@@ -3,12 +3,12 @@
 Sickle is a shellcode development tool, created to speed up the various steps needed to create functioning shellcode. 
 
 Sickle can aid in the following:
-    - Identifying instructions resulting in bad characters
-    - Format output in various languages (python, perl, javascript, etc)
-    - Accept shellcode via stdin and format it / detect bad characters
-    - Execute shellcode in both Windows and Linux environments
-    - Compare reversed shellcode to original
-    - Disassemble shellcode into assembly language (ARM, x86, etc)
+- Identifying instructions resulting in bad characters
+- Format output in various languages (python, perl, javascript, etc)
+- Accept shellcode via stdin and format it / detect bad characters
+- Execute shellcode in both Windows and Linux environments
+- Compare reversed shellcode to original
+- Disassemble shellcode into assembly language (ARM, x86, etc)
 
 #### Quick failure check
 A task I found myself doing repetitively was compiling the ASM -> extracting shellcode -> placing it into a wrapper, and testing it. If it was a bad go, the process would be repeated until success. Sickle takes care of placing the shellcode into a wrapper for quick testing (Works on Windows and Unix systems):
@@ -45,8 +45,8 @@ Architecture or mode not selected, defaulting to x86
 
 ### Installation
 Sickle is written in Python3 and to have full functionality I recommend installing [capstone](http://www.capstone-engine.org/), however at the moment the only "function" that requires capstone is disassembly. If you don't need the disassembly function Sickle should work out of the box. Installation of Capstone is as easy as 1,2,3:
-    - apt-get install python3-pip
-    - pip3 install capstone
+- apt-get install python3-pip
+- pip3 install capstone
     
 Another thing to note is that if you do not compile your shellcode in NASM I have added an "[objdump2shellcode](https://github.com/wetw0rk/objdump2shellcode) like" function. Although I recommend using NASM for a streamline experience. For ease of access I prefer to add it to the /usr/bin/ directory like so, however if you use [Black Arch Linux](https://blackarch.org/index.html) Sickle comes pre-installed (previously known as objdump2shellcode). :
 
