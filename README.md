@@ -54,29 +54,30 @@ Another thing to note is that if you do not compile your shellcode in NASM I hav
 root@wetw0rk:~# chmod +x sickle.py
 root@wetw0rk:~# cp sickle.py /usr/bin/sickle
 root@wetw0rk:~# sickle
-usage: sickle [-h] [-r READ] [-s] [-obj OBJDUMP] [-f FORMAT] [-b BADCHAR]
+usage: sickle [-h] [-r READ] [-s] [-obj OBJDUMP] [-f FORMAT] [-b BADCHAR] [-c]
               [-v VARNAME] [-l] [-e EXAMINE] [-d] [-a ARCH] [-m MODE] [-rs]
 
 Sickle - a shellcode development tool
 
 optional arguments:
   -h, --help            show this help message and exit
-  -r READ, --read READ  Read byte array from the binary file
+  -r READ, --read READ  read byte array from the binary file
   -s, --stdin           read ops from stdin (EX: echo -ne "\xde\xad\xbe\xef" |
                         sickle -s -f <format> -b '\x00')
   -obj OBJDUMP, --objdump OBJDUMP
                         binary to use for shellcode extraction (via objdump
                         method)
   -f FORMAT, --format FORMAT
-                        Output format (use --list for a list)
+                        output format (use --list for a list)
   -b BADCHAR, --badchar BADCHAR
-                        Bad characters to avoid in shellcode
+                        bad characters to avoid in shellcode
+  -c, --comment         comments the shellcode output
   -v VARNAME, --varname VARNAME
                         alternative variable name
-  -l, --list            List all available formats and arguments
+  -l, --list            list all available formats and arguments
   -e EXAMINE, --examine EXAMINE
-                        Examine a separate file containing original shellcode.
-                        Mainly used to see if shellcode was recreated
+                        examine a separate file containing original shellcode.
+                        mainly used to see if shellcode was recreated
                         successfully
   -d, --disassemble     disassemble the binary file
   -a ARCH, --arch ARCH  select architecture for disassembly

@@ -23,31 +23,50 @@
 # SOFTWARE.
 #
 # Script name     : sickle.py
-# Version         : 1.0
+# Version         : 1.1
 # Created date    : 10/14/2017
-# Last update     : 10/14/2017
+# Last update     : 10/17/2017
 # Author          : wetw0rk
 # Architecture	  : x86, and x86-x64
 # Python version  : 3
 # Designed OS     : Linux (preferably a penetration testing distro)
-# Dependencies    : none besides objdump, and capstone
 #
+# Description     : Sickle is a shellcode development tool, created
+#                   to speed up the various steps for functioning
+#                   shellcode.
+#
+# Dependencies (only needed for disassembly)
+#   apt-get install python3-pip
+#   pip3 install capstone
+# 
 
-import os, sys, time, ctypes, codecs, argparse, binascii, subprocess
+import os, sys, ctypes, codecs, argparse, binascii, subprocess
 
 # capstone is only needed for disassembly
 try:
     from capstone import *
+
+    ARCH = {
+            "all"   : CS_ARCH_ALL,
+            "arm"   : CS_ARCH_ARM,
+            "arm64" : CS_ARCH_ARM64,
+            "mips"  : CS_ARCH_MIPS,
+            "ppc"   : CS_ARCH_PPC,
+            "x86"   : CS_ARCH_X86,
+            "xcore" : CS_ARCH_XCORE
+    }
+    MODE = {
+            "16"            : CS_MODE_16,
+            "32"            : CS_MODE_32,
+            "64"            : CS_MODE_64,
+            "arm"           : CS_MODE_ARM,
+            "big_endian"    : CS_MODE_BIG_ENDIAN,
+            "little_endian" : CS_MODE_LITTLE_ENDIAN,
+            "micro"         : CS_MODE_MICRO,
+            "thumb"         : CS_MODE_THUMB
+    }
 except:
-    print("Missing capstone, please install via:")
-    print("apt-get install python3-pip")
-    print("\tpip3 install capstone")
-    print("\tcontinuing in 3 seconds")
-    time.sleep(3)
-    if os.name == 'nt':
-        os.system('cls')
-    else:
-        os.system('clear')
+    print("Capstone missing, disassembly disabled!!!")
 
 def format_list():
 
@@ -68,6 +87,12 @@ def format_list():
             "ruby-array",
             "ruby",
             "raw",
+    ]
+
+    supported_comments = [
+            "c",
+            "python",
+            "perl",
     ]
 
     supported_architectures = [
@@ -94,6 +119,7 @@ def format_list():
     ]
 
     supF = "\t"
+    supC = "\t"
     supA = "\t"
     supM = "\t"
 
@@ -102,6 +128,12 @@ def format_list():
     for i in range(len(supported_formats)):
         supF += "{:s}, ".format(supported_formats[i])
     print(supF[:len(supF)-2])
+
+    # comment supported dump
+    print("Comment dump formats:")
+    for i in range(len(supported_comments)):
+        supC += "{:s}, ".format(supported_comments[i])
+    print(supC[:len(supC)-2])
 
     # supported architectures
     print("Supported architectures:")
@@ -134,12 +166,14 @@ class colors():
 
 class formatting():
 
-    def __init__(self, byte_file, format_mode, badchars, variable):
+    def __init__(self, byte_file, format_mode, badchars, variable, arch, mode):
 
         self.byte_file      = byte_file
         self.format_mode    = format_mode
         self.badchars       = badchars
         self.variable       = variable
+        self.arch           = arch
+        self.mode           = mode
 
     def character_analysis(self, num, op_str, results):
 
@@ -174,6 +208,117 @@ class formatting():
             results += splits[i],
 
         return
+
+    def informational_dump(self):
+        opcode_string       = []
+        instruction_line    = []
+        hex_opcode_string   = []
+        completed_conversion= []
+        results             = []
+
+        mode = Cs(ARCH[self.arch], MODE[self.mode])
+
+        try:
+            with open(self.byte_file, "rb") as fd:
+                binCode = fd.read()
+        except:
+            binCode = self.byte_file
+
+        print("Payload size: {:d} bytes".format(len(binCode)))
+
+        # seperate the instructions and opcode
+        for i in mode.disasm(binCode, 0x1000):
+            opcode_string += "{:s}".format(binascii.hexlify(i.bytes).decode('utf-8')),
+            instruction_line += "{:s} {:s}".format(i.mnemonic, i.op_str),
+        # hex-ify the opcode string
+        for i in range(len(opcode_string)):
+            line = opcode_string[i]
+            hex_opcode_string += "\\x" + "\\x".join([line[i:i+2] for i in range(0, len(line), 2)]),
+        # send it off for character analysis (at this point the results are in... the results)
+        for i in range(len(hex_opcode_string)):
+            self.character_analysis(66, hex_opcode_string[i], results)
+
+        ID = colors.BOLD and colors.RED and colors.END
+
+        # once we have all our conversions complete dump
+        # it into the desired format. each differently..
+        if self.format_mode == 'c':
+            print("unsigned char {:s}[] = ".format(self.variable))
+            for i in range(len(instruction_line)):
+                if ID in results[i] and i != (len(instruction_line)-1):
+                    completed_conversion += ("\"%s\"\t %s%s// %s%s" % (
+                        hex_opcode_string[i],
+                        colors.BOLD,
+                        colors.RED,
+                        instruction_line[i],
+                        colors.END)
+                    ).expandtabs(40),
+                elif i == (len(instruction_line)-1) and ID in results[i]:
+                    completed_conversion += ("\"%s\";\t %s%s// %s%s" % (
+                        hex_opcode_string[i],
+                        colors.BOLD,
+                        colors.RED,
+                        instruction_line[i],
+                        colors.END)
+                    ).expandtabs(40),
+                elif i == (len(instruction_line)-1):
+                    completed_conversion += ("\"%s\";\t // %s" % (
+                        results[i],
+                        instruction_line[i])
+                    ).expandtabs(40),
+                else:
+                    completed_conversion += ("\"%s\"\t // %s" % (
+                        results[i],
+                        instruction_line[i])
+                    ).expandtabs(40),
+
+        if self.format_mode == "python":
+            for i in range(len(instruction_line)):
+                if ID in results[i]:
+                    completed_conversion += ("\"%s\"\t %s%s# %s%s" % (
+                        hex_opcode_string[i],
+                        colors.BOLD,
+                        colors.RED,
+                        instruction_line[i],
+                        colors.END)
+                    ).expandtabs(40),
+                else:
+                    completed_conversion += ("\"%s\"\t # %s" % (
+                        results[i],
+                        instruction_line[i])
+                    ).expandtabs(40),
+
+        if self.format_mode == "perl":
+            for i in range(len(instruction_line)):
+                if ID in results[i] and i != (len(instruction_line)-1):
+                    completed_conversion += ("\"%s\".\t %s%s# %s%s" % (
+                        hex_opcode_string[i],
+                        colors.BOLD,
+                        colors.RED,
+                        instruction_line[i],
+                        colors.END)
+                    ).expandtabs(40),
+                elif i == (len(instruction_line)-1) and ID in results[i]:
+                    completed_conversion += ("\"%s\";\t %s%s# %s%s" % (
+                        hex_opcode_string[i],
+                        colors.BOLD,
+                        colors.RED,
+                        instruction_line[i],
+                        colors.END)
+                    ).expandtabs(40),
+                elif i == (len(instruction_line)-1):
+                    completed_conversion += ("\"%s\";\t # %s" % (
+                        results[i],
+                        instruction_line[i])
+                    ).expandtabs(40),
+                else:
+                    completed_conversion += ("\"%s\".\t # %s" % (
+                        results[i],
+                        instruction_line[i])
+                    ).expandtabs(40),
+
+        for i in range(len(completed_conversion)):
+            print(completed_conversion[i])
 
     def tactical_dump(self):
 
@@ -485,32 +630,13 @@ class reversing():
 
     def disassemble(self):
 
-        completed_disassembly = []
+        completed_disassembly   = []
 
-        ARCH = {
-                "all"   : CS_ARCH_ALL,
-                "arm"   : CS_ARCH_ARM,
-                "arm64" : CS_ARCH_ARM64,
-                "mips"  : CS_ARCH_MIPS,
-                "ppc"   : CS_ARCH_PPC,
-                "x86"   : CS_ARCH_X86,
-                "xcore" : CS_ARCH_XCORE
-        }
-
-        MODE = {
-                "16"            : CS_MODE_16,
-                "32"            : CS_MODE_32,
-                "64"            : CS_MODE_64,
-                "arm"           : CS_MODE_ARM,
-                "big_endian"    : CS_MODE_BIG_ENDIAN,
-                "little_endian" : CS_MODE_LITTLE_ENDIAN,
-                "micro"         : CS_MODE_MICRO,
-                "thumb"         : CS_MODE_THUMB
-
-        }
-
-        with open(self.byte_file, "rb") as fd:
-            binCode = fd.read()
+        try:
+            with open(self.byte_file, "rb") as fd:
+                binCode = fd.read()
+        except:
+            binCode = self.byte_file
 
         try:
             mode = Cs(ARCH[self.arch], MODE[self.mode])
@@ -569,23 +695,42 @@ def deployment(byte_file):
 
         shellcode = bytearray(fc)
 
+        # LPVOID WINAPI VirtualAlloc(
+        #   __in_opt  LPVOID lpAddress,         // Address of the region to allocate. If this parameter is NULL, the system determines where to allocate the region.
+        #   __in      SIZE_T dwSize,            // Size of the region in bytes. Here we put the size of the shellcode
+        #   __in      DWORD flAllocationType,   // The type of memory allocation, flags 0x1000 (MEMCOMMIT) and 0x2000 (MEMRESERVE) to both reserve and commit memory
+        #   __in      DWORD flProtect           // Enables RWX to the committed region of pages
+        # );
         ptr = ctypes.windll.kernel32.VirtualAlloc(ctypes.c_int(0),
                 ctypes.c_int(len(shellcode)), ctypes.c_int(0x3000), ctypes.c_int(0x40))
-
+        # BOOL WINAPI VirtualLock(
+        #   _In_ LPVOID lpAddress,  // A pointer to the base address of the region of pages to be locked
+        #   _In_ SIZE_T dwSize      // The size of the region to be locked, in bytes.
+        # );
         buf = (ctypes.c_char * len(shellcode)).from_buffer(shellcode)
-
+        # VOID RtlMoveMemory(
+        #   _Out_       VOID UNALIGNED *Destination,    // A pointer to the destination memory block to copy the bytes to.
+        #   _In_  const VOID UNALIGNED *Source,         // A pointer to the source memory block to copy the bytes from.
+        #   _In_        SIZE_T         Length           // The number of bytes to copy from the source to the destination.
+        # );
         ctypes.windll.kernel32.RtlMoveMemory(ctypes.c_int(ptr),
                 buf, ctypes.c_int(len(shellcode)))
-
+        # HANDLE WINAPI CreateThread(
+        #   _In_opt_  LPSECURITY_ATTRIBUTES  lpThreadAttributes,    // If lpThreadAttributes is NULL, the thread gets a default security descriptor. 
+        #   _In_      SIZE_T                 dwStackSize,           // If this parameter is zero, the new thread uses the default size for the executable.
+        #   _In_      LPTHREAD_START_ROUTINE lpStartAddress,        // A pointer to the application-defined function to be executed by the thread.
+        #   _In_opt_  LPVOID                 lpParameter,           // optional (A pointer to a variable to be passed to the thread)
+        #   _In_      DWORD                  dwCreationFlags,       // Run the thread immediately after creation.
+        #   _Out_opt_ LPDWORD                lpThreadId             // NULL, so the thread identifier is not returned. 
+        # );
         ht = ctypes.windll.kernel32.CreateThread(ctypes.c_int(0),
                 ctypes.c_int(0), ctypes.c_int(ptr), ctypes.c_int(0), ctypes.c_int(0), ctypes.pointer(ctypes.c_int(0)))
-
+        # Waits until the specified object is in the signaled state or the time-out interval elapses
         ctypes.windll.kernel32.WaitForSingleObject(ctypes.c_int(ht),ctypes.c_int(-1))
                 
     sys.exit()
 
-def objdump2shellcode(dumpfile, format_mode, badchars, variable):
-
+def objdump2shellcode(dumpfile):
     no_junk = []
     no_addr = []
     opcodes = []
@@ -638,21 +783,21 @@ def objdump2shellcode(dumpfile, format_mode, badchars, variable):
     str_obj = bytes(ops, 'ascii')
     raw_ops = codecs.escape_decode(str_obj)[0]
 
-    sendIT = formatting(raw_ops, format_mode, badchars, variable)
-    sendIT.tactical_dump()
+    return raw_ops
 
 def main():
 
     # handle command line arguments
     parser = argparse.ArgumentParser(description="Sickle - a shellcode development tool")
-    parser.add_argument("-r", "--read",help="Read byte array from the binary file")
+    parser.add_argument("-r", "--read",help="read byte array from the binary file")
     parser.add_argument("-s", "--stdin",help="read ops from stdin (EX: echo -ne \"\\xde\\xad\\xbe\\xef\" | sickle -s -f <format> -b '\\x00')", action="store_true")
     parser.add_argument("-obj","--objdump",help="binary to use for shellcode extraction (via objdump method)")
-    parser.add_argument("-f", "--format",help="Output format (use --list for a list)")
-    parser.add_argument("-b", "--badchar",help="Bad characters to avoid in shellcode")
+    parser.add_argument("-f", "--format",help="output format (use --list for a list)")
+    parser.add_argument("-b", "--badchar",help="bad characters to avoid in shellcode")
+    parser.add_argument("-c", "--comment",  help="comments the shellcode output", action="store_true")
     parser.add_argument("-v", "--varname",required=False, help="alternative variable name")
-    parser.add_argument("-l", "--list",help="List all available formats and arguments", action="store_true")
-    parser.add_argument("-e", "--examine",help="Examine a separate file containing original shellcode. Mainly used to see if shellcode was recreated successfully")
+    parser.add_argument("-l", "--list",help="list all available formats and arguments", action="store_true")
+    parser.add_argument("-e", "--examine",help="examine a separate file containing original shellcode. mainly used to see if shellcode was recreated successfully")
     parser.add_argument("-d", "--disassemble",help="disassemble the binary file", action="store_true")
     parser.add_argument("-a", "--arch",help="select architecture for disassembly")
     parser.add_argument("-m", "--mode",help="select mode for disassembly")
@@ -669,6 +814,7 @@ def main():
     mode        = args.mode
     run         = args.run_shellcode
     dumpfile    = args.objdump
+    comment_code= args.comment
 
     # if a list is requested print it
     if args.list == True:
@@ -694,7 +840,15 @@ def main():
             # send the file to be compared
             compareIT = reversing(byte_file, compare, arch="", mode="")
             compareIT.compare_dump()
-        elif disassemble == True:
+        elif comment_code:
+            if arch == None or mode == None:
+                print("Architecture or mode not selected, defaulting to x86")
+                commentIT = formatting(byte_file, format_mode, badchars, variable, arch="x86", mode="32")
+                commentIT.informational_dump()
+            else:
+                commentIT = formatting(byte_file, format_mode, badchars, variable, arch, mode)
+                commentIT.informational_dump()
+        elif disassemble:
             if arch == None or mode == None:
                 print("Architecture or mode not selected, defaulting to x86")
                 disassIT = reversing(byte_file, compare, arch="x86", mode="32")
@@ -705,21 +859,58 @@ def main():
                 disassIT.disassemble()
         else:
             # send the file to be dumped and formatted
-            dumpIT = formatting(byte_file, format_mode, badchars, variable)
+            dumpIT = formatting(byte_file, format_mode, badchars, variable, None, None)
             dumpIT.tactical_dump()
-
+    # are we reading from STDIN?
     elif args.stdin == True:
-
         byte_file = sys.stdin.buffer.raw.read()
-
         if run == True:
             deployment(byte_file)
+        elif comment_code:
+            if arch == None or mode == None:
+                print("Architecture or mode not selected, defaulting to x86")
+                commentIT = formatting(byte_file, format_mode, badchars, variable, arch="x86", mode="32")
+                commentIT.informational_dump()
+            else:
+                commentIT = formatting(byte_file, format_mode, badchars, variable, arch, mode)
+                commentIT.informational_dump()
+        elif disassemble:
+            if arch == None or mode == None:
+                print("Architecture or mode not selected, defaulting to x86")
+                disassIT = reversing(byte_file, compare, arch="x86", mode="32")
+                disassIT.disassemble()
+            else:
+                print("Disassembling in MODE:{:s} ARCH:{:s}".format(mode, arch))
+                disassIT = reversing(byte_file, compare, arch, mode)
+                disassIT.disassemble()
         else:
             readIT = formatting(byte_file, format_mode, badchars, variable)
             readIT.tactical_dump()
-
+    # are we extracting opcodes from an existing binary?
     elif dumpfile:
-        objdump2shellcode(dumpfile, format_mode, badchars, variable)
+        raw_ops = objdump2shellcode(dumpfile)
+        if run == True:
+            deployment(raw_ops)
+        elif comment_code:
+            if arch == None or mode == None:
+                print("Architecture or mode not selected, defaulting to x86")
+                commentIT = formatting(raw_ops, format_mode, badchars, variable, arch="x86", mode="32")
+                commentIT.informational_dump()
+            else:
+                commentIT = formatting(raw_ops, format_mode, badchars, variable, arch, mode)
+                commentIT.informational_dump()
+        elif disassemble:
+            if arch == None or mode == None:
+                print("Architecture or mode not selected, defaulting to x86")
+                disassIT = reversing(raw_ops, compare, arch="x86", mode="32")
+                disassIT.disassemble()
+            else:
+                print("Disassembling in MODE:{:s} ARCH:{:s}".format(mode, arch))
+                disassIT = reversing(raw_ops, compare, arch, mode)
+                disassIT.disassemble()
+        else:
+            dumpIT = formatting(raw_ops, format_mode, badchars, variable, None, None)
+            dumpIT.tactical_dump()
 
     else:
         parser.print_help()
