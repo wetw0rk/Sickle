@@ -884,7 +884,7 @@ def main():
                 disassIT = reversing(byte_file, compare, arch, mode)
                 disassIT.disassemble()
         else:
-            readIT = formatting(byte_file, format_mode, badchars, variable)
+            readIT = formatting(byte_file, format_mode, badchars, variable, None, None)
             readIT.tactical_dump()
     # are we extracting opcodes from an existing binary?
     elif dumpfile:
