@@ -23,7 +23,7 @@ Sometimes you find a piece of shellcode that is fluent in its execution and you 
 #### Bad character identification
 It's important to note that currently bad character identification is best used within a Linux based OS. When dumping shellcode on Windows bad characters will not be highlighted. Below is an example of usage in a Unix environment:
 
-![alt text](https://raw.githubusercontent.com/wetw0rk/Sickle/master/example-pictures/example4.png?style=centerme)
+![alt text](https://raw.githubusercontent.com/wetw0rk/Sickle/master/example-pictures/sickle.gif?style=centerme)
 
 #### Disassembly
 Sickle can also take a binary file and convert the opcodes to machine instructions:
@@ -82,6 +82,7 @@ optional arguments:
   -d, --disassemble     disassemble the binary file
   -a ARCH, --arch ARCH  select architecture for disassembly
   -m MODE, --mode MODE  select mode for disassembly
-  -rs, --run-shellcode  run the shellcode (on linux generates binary)
+  -rs, --run-shellcode  run the shellcode (use at your own risk)
+
 ```
 

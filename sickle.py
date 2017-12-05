@@ -23,9 +23,9 @@
 # SOFTWARE.
 #
 # Script name     : sickle.py
-# Version         : 1.1
+# Version         : 1.2
 # Created date    : 10/14/2017
-# Last update     : 10/17/2017
+# Last update     : 12/5/2017
 # Author          : wetw0rk
 # Architecture	  : x86, and x86-x64
 # Python version  : 3
@@ -38,8 +38,9 @@
 # Dependencies (only needed for disassembly)
 #   apt-get install python3-pip
 #   pip3 install capstone
-# 
+#
 
+from ctypes import CDLL, c_char_p, c_void_p, memmove, cast, CFUNCTYPE
 import os, sys, ctypes, codecs, argparse, binascii, subprocess
 
 # capstone is only needed for disassembly
@@ -93,6 +94,7 @@ def format_list():
             "c",
             "python",
             "perl",
+            "ruby-array",
     ]
 
     supported_architectures = [
@@ -288,6 +290,25 @@ class formatting():
                         instruction_line[i])
                     ).expandtabs(40),
 
+        if self.format_mode == "ruby-array":
+            print('%s = ""' % self.variable)
+            for i in range(len(instruction_line)):
+                if ID in results[i]:
+                    completed_conversion += ("%s << \"%s\"\t %s%s# %s%s" % (
+                        self.variable,
+                        hex_opcode_string[i],
+                        colors.BOLD,
+                        colors.RED,
+                        instruction_line[i],
+                        colors.END)
+                    ).expandtabs(40),
+                else:
+                    completed_conversion += ("%s << \"%s\"\t # %s" % (
+                        self.variable,
+                        results[i],
+                        instruction_line[i])
+                    ).expandtabs(40),
+
         if self.format_mode == "perl":
             for i in range(len(instruction_line)):
                 if ID in results[i] and i != (len(instruction_line)-1):
@@ -323,7 +344,7 @@ class formatting():
     def tactical_dump(self):
 
         # are we reading from stdin?
-        try:    
+        try:
             with open(self.byte_file, "rb") as fd:
                 fc = fd.read()
         except:
@@ -528,7 +549,7 @@ class reversing():
         self.mode       = mode
 
     def compare_dump(self):
-    
+
         done        = []
         examination = ""
         op_str      = ""
@@ -665,31 +686,18 @@ def deployment(byte_file):
 
     # operating system shellcode execution is a bit different
     if os.name == 'posix':
-        sc = ""
-        print("Saving to shellcodetest.c")
-
-        for byte in bytearray(fc):
-            sc += "\\x{:02x}".format(byte)
 
         print("Shellcode length: {:d}".format(len(fc)))
 
-        cmd = "gcc -fno-stack-protector -z execstack shellcodetest.c -o shellcodetest && ./shellcodetest"
-        shellcodetest = "#include <stdio.h>\n"
-        shellcodetest += "#include <string.h>\n\n"
-        shellcodetest += "unsigned char code[]=\n"
-        shellcodetest += '"' + sc + '"' + ";\n\n"
-        shellcodetest += "int main()\n"
-        shellcodetest += "{\n"
-        shellcodetest += "\tint (*ret)() = (int(*)())code;\n"
-        shellcodetest += "\tret();\n"
-        shellcodetest += "}\n"
-
-        file = open("shellcodetest.c", "w")
-        file.write(shellcodetest)
-        file.close()
-
-        os.system(cmd)
-
+        shellcode = bytes(fc)                       # convert shellcode into a bytes
+        libc = CDLL('libc.so.6')                    # implement C functions (duh)
+        sc = c_char_p(shellcode)                    # character pointer (NUL terminated)
+        size = len(shellcode)                       # size of the shellcode executing
+        addr = c_void_p(libc.valloc(size))          # allocate bytes and return pointer to allocated memory
+        memmove(addr, sc, size)                     # copy bytes to allocated memory destination
+        libc.mprotect(addr, size, 0x7)              # change access protections
+        run = cast(addr, CFUNCTYPE(c_void_p))       # calling convention
+        run()                                       # run the shellcode
     else:
         print("Shellcode length: {:d}".format(len(fc)))
 
@@ -716,18 +724,18 @@ def deployment(byte_file):
         ctypes.windll.kernel32.RtlMoveMemory(ctypes.c_int(ptr),
                 buf, ctypes.c_int(len(shellcode)))
         # HANDLE WINAPI CreateThread(
-        #   _In_opt_  LPSECURITY_ATTRIBUTES  lpThreadAttributes,    // If lpThreadAttributes is NULL, the thread gets a default security descriptor. 
+        #   _In_opt_  LPSECURITY_ATTRIBUTES  lpThreadAttributes,    // If lpThreadAttributes is NULL, the thread gets a default security descriptor.
         #   _In_      SIZE_T                 dwStackSize,           // If this parameter is zero, the new thread uses the default size for the executable.
         #   _In_      LPTHREAD_START_ROUTINE lpStartAddress,        // A pointer to the application-defined function to be executed by the thread.
         #   _In_opt_  LPVOID                 lpParameter,           // optional (A pointer to a variable to be passed to the thread)
         #   _In_      DWORD                  dwCreationFlags,       // Run the thread immediately after creation.
-        #   _Out_opt_ LPDWORD                lpThreadId             // NULL, so the thread identifier is not returned. 
+        #   _Out_opt_ LPDWORD                lpThreadId             // NULL, so the thread identifier is not returned.
         # );
         ht = ctypes.windll.kernel32.CreateThread(ctypes.c_int(0),
                 ctypes.c_int(0), ctypes.c_int(ptr), ctypes.c_int(0), ctypes.c_int(0), ctypes.pointer(ctypes.c_int(0)))
         # Waits until the specified object is in the signaled state or the time-out interval elapses
         ctypes.windll.kernel32.WaitForSingleObject(ctypes.c_int(ht),ctypes.c_int(-1))
-                
+
     sys.exit()
 
 def objdump2shellcode(dumpfile):
@@ -801,7 +809,7 @@ def main():
     parser.add_argument("-d", "--disassemble",help="disassemble the binary file", action="store_true")
     parser.add_argument("-a", "--arch",help="select architecture for disassembly")
     parser.add_argument("-m", "--mode",help="select mode for disassembly")
-    parser.add_argument('-rs', "--run-shellcode",help="run the shellcode (on linux generates binary)", action="store_true")
+    parser.add_argument('-rs', "--run-shellcode",help="run the shellcode (use at your own risk)", action="store_true")
 
     args = parser.parse_args()
 
