@@ -13,7 +13,7 @@ Sickle can aid in the following:
 #### Quick failure check
 A task I found myself doing repetitively was compiling the ASM -> extracting shellcode -> placing it into a wrapper, and testing it. If it was a bad go, the process would be repeated until successful. Sickle takes care of placing the shellcode into a wrapper for quick testing (Works on Windows and Unix systems):
 
-![alt text](https://raw.githubusercontent.com/wetw0rk/Sickle/master/example-pictures/example1.png?style=centerme)
+![alt text](https://raw.githubusercontent.com/wetw0rk/Sickle/master/example-pictures/example.png?style=centerme)
 
 #### Recreating shellcode
 Sometimes you find a piece of shellcode that is fluent in its execution and you want to recreate it yourself to understand its underlying mechanisms. Sickle can help you compare the original shellcode to your "recreated" version.
