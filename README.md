@@ -16,12 +16,12 @@ A task I found myself doing repetitively was compiling the ASM -> extracting she
 ![alt text](https://raw.githubusercontent.com/wetw0rk/Sickle/master/example-pictures/example.png?style=centerme)
 
 #### Recreating shellcode
-Sometimes you find a piece of shellcode that is fluent in its execution and you want to recreate it yourself to understand its underlying mechanisms. Sickle can help you compare the original shellcode to your "recreated" version.
+Sometimes you find a piece of shellcode that's fluent in its execution and you want to recreate it yourself to understand its underlying mechanisms. Sickle can help you compare the original shellcode to your "recreated" version.
 
 ![alt text](https://raw.githubusercontent.com/wetw0rk/Sickle/master/example-pictures/example3.png?style=centerme)
 
 #### Bad character identification
-It's important to note that currently bad character identification is best used within a Linux based OS. When dumping shellcode on Windows bad characters will not be highlighted. Below is an example of usage in a Unix environment:
+It's important to note that currently bad character identification is best used within a Linux based OS. When dumping shellcode on a Windows host bad characters will not be highlighted. Below is a usage example in a Unix environment:
 
 ![alt text](https://raw.githubusercontent.com/wetw0rk/Sickle/master/example-pictures/sickle.gif?style=centerme)
 
