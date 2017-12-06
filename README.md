@@ -23,7 +23,7 @@ Sometimes you find a piece of shellcode that's fluent in its execution and you w
 #### Bad character identification
 It's important to note that currently bad character identification is best used within a Linux based OS. When dumping shellcode on a Windows host bad characters will not be highlighted. Below is a usage example in a Unix environment:
 
-![alt text](https://raw.githubusercontent.com/wetw0rk/Sickle/master/example-pictures/sickle.gif?style=centerme)
+![alt text](https://raw.githubusercontent.com/wetw0rk/Sickle/master/example-pictures/sickleG.gif?style=centerme)
 
 #### Disassembly
 Sickle can also take a binary file and convert the opcodes to machine instructions:
