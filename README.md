@@ -28,20 +28,7 @@ It's important to note that currently bad character identification is best used 
 #### Disassembly
 Sickle can also take a binary file and convert the opcodes to machine instructions:
 
-```sh
-root@wetw0rk:~# sickle -r original -d
-Architecture or mode not selected, defaulting to x86
-0x1000: 31c0             xor eax, eax
-0x1002: 50               push eax
-0x1003: 682f2f7368       push 0x68732f2f
-0x1008: 682f62696e       push 0x6e69622f
-0x100d: 89e3             mov ebx, esp
-0x100f: 50               push eax
-0x1010: 53               push ebx
-0x1011: 89e1             mov ecx, esp
-0x1013: b00b             mov al, 0xb
-0x1015: cd80             int 0x80
-```
+![alt text](https://raw.githubusercontent.com/wetw0rk/Sickle/master/example-pictures/example5.png?style=centerme)
 
 ### Installation
 Sickle is written in Python3 and to have full functionality I recommend installing [capstone](http://www.capstone-engine.org/), however at the moment the only "function" that requires capstone is disassembly. If you don't need the disassembly function, Sickle should work out of the box. Installation of Capstone is as easy as 1,2,3:
