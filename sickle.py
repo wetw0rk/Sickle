@@ -23,7 +23,7 @@
 # SOFTWARE.
 #
 # Script name     : sickle.py
-# Version         : 1.2
+# Version         : 1.3
 # Created date    : 10/14/2017
 # Last update     : 12/9/2017
 # Author          : wetw0rk
@@ -89,7 +89,7 @@ except:
 
     print("Failed to load capstone, disassembly disabled")
 
-def format_list():
+def format_list(print_formats):
 
     supported_formats = [
             "hex",
@@ -140,34 +140,38 @@ def format_list():
             "thumb",
     ]
 
-    supF = "\t"
-    supC = "\t"
-    supA = "\t"
-    supM = "\t"
+    if print_formats == True:
+        supF = "\t"
+        supC = "\t"
+        supA = "\t"
+        supM = "\t"
 
-    # dumpable languages currently supported
-    print("Dump formats:")
-    for i in range(len(supported_formats)):
-        supF += "{:s}, ".format(supported_formats[i])
-    print(supF[:len(supF)-2])
+        # dumpable languages currently supported
+        print("Dump formats:")
+        for i in range(len(supported_formats)):
+            supF += "{:s}, ".format(supported_formats[i])
+        print(supF[:len(supF)-2])
 
-    # comment supported dump
-    print("Comment dump formats:")
-    for i in range(len(supported_comments)):
-        supC += "{:s}, ".format(supported_comments[i])
-    print(supC[:len(supC)-2])
+        # comment supported dump
+        print("Comment dump formats:")
+        for i in range(len(supported_comments)):
+            supC += "{:s}, ".format(supported_comments[i])
+        print(supC[:len(supC)-2])
 
-    # supported architectures
-    print("Supported architectures:")
-    for i in range(len(supported_architectures)):
-        supA += "{:s}, ".format(supported_architectures[i])
-    print(supA[:len(supA)-2])
+        # supported architectures
+        print("Supported architectures:")
+        for i in range(len(supported_architectures)):
+            supA += "{:s}, ".format(supported_architectures[i])
+        print(supA[:len(supA)-2])
 
-    # supported modes
-    print("Supported modes:")
-    for i in range(len(supported_modes)):
-        supM += "{:s}, ".format(supported_modes[i])
-    print(supM[:len(supM)-2])
+        # supported modes
+        print("Supported modes:")
+        for i in range(len(supported_modes)):
+            supM += "{:s}, ".format(supported_modes[i])
+        print(supM[:len(supM)-2])
+        exit(0)
+    else:
+        return supported_formats
 
 class colors():
 
@@ -865,8 +869,9 @@ def main():
 
     # if a list is requested print it
     if args.list == True:
-        format_list()
-        sys.exit()
+        grab_info = format_list(True)
+    else:
+        grab_info = format_list(False)
 
     # default variables if none given
     if args.varname == None:
@@ -878,6 +883,9 @@ def main():
         format_mode = 'c'
     else:
         format_mode = args.format
+        if format_mode not in grab_info:
+            print("Currently %s format is not supported" % (format_mode))
+            exit(0)
 
     # if we are just extracting raw opcodes
     if byte_file:
