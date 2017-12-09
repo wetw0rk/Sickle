@@ -35,7 +35,7 @@
 #                   to speed up the various steps for functioning
 #                   shellcode.
 #
-# Dependencies (only needed for disassembly)
+# Dependencies (if capstone is not installed)
 #   apt-get install python3-pip
 #   pip3 install capstone
 #
@@ -43,31 +43,39 @@
 from ctypes import CDLL, c_char_p, c_void_p, memmove, cast, CFUNCTYPE
 import os, sys, ctypes, codecs, argparse, binascii, subprocess
 
-# capstone is only needed for disassembly
 try:
     from capstone import *
 
-    ARCH = {
-            "all"   : CS_ARCH_ALL,
-            "arm"   : CS_ARCH_ARM,
-            "arm64" : CS_ARCH_ARM64,
-            "mips"  : CS_ARCH_MIPS,
-            "ppc"   : CS_ARCH_PPC,
-            "x86"   : CS_ARCH_X86,
-            "xcore" : CS_ARCH_XCORE
-    }
-    MODE = {
-            "16"            : CS_MODE_16,
-            "32"            : CS_MODE_32,
-            "64"            : CS_MODE_64,
-            "arm"           : CS_MODE_ARM,
-            "big_endian"    : CS_MODE_BIG_ENDIAN,
-            "little_endian" : CS_MODE_LITTLE_ENDIAN,
-            "micro"         : CS_MODE_MICRO,
-            "thumb"         : CS_MODE_THUMB
-    }
 except:
-    print("Capstone missing, disassembly disabled!!!")
+    # if capstone is installed under python2.7 path import it a tad
+    # bit differently
+    import importlib.machinery, site
+    path_var = "/usr/lib/python2.7/dist-packages/capstone/__init__.py"
+    capstone = importlib.machinery.SourceFileLoader(
+        'capstone', path_var
+    ).load_module()
+    from capstone import *
+
+ARCH = {
+    "all"   : CS_ARCH_ALL,
+    "arm"   : CS_ARCH_ARM,
+    "arm64" : CS_ARCH_ARM64,
+    "mips"  : CS_ARCH_MIPS,
+    "ppc"   : CS_ARCH_PPC,
+    "x86"   : CS_ARCH_X86,
+    "xcore" : CS_ARCH_XCORE
+}
+MODE = {
+    "16"            : CS_MODE_16,
+    "32"            : CS_MODE_32,
+    "64"            : CS_MODE_64,
+    "arm"           : CS_MODE_ARM,
+    "big_endian"    : CS_MODE_BIG_ENDIAN,
+    "little_endian" : CS_MODE_LITTLE_ENDIAN,
+    "micro"         : CS_MODE_MICRO,
+    "thumb"         : CS_MODE_THUMB
+}
+
 
 def format_list():
 
