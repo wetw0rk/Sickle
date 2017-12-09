@@ -238,8 +238,11 @@ class formatting():
         completed_conversion= []
         results             = []
 
-        mode = Cs(ARCH[self.arch], MODE[self.mode])
-
+        try:
+            mode = Cs(ARCH[self.arch], MODE[self.mode])
+        except:
+            print("Architecture or Mode not supported")
+            exit(1)
         try:
             with open(self.byte_file, "rb") as fd:
                 binCode = fd.read()
@@ -689,7 +692,14 @@ class reversing():
             binCode = self.byte_file
 
         try:
-            mode = Cs(ARCH[self.arch], MODE[self.mode])
+            try:
+                mode = Cs(ARCH[self.arch], MODE[self.mode])
+            except:
+                print("Architecture or Mode not supported")
+                exit(0);
+
+            print("Disassembling shellcode in {:s}-{:s}".format(self.arch, self.mode))
+
             for i in mode.disasm(binCode, 0x1000):
                 completed_disassembly += ("0x%x: %s\t%s %s" % (
                     i.address,
@@ -879,7 +889,7 @@ def main():
             compareIT.compare_dump()
         elif comment_code:
             if arch == None or mode == None:
-                print("Architecture or mode not selected, defaulting to x86")
+                print("Architecture or mode not selected, defaulting to x86-32")
                 commentIT = formatting(byte_file, format_mode, badchars, variable, arch="x86", mode="32")
                 commentIT.informational_dump()
             else:
@@ -887,11 +897,10 @@ def main():
                 commentIT.informational_dump()
         elif disassemble:
             if arch == None or mode == None:
-                print("Architecture or mode not selected, defaulting to x86")
+                print("Architecture or mode not selected, defaulting to x86-32")
                 disassIT = reversing(byte_file, compare, arch="x86", mode="32")
                 disassIT.disassemble()
             else:
-                print("Disassembling in MODE:{:s} ARCH:{:s}".format(mode, arch))
                 disassIT = reversing(byte_file, compare, arch, mode)
                 disassIT.disassemble()
         else:
@@ -905,7 +914,7 @@ def main():
             deployment(byte_file)
         elif comment_code:
             if arch == None or mode == None:
-                print("Architecture or mode not selected, defaulting to x85")
+                print("Architecture or mode not selected, defaulting to x86-32")
                 commentIT = formatting(byte_file, format_mode, badchars, variable, arch="x86", mode="32")
                 commentIT.informational_dump()
             else:
@@ -913,11 +922,10 @@ def main():
                 commentIT.informational_dump()
         elif disassemble:
             if arch == None or mode == None:
-                print("Architecture or mode not selected, defaulting to x86")
+                print("Architecture or mode not selected, defaulting to x86-32")
                 disassIT = reversing(byte_file, compare, arch="x86", mode="32")
                 disassIT.disassemble()
             else:
-                print("Disassembling in MODE:{:s} ARCH:{:s}".format(mode, arch))
                 disassIT = reversing(byte_file, compare, arch, mode)
                 disassIT.disassemble()
         else:
@@ -930,7 +938,7 @@ def main():
             deployment(raw_ops)
         elif comment_code:
             if arch == None or mode == None:
-                print("Architecture or mode not selected, defaulting to x86")
+                print("Architecture or mode not selected, defaulting to x86-32")
                 commentIT = formatting(raw_ops, format_mode, badchars, variable, arch="x86", mode="32")
                 commentIT.informational_dump()
             else:
@@ -938,11 +946,10 @@ def main():
                 commentIT.informational_dump()
         elif disassemble:
             if arch == None or mode == None:
-                print("Architecture or mode not selected, defaulting to x86")
+                print("Architecture or mode not selected, defaulting to x86-32")
                 disassIT = reversing(raw_ops, compare, arch="x86", mode="32")
                 disassIT.disassemble()
             else:
-                print("Disassembling in MODE:{:s} ARCH:{:s}".format(mode, arch))
                 disassIT = reversing(raw_ops, compare, arch, mode)
                 disassIT.disassemble()
         else:
