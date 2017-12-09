@@ -25,7 +25,7 @@
 # Script name     : sickle.py
 # Version         : 1.2
 # Created date    : 10/14/2017
-# Last update     : 12/5/2017
+# Last update     : 12/9/2017
 # Author          : wetw0rk
 # Architecture	  : x86, and x86-x64
 # Python version  : 3
@@ -47,35 +47,40 @@ try:
     from capstone import *
 
 except:
-    # if capstone is installed under python2.7 path import it a tad
-    # bit differently
-    import importlib.machinery, site
-    path_var = "/usr/lib/python2.7/dist-packages/capstone/__init__.py"
-    capstone = importlib.machinery.SourceFileLoader(
-        'capstone', path_var
-    ).load_module()
-    from capstone import *
+    # if capstone is installed under python2.7 path, import directly
+    # if fails we are on a Windows OS
+    try:
+        import importlib.machinery
+        path_var = "/usr/lib/python2.7/dist-packages/capstone/__init__.py"
+        capstone = importlib.machinery.SourceFileLoader(
+            'capstone', path_var
+        ).load_module()
+        from capstone import *
+    except:
+        pass
 
-ARCH = {
-    "all"   : CS_ARCH_ALL,
-    "arm"   : CS_ARCH_ARM,
-    "arm64" : CS_ARCH_ARM64,
-    "mips"  : CS_ARCH_MIPS,
-    "ppc"   : CS_ARCH_PPC,
-    "x86"   : CS_ARCH_X86,
-    "xcore" : CS_ARCH_XCORE
-}
-MODE = {
-    "16"            : CS_MODE_16,
-    "32"            : CS_MODE_32,
-    "64"            : CS_MODE_64,
-    "arm"           : CS_MODE_ARM,
-    "big_endian"    : CS_MODE_BIG_ENDIAN,
-    "little_endian" : CS_MODE_LITTLE_ENDIAN,
-    "micro"         : CS_MODE_MICRO,
-    "thumb"         : CS_MODE_THUMB
-}
-
+try:
+    ARCH = {
+        "all"   : CS_ARCH_ALL,
+        "arm"   : CS_ARCH_ARM,
+        "arm64" : CS_ARCH_ARM64,
+        "mips"  : CS_ARCH_MIPS,
+        "ppc"   : CS_ARCH_PPC,
+        "x86"   : CS_ARCH_X86,
+        "xcore" : CS_ARCH_XCORE
+    }
+    MODE = {
+        "16"            : CS_MODE_16,
+        "32"            : CS_MODE_32,
+        "64"            : CS_MODE_64,
+        "arm"           : CS_MODE_ARM,
+        "big_endian"    : CS_MODE_BIG_ENDIAN,
+        "little_endian" : CS_MODE_LITTLE_ENDIAN,
+        "micro"         : CS_MODE_MICRO,
+        "thumb"         : CS_MODE_THUMB
+    }
+except:
+    print("Failed to load capstone, disassembly disabled")
 
 def format_list():
 
