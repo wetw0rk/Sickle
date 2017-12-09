@@ -375,15 +375,19 @@ class formatting():
         norm    = ""
         size    = len(fc)
 
+        # majority of dumps use this format
+        try:
+            for byte in bytearray(fc):
+                norm += "\\x{:02x}".format(byte)
+        except:
+            print("Error dumping shellcode. Is file present?")
+            exit(1);
+
         if self.format_mode != "raw":
             print("Payload size: {:d} bytes".format(size))
 
         if self.format_mode == "raw":
             sys.stdout.buffer.write(fc)
-
-        # majority of dumps use this format
-        for byte in bytearray(fc):
-            norm += "\\x{:02x}".format(byte)
 
         if self.format_mode == 'c':
             num = 60
@@ -576,10 +580,15 @@ class reversing():
         cmp_str     = ""
 
         # open the bin-file to compare
-        with open(self.compare, 'rb') as fd:
-            fc = fd.read()
-            for byte in bytearray(fc):
-                cmp_str += "\\x{:02x}".format(byte)
+        try:
+            with open(self.compare, 'rb') as fd:
+                fc = fd.read()
+                for byte in bytearray(fc):
+                    cmp_str += "\\x{:02x}".format(byte)
+        except:
+            print("Error examining shellcode. Is file present?")
+            exit(1);
+
         # open the original file
         with open(self.byte_file, 'rb') as fd:
             fc = fd.read()
@@ -896,7 +905,7 @@ def main():
             deployment(byte_file)
         elif comment_code:
             if arch == None or mode == None:
-                print("Architecture or mode not selected, defaulting to x86")
+                print("Architecture or mode not selected, defaulting to x85")
                 commentIT = formatting(byte_file, format_mode, badchars, variable, arch="x86", mode="32")
                 commentIT.informational_dump()
             else:
