@@ -44,22 +44,28 @@ from ctypes import CDLL, c_char_p, c_void_p, memmove, cast, CFUNCTYPE
 import os, sys, ctypes, codecs, argparse, binascii, subprocess
 
 try:
+
     from capstone import *
 
 except:
+
     # if capstone is installed under python2.7 path, import directly
     # if fails we are on a Windows OS
     try:
+
         import importlib.machinery
         path_var = "/usr/lib/python2.7/dist-packages/capstone/__init__.py"
         capstone = importlib.machinery.SourceFileLoader(
             'capstone', path_var
         ).load_module()
         from capstone import *
+
     except:
+
         pass
 
 try:
+
     ARCH = {
         "all"   : CS_ARCH_ALL,
         "arm"   : CS_ARCH_ARM,
@@ -80,6 +86,7 @@ try:
         "thumb"         : CS_MODE_THUMB
     }
 except:
+
     print("Failed to load capstone, disassembly disabled")
 
 def format_list():
