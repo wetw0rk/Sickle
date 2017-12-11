@@ -18,7 +18,7 @@ A task I found myself doing repetitively was compiling the ASM -> extracting she
 #### Recreating shellcode
 Sometimes you find a piece of shellcode that's fluent in its execution and you want to recreate it yourself to understand its underlying mechanisms. Sickle can help you compare the original shellcode to your "recreated" version.
 
-![alt text](https://raw.githubusercontent.com/wetw0rk/Sickle/master/example-pictures/example3.png?style=centerme)
+![alt text](https://raw.githubusercontent.com/wetw0rk/Sickle/master/example-pictures/rev.png?style=centerme)
 
 #### Bad character identification
 It's important to note that currently bad character identification is best used within a Linux based OS. When dumping shellcode on a Windows host bad characters will not be highlighted. Below is a usage example in a Unix environment:
@@ -28,7 +28,7 @@ It's important to note that currently bad character identification is best used 
 #### Disassembly
 Sickle can also take a binary file and convert the opcodes to machine instructions:
 
-![alt text](https://raw.githubusercontent.com/wetw0rk/Sickle/master/example-pictures/example5.png?style=centerme)
+![alt text](https://raw.githubusercontent.com/wetw0rk/Sickle/master/example-pictures/disa.png?style=centerme)
 
 ### Installation
 Sickle is written in Python3 and to have full functionality I recommend installing [capstone](http://www.capstone-engine.org/), however at the moment the only "function" that requires capstone is disassembly. If you don't need the disassembly function, Sickle should work out of the box. Installation of Capstone is as easy as 1,2,3:
