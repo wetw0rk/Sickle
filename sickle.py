@@ -1041,5 +1041,7 @@ def main():
         else:
             dumpIT = formatting(byte_file, format_mode, badchars, variable, None, None)
             dumpIT.tactical_dump()
+    else:
+        parser.print_help()
 
 main()
