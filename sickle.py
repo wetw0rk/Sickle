@@ -23,11 +23,11 @@
 # SOFTWARE.
 #
 # Script name     : sickle.py
-# Version         : 1.3
+# Version         : 1.4
 # Created date    : 10/14/2017
-# Last update     : 12/9/2017
+# Last update     : 12/11/2017
 # Author          : wetw0rk
-# Architecture	  : x86, and x86-x64
+# Architecture    : x86, and x86-x64
 # Python version  : 3
 # Designed OS     : Linux (preferably a penetration testing distro)
 #
@@ -48,16 +48,17 @@ try:
     from capstone import *
 
 except:
-
     # if capstone is installed under python2.7 path, import directly
-    # if fails we are on a Windows OS
+    # else fails we are on a Windows OS
     try:
 
+        # don't look nasty direct import
         import importlib.machinery
         path_var = "/usr/lib/python2.7/dist-packages/capstone/__init__.py"
         capstone = importlib.machinery.SourceFileLoader(
             'capstone', path_var
         ).load_module()
+
         from capstone import *
 
     except:
@@ -85,11 +86,12 @@ try:
         "micro"         : CS_MODE_MICRO,
         "thumb"         : CS_MODE_THUMB
     }
+
 except:
 
     print("Failed to load capstone, disassembly disabled")
 
-def format_list(print_formats):
+def format_list(request):
 
     supported_formats = [
             "hex",
@@ -140,7 +142,10 @@ def format_list(print_formats):
             "thumb",
     ]
 
-    if print_formats == True:
+    # If the user wants a list of all dumps,
+    # disassembly, and formats. Print & exit
+    if request == "print":
+
         supF = "\t"
         supC = "\t"
         supA = "\t"
@@ -169,9 +174,25 @@ def format_list(print_formats):
         for i in range(len(supported_modes)):
             supM += "{:s}, ".format(supported_modes[i])
         print(supM[:len(supM)-2])
-        exit(0)
-    else:
+        sys.exit(0)
+    elif request == "supFrm":
+
         return supported_formats
+
+    elif request == "cmtFrm":
+
+        return supported_comments
+
+    elif request == "modFrm":
+
+        return supported_modes
+
+    elif request == "arcFrm":
+
+        return supported_architectures
+
+    else:
+        return
 
 class colors():
 
@@ -236,17 +257,15 @@ class formatting():
         return
 
     def informational_dump(self):
+
         opcode_string       = []
         instruction_line    = []
         hex_opcode_string   = []
         completed_conversion= []
         results             = []
 
-        try:
-            mode = Cs(ARCH[self.arch], MODE[self.mode])
-        except:
-            print("Architecture or Mode not supported")
-            exit(1)
+        mode = Cs(ARCH[self.arch], MODE[self.mode])
+
         try:
             with open(self.byte_file, "rb") as fd:
                 binCode = fd.read()
@@ -377,18 +396,15 @@ class formatting():
         except:
             fc = self.byte_file
 
-        results = []
-        op_str  = ""
-        norm    = ""
-        size    = len(fc)
+        results         = []
+        op_str          = ""
+        norm            = ""
+        mod_badchars    = ""
+        size            = len(fc)
 
         # majority of dumps use this format
-        try:
-            for byte in bytearray(fc):
-                norm += "\\x{:02x}".format(byte)
-        except:
-            print("Error dumping shellcode. Is file present?")
-            exit(1);
+        for byte in bytearray(fc):
+            norm += "\\x{:02x}".format(byte)
 
         if self.format_mode != "raw":
             print("Payload size: {:d} bytes".format(size))
@@ -452,6 +468,16 @@ class formatting():
         if self.format_mode == "hex_space":
             num = 8
             ops = ""
+
+            # setup bad chars properly
+            try:
+                split_badchar = self.badchars.split(',')
+                for i in range(len(split_badchar)):
+                    mod_badchars += "%s," % (split_badchar[i][2:])
+                self.badchars = mod_badchars.rstrip(',')
+            except:
+                pass
+
             for byte in bytearray(fc):
                 op_str += "{:02x} ".format(byte)
 
@@ -464,6 +490,16 @@ class formatting():
         if self.format_mode == "hex":
             num = 8
             ops = ""
+
+            # setup bad chars properly
+            try:
+                split_badchar = self.badchars.split(',')
+                for i in range(len(split_badchar)):
+                    mod_badchars += "%s," % (split_badchar[i][2:])
+                self.badchars = mod_badchars.rstrip(',')
+            except:
+                pass
+
             for byte in bytearray(fc):
                 op_str += "{:02x}".format(byte)
 
@@ -475,6 +511,16 @@ class formatting():
 
         if self.format_mode == "csharp":
             num = 75
+
+            # setup bad chars properly
+            try:
+                split_badchar = self.badchars.split(',')
+                for i in range(len(split_badchar)):
+                    mod_badchars += "0x%s," % (split_badchar[i][2:])
+                self.badchars = mod_badchars.rstrip(',')
+            except:
+                pass
+
             for byte in bytearray(fc):
                 op_str += "0x{:02x},".format(byte)
 
@@ -491,6 +537,15 @@ class formatting():
             num = 94
             dwrd= ""
             dlst= []
+
+            # setup bad chars properly
+            try:
+                split_badchar = self.badchars.split(',')
+                for i in range(len(split_badchar)):
+                    mod_badchars += "%s," % (split_badchar[i][2:])
+                self.badchars = mod_badchars.rstrip(',')
+            except:
+                pass
 
             for byte in bytearray(fc):
                 dwrd += "{:02x}".format(byte)
@@ -511,6 +566,15 @@ class formatting():
         if self.format_mode == "nasm":
             num = 60
 
+            # setup bad chars properly
+            try:
+                split_badchar = self.badchars.split(',')
+                for i in range(len(split_badchar)):
+                    mod_badchars += "0x%s," % (split_badchar[i][2:])
+                self.badchars = mod_badchars.rstrip(',')
+            except:
+                pass
+
             for byte in bytearray(fc):
                 op_str += "0x{:02x},".format(byte)
 
@@ -520,8 +584,18 @@ class formatting():
                 snip = len(results[i]) - 1
                 print("db " + results[i][:snip])
 
+
         if self.format_mode == "num":
             num = 84
+
+            # setup bad chars properly
+            try:
+                split_badchar = self.badchars.split(',')
+                for i in range(len(split_badchar)):
+                    mod_badchars += "0x%s," % (split_badchar[i][2:])
+                self.badchars = mod_badchars.rstrip(',')
+            except:
+                pass
 
             for byte in bytearray(fc):
                 op_str += "0x{:02x}, ".format(byte)
@@ -537,6 +611,15 @@ class formatting():
         if self.format_mode == "powershell":
             num = 50
 
+            # setup bad chars properly
+            try:
+                split_badchar = self.badchars.split(',')
+                for i in range(len(split_badchar)):
+                    mod_badchars += "0x%s," % (split_badchar[i][2:])
+                self.badchars = mod_badchars.rstrip(',')
+            except:
+                pass
+
             for byte in bytearray(fc):
                 op_str += "0x{:02x},".format(byte)
 
@@ -550,6 +633,15 @@ class formatting():
 
         if self.format_mode == "java":
             num = 104
+
+            # setup bad chars properly
+            try:
+                split_badchar = self.badchars.split(',')
+                for i in range(len(split_badchar)):
+                    mod_badchars += "(byte) 0x%s," % (split_badchar[i][2:])
+                self.badchars = mod_badchars.rstrip(',')
+            except:
+                pass
 
             for byte in bytearray(fc):
                 op_str += " (byte) 0x{:02x},".format(byte)
@@ -580,21 +672,16 @@ class reversing():
         self.mode       = mode
 
     def compare_dump(self):
-
         done        = []
         examination = ""
         op_str      = ""
         cmp_str     = ""
 
         # open the bin-file to compare
-        try:
-            with open(self.compare, 'rb') as fd:
-                fc = fd.read()
-                for byte in bytearray(fc):
-                    cmp_str += "\\x{:02x}".format(byte)
-        except:
-            print("Error examining shellcode. Is file present?")
-            exit(1);
+        with open(self.compare, 'rb') as fd:
+            fc = fd.read()
+            for byte in bytearray(fc):
+                cmp_str += "\\x{:02x}".format(byte)
 
         # open the original file
         with open(self.byte_file, 'rb') as fd:
@@ -612,12 +699,10 @@ class reversing():
                     examination += "{:s}{:s}{:s}".format(
                         colors.BLUE, original_split[i], colors.END
                     )
-
                 else:
                     examination += "{:s}{:s}{:s}".format(
                         colors.RED, original_split[i], colors.END
                     )
-
             except IndexError:
                 examination += "{:s}{:s}{:s}".format(colors.RED, original_split[i], colors.END)
 
@@ -650,7 +735,7 @@ class reversing():
                     spaces -= 2
 
                 done += (
-                        # examination splits
+                    # examination splits
                         "| " +
                         "{:s}".format(exam_split[i]) +
                         " " * spaces +
@@ -685,6 +770,8 @@ class reversing():
         for i in range(len(done)):
             print(done[i])
 
+        print("+------------------------------------------+ +------------------------------------------+ +------------------------------------------+")
+
     def disassemble(self):
 
         completed_disassembly   = []
@@ -696,13 +783,8 @@ class reversing():
             binCode = self.byte_file
 
         try:
-            try:
-                mode = Cs(ARCH[self.arch], MODE[self.mode])
-            except:
-                print("Architecture or Mode not supported")
-                exit(0);
-
-            print("Disassembling shellcode in {:s}-{:s}".format(self.arch, self.mode))
+            print("Disassembling shellcode in {:s}-{:s} architecture".format(self.arch, self.mode))
+            mode = Cs(ARCH[self.arch], MODE[self.mode])
 
             for i in mode.disasm(binCode, 0x1000):
                 completed_disassembly += ("0x%x: %s\t%s %s" % (
@@ -727,10 +809,10 @@ def deployment(byte_file):
     except:
         fc = byte_file
 
-    # operating system shellcode execution is a bit different
-    if os.name == 'posix':
+    # operating system, dictates shellcode execution method
+    print("Shellcode length: {:d}".format(len(fc)))
 
-        print("Shellcode length: {:d}".format(len(fc)))
+    if os.name == 'posix':
 
         shellcode = bytes(fc)                       # convert shellcode into a bytes
         libc = CDLL('libc.so.6')                    # implement C functions (duh)
@@ -741,8 +823,8 @@ def deployment(byte_file):
         libc.mprotect(addr, size, 0x7)              # change access protections
         run = cast(addr, CFUNCTYPE(c_void_p))       # calling convention
         run()                                       # run the shellcode
+
     else:
-        print("Shellcode length: {:d}".format(len(fc)))
 
         shellcode = bytearray(fc)
 
@@ -836,6 +918,7 @@ def objdump2shellcode(dumpfile):
 
     return raw_ops
 
+
 def main():
 
     # handle command line arguments
@@ -867,105 +950,96 @@ def main():
     dumpfile    = args.objdump
     comment_code= args.comment
 
+    trigger = False
+
     # if a list is requested print it
+    # and then exit.
     if args.list == True:
-        grab_info = format_list(True)
+        printList = format_list("print")
+    # if a list was not requested check
+    # compatibility for formats etc
     else:
-        grab_info = format_list(False)
+        formatList  = format_list("supFrm")
+        commentList = format_list("cmtFrm")
+        modesList   = format_list("modFrm")
+        archList    = format_list("arcFrm")
 
     # default variables if none given
     if args.varname == None:
         variable = "buf"
     else:
         variable = args.varname
-
+    # check if the format is supported and
+    # check if the format was provided
     if args.format == None:
         format_mode = 'c'
+    elif args.format not in formatList:
+        print("Currently %s format is not supported" % (args.format))
+        sys.exit(1)
     else:
         format_mode = args.format
-        if format_mode not in grab_info:
-            print("Currently %s format is not supported" % (format_mode))
-            exit(0)
 
-    # if we are just extracting raw opcodes
+    if args.comment == True and args.format not in commentList:
+        print("Currently %s comment format is not supported" % (args.format))
+        sys.exit(1)
+
+    # if the architecture is not supported or not provided
+    # default to x86-32.
+    if arch == None or mode == None:
+        arch = "x86"
+        mode = "32"
+    elif arch not in archList or mode not in modesList:
+        arch = "x86"
+        mode = "32"
+
+
+    # if we are reading from STDIN
+    if args.stdin == True:
+        byte_file = sys.stdin.buffer.raw.read()
+
+    elif dumpfile:
+        if os.path.isfile(dumpfile) is False:
+            print("Error dumping shellcode. Is file present?")
+            sys.exit(1)
+
+        raw_ops     = objdump2shellcode(dumpfile)
+        byte_file   = dumpfile
+        trigger     = True
+
     if byte_file:
+        if args.stdin == False:
+            if os.path.isfile(byte_file) is False:
+                print("Error dumping shellcode. Is file present?")
+                sys.exit(1)
+
+        if trigger == True:
+            byte_file = raw_ops
+
         if run == True:
             deployment(byte_file)
+
         elif compare:
-            # send the file to be compared
+            if args.stdin == True or trigger == True:
+                print("Please use read mode to compare shellcode")
+                sys.exit(1)
+
+            if os.path.isfile(compare) is False:
+                print("Error dumping shellcode. Is compare file present?")
+                sys.exit(1)
+
             compareIT = reversing(byte_file, compare, arch="", mode="")
             compareIT.compare_dump()
+
         elif comment_code:
-            if arch == None or mode == None:
-                print("Architecture or mode not selected, defaulting to x86-32")
-                commentIT = formatting(byte_file, format_mode, badchars, variable, arch="x86", mode="32")
-                commentIT.informational_dump()
-            else:
-                commentIT = formatting(byte_file, format_mode, badchars, variable, arch, mode)
-                commentIT.informational_dump()
+            commentIT = formatting(byte_file, format_mode, badchars, variable, arch, mode)
+            commentIT.informational_dump()
+
         elif disassemble:
-            if arch == None or mode == None:
-                print("Architecture or mode not selected, defaulting to x86-32")
-                disassIT = reversing(byte_file, compare, arch="x86", mode="32")
-                disassIT.disassemble()
-            else:
-                disassIT = reversing(byte_file, compare, arch, mode)
-                disassIT.disassemble()
+            disassIT = reversing(byte_file, compare, arch, mode)
+            disassIT.disassemble()
+
         else:
-            # send the file to be dumped and formatted
             dumpIT = formatting(byte_file, format_mode, badchars, variable, None, None)
             dumpIT.tactical_dump()
-    # are we reading from STDIN?
-    elif args.stdin == True:
-        byte_file = sys.stdin.buffer.raw.read()
-        if run == True:
-            deployment(byte_file)
-        elif comment_code:
-            if arch == None or mode == None:
-                print("Architecture or mode not selected, defaulting to x86-32")
-                commentIT = formatting(byte_file, format_mode, badchars, variable, arch="x86", mode="32")
-                commentIT.informational_dump()
-            else:
-                commentIT = formatting(byte_file, format_mode, badchars, variable, arch, mode)
-                commentIT.informational_dump()
-        elif disassemble:
-            if arch == None or mode == None:
-                print("Architecture or mode not selected, defaulting to x86-32")
-                disassIT = reversing(byte_file, compare, arch="x86", mode="32")
-                disassIT.disassemble()
-            else:
-                disassIT = reversing(byte_file, compare, arch, mode)
-                disassIT.disassemble()
-        else:
-            readIT = formatting(byte_file, format_mode, badchars, variable, None, None)
-            readIT.tactical_dump()
-    # are we extracting opcodes from an existing binary?
-    elif dumpfile:
-        raw_ops = objdump2shellcode(dumpfile)
-        if run == True:
-            deployment(raw_ops)
-        elif comment_code:
-            if arch == None or mode == None:
-                print("Architecture or mode not selected, defaulting to x86-32")
-                commentIT = formatting(raw_ops, format_mode, badchars, variable, arch="x86", mode="32")
-                commentIT.informational_dump()
-            else:
-                commentIT = formatting(raw_ops, format_mode, badchars, variable, arch, mode)
-                commentIT.informational_dump()
-        elif disassemble:
-            if arch == None or mode == None:
-                print("Architecture or mode not selected, defaulting to x86-32")
-                disassIT = reversing(raw_ops, compare, arch="x86", mode="32")
-                disassIT.disassemble()
-            else:
-                disassIT = reversing(raw_ops, compare, arch, mode)
-                disassIT.disassemble()
-        else:
-            dumpIT = formatting(raw_ops, format_mode, badchars, variable, None, None)
-            dumpIT.tactical_dump()
 
-    else:
-        parser.print_help()
-
-if __name__ == '__main__':
-    main()
+main()
