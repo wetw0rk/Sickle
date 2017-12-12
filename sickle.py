@@ -627,7 +627,7 @@ class formatting():
             for i in range(len(results)):
                 snip = len(results[i]) - 1
                 if i == 0:
-                    print("[Byte[]] {:s} = {:s}".format(self.variable, results[i].replace(" ", ",")[:snip]))
+                    print("[Byte[]] ${:s} = {:s}".format(self.variable, results[i].replace(" ", ",")[:snip]))
                 else:
                     print("${:s} += {:s}".format(self.variable, results[i].replace(" ", ",")[:snip]))
 
@@ -809,7 +809,11 @@ def deployment(byte_file):
     except:
         fc = byte_file
 
-    # operating system, dictates shellcode execution method
+
+    # Operating system, dictates shellcode execution method.
+    # Methods used are heavily inspired by the following:
+    #   http://hacktracking.blogspot.com/2015/05/execute-shellcode-in-python.html
+    #   http://www.debasish.in/2012/04/execute-shellcode-using-python.html
     print("Shellcode length: {:d}".format(len(fc)))
 
     if os.name == 'posix':
