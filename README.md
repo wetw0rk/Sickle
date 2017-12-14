@@ -11,7 +11,7 @@ Sickle can aid in the following:
 - Disassemble shellcode into assembly language (ARM, x86, etc)
 
 #### Quick failure check
-A task I found myself doing repetitively was compiling the ASM -> extracting shellcode -> placing it into a wrapper, and testing it. If it was a bad go, the process would be repeated until successful. Sickle takes care of placing the shellcode into a wrapper for quick testing (Works on Windows and Unix systems):
+A task I found myself doing repetitively was compiling assembly source code then extracting the shellcode, placing it into a wrapper, and testing it. If it was a bad run, the process would be repeated until successful. Sickle takes care of placing the shellcode into a wrapper for quick testing. (Works on Windows and Unix systems):
 
 ![alt text](https://raw.githubusercontent.com/wetw0rk/Sickle/master/example-pictures/example.png?style=centerme)
 
@@ -21,7 +21,7 @@ Sometimes you find a piece of shellcode that's fluent in its execution and you w
 ![alt text](https://raw.githubusercontent.com/wetw0rk/Sickle/master/example-pictures/rev.png?style=centerme)
 
 #### Bad character identification
-It's important to note that currently bad character identification is best used within a Linux based OS. When dumping shellcode on a Windows host bad characters will not be highlighted. Below is a usage example in a Unix environment:
+It's important to note that currently bad character identification is best used within a Linux based operating system. When dumping shellcode on a Windows host bad characters will not be highlighted. Below is a usage example in a Unix environment:
 
 ![alt text](https://raw.githubusercontent.com/wetw0rk/Sickle/master/example-pictures/sickleG.gif?style=centerme)
 
@@ -30,14 +30,21 @@ Sickle can also take a binary file and convert the opcodes to machine instructio
 
 ![alt text](https://raw.githubusercontent.com/wetw0rk/Sickle/master/example-pictures/disa.png?style=centerme)
 
-### Installation
-Sickle is written in Python3 and to have full functionality I recommend installing [capstone](http://www.capstone-engine.org/), however at the moment the only "function" that requires capstone is disassembly. If you don't need the disassembly function, Sickle should work out of the box. Installation of Capstone is as easy as 1,2,3:
+### Windows Installation
+If you decide to opt-out of the disassembly functions and only want to use Sickle as a wrapper/dumping tool Sickle will work out of the box with any Python version (Including 2.7). I have only encountered issues when writing/testing 64 bit shellcode on a Windows 10 host. In order to avoid problems I recommend installing [Python 3.4.4  (amd64)](https://www.python.org/ftp/python/3.4.4/python-3.4.4.amd64.msi) however any other Windows version should not have this issue. Should you be writing x86 shellcode, Windows 10 will work with any Python version eg [Python 3.7.0a3](https://www.python.org/ftp/python/3.7.0/python-3.7.0a3.exe). Below is a usage example testing msfvenom generated shellcode ("windows/x64/shell_reverse_tcp") on a Windows 10 host
+
+![alt text](https://raw.githubusercontent.com/wetw0rk/Sickle/master/example-pictures/Win10.png?style=centerme)
+
+### Linux Installation
+Sickle is written in Python3 and to have full functionality I recommend installing [capstone](http://www.capstone-engine.org/) directly. If you don't need the disassembly function Sickle should work out of the box. Installation of Capstone is as easy as 1,2,3:
 - apt-get install python3-pip
 - pip3 install capstone
     
-Another thing to note is that if you do not compile your shellcode in NASM I have added an "[objdump2shellcode](https://github.com/wetw0rk/objdump2shellcode) like" function. Although I recommend using NASM for a streamline experience. For ease of access I prefer to add it to the /usr/bin/ directory, however if you use [Black Arch Linux](https://blackarch.org/index.html) Sickle comes pre-installed (previously known as objdump2shellcode). :
+If you don't compile your shellcode in NASM I have added an "[objdump2shellcode](https://github.com/wetw0rk/objdump2shellcode)" like function. Although I recommend using NASM for a streamline experience. For ease of access I prefer to add Sickle to the /usr/bin/ directory however if you use [Black Arch Linux](https://blackarch.org/index.html) Sickle comes pre-installed. (previously known as objdump2shellcode):
 
 ```sh
+root@wetw0rk:~# git clone https://github.com/wetw0rk/Sickle.git
+root@wetw0rk:~# cd Sickle/
 root@wetw0rk:~# chmod +x sickle.py
 root@wetw0rk:~# cp sickle.py /usr/bin/sickle
 root@wetw0rk:~# sickle
@@ -70,6 +77,4 @@ optional arguments:
   -a ARCH, --arch ARCH  select architecture for disassembly
   -m MODE, --mode MODE  select mode for disassembly
   -rs, --run-shellcode  run the shellcode (use at your own risk)
-
 ```
-
