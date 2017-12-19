@@ -3,12 +3,12 @@
 Sickle is a shellcode development tool, created to speed up the various steps needed to create functioning shellcode. 
 
 Sickle can aid in the following:
-- Identifying instructions resulting in bad characters
-- Format output in various languages (python, perl, javascript, etc)
-- Accept shellcode via stdin and format it / detect bad characters
-- Execute shellcode in both Windows and Linux environments
-- Compare reversed shellcode to original
-- Disassemble shellcode into assembly language (ARM, x86, etc)
+- Identifying instructions resulting in bad characters.
+- Formatting output in various languages (python, perl, javascript, etc).
+- Accepting shellcode via STDIN and formatting it.
+- Executing shellcode in both Windows and Linux environments.
+- Comparing reversed shellcode to original.
+- Dissembling shellcode into assembly language (ARM, x86, etc).
 
 #### Quick failure check
 A task I found myself doing repetitively was compiling assembly source code then extracting the shellcode, placing it into a wrapper, and testing it. If it was a bad run, the process would be repeated until successful. Sickle takes care of placing the shellcode into a wrapper for quick testing. (Works on Windows and Unix systems):
@@ -23,12 +23,12 @@ Sometimes you find a piece of shellcode that's fluent in its execution and you w
 #### Bad character identification
 It's important to note that currently bad character identification is best used within a Linux based operating system. When dumping shellcode on a Windows host bad characters will not be highlighted. Below is a usage example in a Unix environment:
 
-![alt text](https://raw.githubusercontent.com/wetw0rk/Sickle/master/example-pictures/sickleG.gif?style=centerme)
+[![asciicast](https://asciinema.org/a/52vwzAyDVlmVPvuq7KKMByyIE.png)](https://asciinema.org/a/52vwzAyDVlmVPvuq7KKMByyIE)
 
 #### Disassembly
-Sickle can also take a binary file and convert the opcodes to machine instructions:
+Sickle can also take a binary file and convert the extracted opcodes (shellcode) to machine instructions (-obj). Keep in mind this works with raw opcodes (-r) and STDIN (-s) as well. In the following example I am converting a reverse shell designed by Stephen Fewer to assembly.
 
-![alt text](https://raw.githubusercontent.com/wetw0rk/Sickle/master/example-pictures/disa.png?style=centerme)
+![alt text](https://raw.githubusercontent.com/wetw0rk/Sickle/master/example-pictures/dis.png?style=centerme)
 
 ### Windows Installation
 If you decide to opt-out of the disassembly functions and only want to use Sickle as a wrapper/dumping tool Sickle will work out of the box with any Python version (Including 2.7). I have only encountered issues when writing/testing 64 bit shellcode on a Windows 10 host. In order to avoid problems I recommend installing [Python 3.4.4  (amd64)](https://www.python.org/ftp/python/3.4.4/python-3.4.4.amd64.msi) however any other Windows version should not have this issue. Should you be writing x86 shellcode, Windows 10 will work with any Python version eg [Python 3.7.0a3](https://www.python.org/ftp/python/3.7.0/python-3.7.0a3.exe). Below is a usage example testing msfvenom generated shellcode ("windows/x64/shell_reverse_tcp") on a Windows 10 host
@@ -78,3 +78,4 @@ optional arguments:
   -m MODE, --mode MODE  select mode for disassembly
   -rs, --run-shellcode  run the shellcode (use at your own risk)
 ```
+
