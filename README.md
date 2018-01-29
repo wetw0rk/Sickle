@@ -23,7 +23,7 @@ Sometimes you find a piece of shellcode that's fluent in its execution and you w
 #### Bad character identification
 It's important to note that currently bad character identification is best used within a Linux based operating system. When dumping shellcode on a Windows host bad characters will not be highlighted. Below is a usage example in a Unix environment:
 
-[![asciicast](https://asciinema.org/a/52vwzAyDVlmVPvuq7KKMByyIE.png)](https://asciinema.org/a/52vwzAyDVlmVPvuq7KKMByyIE)
+[![asciicast](https://asciinema.org/a/7vvVRjZGbY7OlqMsh6dBi7FDU.png)](https://asciinema.org/a/7vvVRjZGbY7OlqMsh6dBi7FDU)
 
 #### Disassembly
 Sickle can also take a binary file and convert the extracted opcodes (shellcode) to machine instructions (-obj). Keep in mind this works with raw opcodes (-r) and STDIN (-s) as well. In the following example I am converting a reverse shell designed by Stephen Fewer to assembly.
