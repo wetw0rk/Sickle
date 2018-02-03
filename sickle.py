@@ -321,9 +321,11 @@ class formatting():
                     ).expandtabs(40),
 
         if self.format_mode == "python":
+            print('%s = ""' % self.variable)
             for i in range(len(instruction_line)):
                 if ID in results[i]:
-                    completed_conversion += ("\"%s\"\t %s%s# %s%s" % (
+                    completed_conversion += ("%s += \"%s\"\t %s%s# %s%s" % (
+                        self.variable,
                         hex_opcode_string[i],
                         colors.BOLD,
                         colors.RED,
@@ -331,7 +333,8 @@ class formatting():
                         colors.END)
                     ).expandtabs(40),
                 else:
-                    completed_conversion += ("\"%s\"\t # %s" % (
+                    completed_conversion += ("%s += \"%s\"\t # %s" % (
+                        self.variable,
                         results[i],
                         instruction_line[i])
                     ).expandtabs(40),
@@ -356,6 +359,7 @@ class formatting():
                     ).expandtabs(40),
 
         if self.format_mode == "perl":
+            print('my $%s =' % self.variable)
             for i in range(len(instruction_line)):
                 if ID in results[i] and i != (len(instruction_line)-1):
                     completed_conversion += ("\"%s\".\t %s%s# %s%s" % (
