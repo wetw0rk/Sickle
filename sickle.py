@@ -23,10 +23,10 @@
 # SOFTWARE.
 #
 # Script name     : sickle.py
-# Version         : 1.4
+# Version         : 1.5
 # Created date    : 10/14/2017
-# Last update     : 12/11/2017
-# Author          : wetw0rk
+# Last update     : 2/11/2018
+# Author          : Milton Valencia (wetw0rk)
 # Architecture    : x86, and x86-x64
 # Python version  : 3
 # Designed OS     : Linux (preferably a penetration testing distro)
@@ -41,10 +41,9 @@
 #
 
 from ctypes import CDLL, c_char_p, c_void_p, memmove, cast, CFUNCTYPE
-import os, sys, ctypes, codecs, argparse, binascii, subprocess
+import os, sys, time, ctypes, codecs, argparse, binascii, subprocess
 
 try:
-
     from capstone import *
 
 except:
@@ -91,111 +90,97 @@ except:
 
     print("Failed to load capstone, disassembly disabled")
 
-def format_list(request):
+supported_formats = [
+    "hex",
+    "hex_space",
+    "nasm",
+    "c",
+    "perl",
+    "python",
+    "python3",
+    "bash",
+    "csharp",
+    "dword",
+    "java",
+    "num",
+    "powershell",
+    "ruby-array",
+    "ruby",
+    "raw",
+]
 
-    supported_formats = [
-            "hex",
-            "hex_space",
-            "nasm",
-            "c",
-            "perl",
-            "python",
-            "python3",
-            "bash",
-            "csharp",
-            "dword",
-            "java",
-            "num",
-            "powershell",
-            "ruby-array",
-            "ruby",
-            "raw",
-    ]
+supported_comments = [
+    "c",
+    "python",
+    "perl",
+    "ruby-array",
+]
 
-    supported_comments = [
-            "c",
-            "python",
-            "perl",
-            "ruby-array",
-    ]
+supported_architectures = [
+    "all",
+    "arm",
+    "arm64",
+    "mips",
+    "ppc",
+    "x86",
+    "xcore",
+]
 
-    supported_architectures = [
-            "all",
-            "arm",
-            "arm64",
-            "mips",
-            "ppc",
-            "x86",
-            "xcore",
-    ]
+supported_modes = [
+    "16",
+    "32",
+    "64",
+    "13",
+    "64",
+    "arm",
+    "big_endian",
+    "little_endian",
+    "micro",
+    "thumb",
+]
 
-    supported_modes = [
-            "16",
-            "32",
-            "64",
-            "13",
-            "64",
-            "arm",
-            "big_endian",
-            "little_endian",
-            "micro",
-            "thumb",
-    ]
+class check_default_formats():
+    def __init__(self, format_mode, comment_bool, arch, mode):
+        self.format_mode    = format_mode
+        self.comment_bool   = comment_bool
+        self.arch           = arch
+        self.mode           = mode
 
-    # If the user wants a list of all dumps,
-    # disassembly, and formats. Print & exit
-    if request == "print":
+    def check(self):
+        if self.format_mode not in supported_formats:
+            sys.exit("Currently %s format is not supported" % (self.format_mode))
+        if self.comment_bool == True and self.format_mode not in supported_comments:
+            sys.exit("Currently %s comment format is not supported" % (self.format_mode))
+        if self.arch not in supported_architectures or self.mode not in supported_modes:
+            sys.exit("Currently %s-%s architecture is not supported" % (self.arch, self.mode))
 
-        supF = "\t"
-        supC = "\t"
-        supA = "\t"
-        supM = "\t"
-
-        # dumpable languages currently supported
-        print("Dump formats:")
-        for i in range(len(supported_formats)):
-            supF += "{:s}, ".format(supported_formats[i])
-        print(supF[:len(supF)-2])
-
-        # comment supported dump
-        print("Comment dump formats:")
-        for i in range(len(supported_comments)):
-            supC += "{:s}, ".format(supported_comments[i])
-        print(supC[:len(supC)-2])
-
-        # supported architectures
-        print("Supported architectures:")
-        for i in range(len(supported_architectures)):
-            supA += "{:s}, ".format(supported_architectures[i])
-        print(supA[:len(supA)-2])
-
-        # supported modes
-        print("Supported modes:")
-        for i in range(len(supported_modes)):
-            supM += "{:s}, ".format(supported_modes[i])
-        print(supM[:len(supM)-2])
-        sys.exit(0)
-    elif request == "supFrm":
-
-        return supported_formats
-
-    elif request == "cmtFrm":
-
-        return supported_comments
-
-    elif request == "modFrm":
-
-        return supported_modes
-
-    elif request == "arcFrm":
-
-        return supported_architectures
-
-    else:
         return
 
-class colors():
+    def loop(self, arg):
+        sup = "\t"
+        for i in range(len(arg)):
+            sup += "{:s}, ".format(arg[i])
+        print(sup[:len(sup)-2])
+        sup = ""
 
+        return
+
+    def print_info(self):
+        print("Dump formats:")
+        self.loop(supported_formats)
+
+        print("Comment dump formats:")
+        self.loop(supported_comments)
+
+        print("Supported architectures:")
+        self.loop(supported_architectures)
+
+        print("Supported modes:")
+        self.loop(supported_modes)
+
+        sys.exit(0)
+
+class colors():
     def __init__(self):
         pass
 
@@ -204,18 +189,18 @@ class colors():
         RED     = '\033[31m'
         BLUE    = '\033[94m'
         BOLD    = '\033[1m'
+        GRN     = '\033[92m'
         END     = '\033[0m'
     else:
         RED     = ""
         BLUE    = ""
         BOLD    = ""
+        GRN     = ""
         END     = ""
 
-class formatting():
-
-    def __init__(self, byte_file, format_mode, badchars, variable, arch, mode):
-
-        self.byte_file      = byte_file
+class shellcode_manipulation():
+    def __init__(self, binary_file, format_mode, badchars, variable, arch, mode):
+        self.binary_file    = binary_file
         self.format_mode    = format_mode
         self.badchars       = badchars
         self.variable       = variable
@@ -223,7 +208,6 @@ class formatting():
         self.mode           = mode
 
     def character_analysis(self, num, op_str, results):
-
         op_line = []
         spotted = []
 
@@ -238,7 +222,6 @@ class formatting():
         # here we begin to spot the badchars should we find one
         # we will replace it with a bold and red opcode, simply
         # making identification an ease
-
         indiv_byte = len(spotted)-1         # loop counter for bad characters
 
         # the tactical dumping begins here, aiding in spotting badchars
@@ -256,8 +239,7 @@ class formatting():
 
         return
 
-    def informational_dump(self):
-
+    def commented_dump(self):
         opcode_string       = []
         instruction_line    = []
         hex_opcode_string   = []
@@ -266,16 +248,12 @@ class formatting():
 
         mode = Cs(ARCH[self.arch], MODE[self.mode])
 
-        try:
-            with open(self.byte_file, "rb") as fd:
-                binCode = fd.read()
-        except:
-            binCode = self.byte_file
+        rbytes = read_in_bytes(self.binary_file, False)
 
-        print("Payload size: {:d} bytes".format(len(binCode)))
+        print("Payload size: {:d} bytes".format(rbytes[2]))
 
         # seperate the instructions and opcode
-        for i in mode.disasm(binCode, 0x1000):
+        for i in mode.disasm(rbytes[1], 0x1000):
             opcode_string += "{:s}".format(binascii.hexlify(i.bytes).decode('utf-8')),
             instruction_line += "{:s} {:s}".format(i.mnemonic, i.op_str),
         # hex-ify the opcode string
@@ -300,7 +278,7 @@ class formatting():
                         colors.RED,
                         instruction_line[i],
                         colors.END)
-                    ).expandtabs(40),
+                    ).expandtabs(44),
                 elif i == (len(instruction_line)-1) and ID in results[i]:
                     completed_conversion += ("\"%s\";\t %s%s// %s%s" % (
                         hex_opcode_string[i],
@@ -308,17 +286,17 @@ class formatting():
                         colors.RED,
                         instruction_line[i],
                         colors.END)
-                    ).expandtabs(40),
+                    ).expandtabs(44),
                 elif i == (len(instruction_line)-1):
                     completed_conversion += ("\"%s\";\t // %s" % (
                         results[i],
                         instruction_line[i])
-                    ).expandtabs(40),
+                    ).expandtabs(44),
                 else:
                     completed_conversion += ("\"%s\"\t // %s" % (
                         results[i],
                         instruction_line[i])
-                    ).expandtabs(40),
+                    ).expandtabs(44),
 
         if self.format_mode == "python":
             print('%s = ""' % self.variable)
@@ -391,34 +369,22 @@ class formatting():
         for i in range(len(completed_conversion)):
             print(completed_conversion[i])
 
-    def tactical_dump(self):
 
-        # are we reading from stdin?
-        try:
-            with open(self.byte_file, "rb") as fd:
-                fc = fd.read()
-        except:
-            fc = self.byte_file
+    def standard_dump(self):
+        rbytes = read_in_bytes(self.binary_file, False)
+        fbytes = read_in_bytes(self.binary_file, True)
 
-        results         = []
-        op_str          = ""
-        norm            = ""
-        mod_badchars    = ""
-        size            = len(fc)
-
-        # majority of dumps use this format
-        for byte in bytearray(fc):
-            norm += "\\x{:02x}".format(byte)
+        results = []
+        op_str  = ""
 
         if self.format_mode != "raw":
-            print("Payload size: {:d} bytes".format(size))
+            print("Payload size: {:d} bytes".format(fbytes[2]))
 
         if self.format_mode == "raw":
-            sys.stdout.buffer.write(fc)
+            sys.stdout.buffer.write(rbytes[1])
 
-        if self.format_mode == 'c':
-            num = 60
-            self.character_analysis(num, norm, results)
+        elif self.format_mode == 'c':
+            self.character_analysis(60, fbytes[1], results)
             print("unsigned char {:s}[] = ".format(self.variable))
             for i in range(len(results)):
                 if i == (len(results) -1):
@@ -427,22 +393,19 @@ class formatting():
                     print("\"{:s}\"".format(results[i]))
 
         if self.format_mode == "python":
-            num = 60
-            self.character_analysis(num, norm, results)
+            self.character_analysis(60, fbytes[1], results)
             print('{:s} = ""'.format(self.variable))
             for i in range(len(results)):
                 print("{:s} += \"{:s}\"".format(self.variable, results[i]))
 
         if self.format_mode == "python3":
-            num = 60
-            self.character_analysis(num, norm, results)
+            self.character_analysis(60, fbytes[1], results)
             print('{:s} = bytearray()'.format(self.variable))
             for i in range(len(results)):
                 print("{:s} += b'{:s}'".format(self.variable, results[i]))
 
         if self.format_mode == "bash":
-            num = 56
-            self.character_analysis(num, norm, results)
+            self.character_analysis(56, fbytes[1], results)
             for i in range(len(results)):
                 if i == (len(results) - 1):
                     print("$'{:s}'".format(results[i]))
@@ -450,8 +413,7 @@ class formatting():
                     print("$'{:s}'\\".format(results[i]))
 
         if self.format_mode == "ruby":
-            num = 56
-            self.character_analysis(num, norm, results)
+            self.character_analysis(56, fbytes[1], results)
             print("{:s} = ".format(self.variable))
             for i in range(len(results)):
                 if i == (len(results) -1):
@@ -460,8 +422,7 @@ class formatting():
                     print("\"{:s}\" +".format(results[i]))
 
         if self.format_mode == "perl":
-            num = 60
-            self.character_analysis(num, norm, results)
+            self.character_analysis(60, fbytes[1], results)
             print("my ${:s} =".format(self.variable))
             for i in range(len(results)):
                 if i == (len(results) -1):
@@ -470,7 +431,6 @@ class formatting():
                     print("\"{:s}\" .".format(results[i]))
 
         if self.format_mode == "hex_space":
-            num = 8
             ops = ""
 
             # setup bad chars properly
@@ -482,17 +442,16 @@ class formatting():
             except:
                 pass
 
-            for byte in bytearray(fc):
+            for byte in bytearray(rbytes[1]):
                 op_str += "{:02x} ".format(byte)
 
-            self.character_analysis(num, op_str, results)
+            self.character_analysis(8, op_str, results)
             for i in range(len(results)):
                 ops += results[i]
 
             print(ops)
 
         if self.format_mode == "hex":
-            num = 8
             ops = ""
 
             # setup bad chars properly
@@ -504,18 +463,16 @@ class formatting():
             except:
                 pass
 
-            for byte in bytearray(fc):
+            for byte in bytearray(rbytes[1]):
                 op_str += "{:02x}".format(byte)
 
-            self.character_analysis(num, op_str, results)
+            self.character_analysis(8, op_str, results)
             for i in range(len(results)):
                 ops += results[i]
 
             print(ops)
 
         if self.format_mode == "csharp":
-            num = 75
-
             # setup bad chars properly
             try:
                 split_badchar = self.badchars.split(',')
@@ -525,11 +482,11 @@ class formatting():
             except:
                 pass
 
-            for byte in bytearray(fc):
+            for byte in bytearray(rbytes[1]):
                 op_str += "0x{:02x},".format(byte)
 
-            self.character_analysis(num, op_str, results)
-            print("byte[] {:s} = new byte[{:d}] {:s}".format(self.variable, size, "{"))
+            self.character_analysis(75, op_str, results)
+            print("byte[] {:s} = new byte[{:d}] {:s}".format(self.variable, rbytes[2], "{"))
             for i in range(len(results)):
                 snip = len(results[i]) - 1
                 if i == (len(results)-1):
@@ -538,7 +495,6 @@ class formatting():
                     print(results[i])
 
         if self.format_mode == "dword":
-            num = 94
             dwrd= ""
             dlst= []
 
@@ -551,7 +507,7 @@ class formatting():
             except:
                 pass
 
-            for byte in bytearray(fc):
+            for byte in bytearray(rbytes[1]):
                 dwrd += "{:02x}".format(byte)
 
             # format the hex bytes into dword
@@ -563,13 +519,11 @@ class formatting():
                 op_str += ", ".join(dlst[i*8:(i+1)*8])
 
             # send it of for character character_analysis
-            self.character_analysis(num, op_str, results)
+            self.character_analysis(94, op_str, results)
             for i in range(len(results)):
                 print(results[i])
 
         if self.format_mode == "nasm":
-            num = 60
-
             # setup bad chars properly
             try:
                 split_badchar = self.badchars.split(',')
@@ -579,10 +533,10 @@ class formatting():
             except:
                 pass
 
-            for byte in bytearray(fc):
+            for byte in bytearray(rbytes[1]):
                 op_str += "0x{:02x},".format(byte)
 
-            self.character_analysis(num, op_str, results)
+            self.character_analysis(60, op_str, results)
 
             for i in range(len(results)):
                 snip = len(results[i]) - 1
@@ -590,8 +544,6 @@ class formatting():
 
 
         if self.format_mode == "num":
-            num = 84
-
             # setup bad chars properly
             try:
                 split_badchar = self.badchars.split(',')
@@ -601,10 +553,10 @@ class formatting():
             except:
                 pass
 
-            for byte in bytearray(fc):
+            for byte in bytearray(rbytes[1]):
                 op_str += "0x{:02x}, ".format(byte)
 
-            self.character_analysis(num, op_str, results)
+            self.character_analysis(84, op_str, results)
             for i in range(len(results)):
                 snip = len(results[i]) - 2
                 if i == (len(results)-1):
@@ -613,8 +565,6 @@ class formatting():
                     print(results[i])
 
         if self.format_mode == "powershell":
-            num = 50
-
             # setup bad chars properly
             try:
                 split_badchar = self.badchars.split(',')
@@ -624,10 +574,10 @@ class formatting():
             except:
                 pass
 
-            for byte in bytearray(fc):
+            for byte in bytearray(rbytes[1]):
                 op_str += "0x{:02x},".format(byte)
 
-            self.character_analysis(num, op_str, results)
+            self.character_analysis(50, op_str, results)
             for i in range(len(results)):
                 snip = len(results[i]) - 1
                 if i == 0:
@@ -636,8 +586,6 @@ class formatting():
                     print("${:s} += {:s}".format(self.variable, results[i].replace(" ", ",")[:snip]))
 
         if self.format_mode == "java":
-            num = 104
-
             # setup bad chars properly
             try:
                 split_badchar = self.badchars.split(',')
@@ -647,10 +595,10 @@ class formatting():
             except:
                 pass
 
-            for byte in bytearray(fc):
+            for byte in bytearray(rbytes[1]):
                 op_str += " (byte) 0x{:02x},".format(byte)
 
-            self.character_analysis(num, op_str, results)
+            self.character_analysis(104, op_str, results)
             print("byte {:s}[] = new byte[]".format(self.variable))
             print("{")
             for i in range(len(results)):
@@ -658,171 +606,173 @@ class formatting():
             print("};")
 
         if self.format_mode == "ruby-array":
-            num = 60
-            self.character_analysis(num, norm, results)
+            self.character_analysis(60, fbytes[1], results)
             for i in range(len(results)):
                 if i == 0:
                     print('{:s} = "{:s}"'.format(self.variable, results[i]))
                 else:
                     print('{:s} << "{:s}"'.format(self.variable, results[i]))
 
-class reversing():
+class reversing_shellcode():
+    def __init__(self, binary_file, compare, arch, mode):
+        self.binary_file    = binary_file
+        self.compare        = compare
+        self.arch           = arch
+        self.mode           = mode
 
-    def __init__(self, byte_file, compare, arch, mode):
+    def disassemble_bytes(self, source_file, shellcode, sc_size):
+        instruction = []
+        address     = []
+        opcode      = []
 
-        self.byte_file  = byte_file
-        self.compare    = compare
-        self.arch       = arch
-        self.mode       = mode
-
-    def compare_dump(self):
-        done        = []
-        examination = ""
-        op_str      = ""
-        cmp_str     = ""
-
-        # open the bin-file to compare
-        with open(self.compare, 'rb') as fd:
-            fc = fd.read()
-            for byte in bytearray(fc):
-                cmp_str += "\\x{:02x}".format(byte)
-
-        # open the original file
-        with open(self.byte_file, 'rb') as fd:
-            fc = fd.read()
-            for byte in bytearray(fc):
-                op_str += "\\x{:02x}".format(byte)
-
-        checking_split = [op_str[x:x+4] for x in range(0,len(op_str),4)]
-        original_split = [cmp_str[x:x+4] for x in range(0,len(cmp_str),4)]
-
-        # format anything strange
-        for i in range(len(original_split)):
-            try:
-                if checking_split[i] == original_split[i]:
-                    examination += "{:s}{:s}{:s}".format(
-                        colors.BLUE, original_split[i], colors.END
-                    )
-                else:
-                    examination += "{:s}{:s}{:s}".format(
-                        colors.RED, original_split[i], colors.END
-                    )
-            except IndexError:
-                examination += "{:s}{:s}{:s}".format(colors.RED, original_split[i], colors.END)
-
-        exam_split = [examination[x:x+130] for x in range(0,len(examination),130)]
-        checking_split = [op_str[x:x+40] for x in range(0,len(op_str),40)]
-        original_split = [cmp_str[x:x+40] for x in range(0,len(cmp_str),40)]
-
-        print("+------------------------------------------+ +------------------------------------------+ +------------------------------------------+")
-        print("|    (Differences In Red) Final Results    | |         Shellcode Being Examined         | |          Shellcode Being Dumped          |")
-        print("+------------------------------------------+ +------------------------------------------+ +------------------------------------------+")
-        for i in range(len(exam_split)):
-            try:
-                spaces = 13 - int(
-                    len(exam_split[i])/10
-                )
-                if spaces < 13:
-                    spaces = spaces * 3
-                # ugly don't look
-                if len(exam_split[i]) == 26:
-                    spaces -= 1
-                elif len(exam_split[i]) == 39:
-                    spaces -= 2
-                elif len(exam_split[i]) == 65:
-                    spaces -= 1
-                elif len(exam_split[i]) == 78:
-                    spaces -= 2
-                elif len(exam_split[i]) == 104:
-                    spaces -= 1
-                elif len(exam_split[i]) == 117:
-                    spaces -= 2
-
-                done += (
-                    # examination splits
-                        "| " +
-                        "{:s}".format(exam_split[i]) +
-                        " " * spaces +
-                        " |" +
-                        # original shellcode
-                        " | " +
-                        "{:s}".format(original_split[i]) +
-                        " " * abs(len(original_split[i]) - 40) +
-                        " |" +
-                        # file we are dumping / checking
-                        " | " +
-                        "{:s}".format(checking_split[i]) +
-                        " " * abs(len(checking_split[i]) - 40) +
-                        " |"
-                ),
-            except IndexError:
-                # if the dumped shellcode length is not == examined code
-                # truncation has occured
-                done += (
-                        # examination splits
-                        "| " +
-                        "{:s}".format(exam_split[i]) +
-                        " " * spaces +
-                        " |" +
-                        # original shellcode
-                        " | " +
-                        "{:s}".format(original_split[i]) +
-                        " " * abs(len(original_split[i]) - 40) +
-                        " |"
-                ),
-
-        for i in range(len(done)):
-            print(done[i])
-
-        print("+------------------------------------------+ +------------------------------------------+ +------------------------------------------+")
-
-    def disassemble(self):
-
-        completed_disassembly   = []
+        mode = Cs(ARCH[self.arch], MODE[self.mode])
 
         try:
-            with open(self.byte_file, "rb") as fd:
-                binCode = fd.read()
-        except:
-            binCode = self.byte_file
-
-        try:
-            print("Disassembling shellcode in {:s}-{:s} architecture".format(self.arch, self.mode))
-            mode = Cs(ARCH[self.arch], MODE[self.mode])
-
-            for i in mode.disasm(binCode, 0x1000):
-                completed_disassembly += ("0x%x: %s\t%s %s" % (
-                    i.address,
-                    binascii.hexlify(i.bytes).decode('utf-8'),
-                    i.mnemonic,
-                    i.op_str)
-                ).expandtabs(25),
-
-            for i in range(len(completed_disassembly)):
-                print(completed_disassembly[i])
-
+            for i in mode.disasm(shellcode, 0x10000000):
+                address     += "%x" % i.address,
+                opcode      += binascii.hexlify(i.bytes).decode('utf-8'),
+                instruction += "%s %s" % (i.mnemonic, i.op_str),
         except CsError as e:
             print("Something went wrong: {:s}".format(e))
 
-def deployment(byte_file):
+        return address, opcode, instruction
 
-    # are we reading from stdin
-    try:
-        with open(byte_file, "rb") as fd:
-            fc = fd.read()
-    except:
-        fc = byte_file
+    def check_alpha(self, shellcode):
+        try:
+            shellcode.decode('ascii')
+            alpha = True
+        except:
+            alpha = False
 
+        return alpha
 
-    # Operating system, dictates shellcode execution method.
+    def disassemble_shellcode(self):
+        rbytes = read_in_bytes(self.binary_file, False)
+        completed_check = []
+
+        sc_adr, sc_ops, sc_ins = self.disassemble_bytes(rbytes[0], rbytes[1], rbytes[2])
+
+        alpha = self.check_alpha(rbytes[1])
+
+        print("%s%s" % (colors.BOLD, colors.GRN)),
+        print("[Bytearray information]".center(60)),
+        print(colors.BLUE),
+        print("Architecture\tAlphanumeric\tSize (bytes)\tSource{:s}".format(colors.END).expandtabs(15)),
+        print("{:s}-{:s}\t{}\t{:d}\t{:s}".format(self.arch, self.mode, alpha, rbytes[2], rbytes[0]).expandtabs(15)),
+        print("%s%s" % (colors.BOLD, colors.GRN)),
+        print("[Shellcode disassembly]".center(60)),
+        print(colors.BLUE),
+        print("Address\tOpCodes\tAssembly{:s}".format(colors.END).expandtabs(22)),
+
+        for i in range(len(sc_adr)):
+            completed_check += ("%s\t%s\t%s" % (
+                    sc_adr[i],
+                    sc_ops[i],
+                    sc_ins[i],
+            )).expandtabs(22),
+
+        for i in range(len(completed_check)):
+            print(completed_check[i])
+
+    def compare_shellcode(self):
+        original = read_in_bytes(self.binary_file, False)
+        modified = read_in_bytes(self.compare, False)
+
+        og_addr, og_op, og_ins = self.disassemble_bytes(original[0], original[1], original[2])
+        md_addr, md_op, md_ins = self.disassemble_bytes(modified[0], modified[1], modified[2])
+
+        final_ops = []
+        final_asm = []
+        final_end = []
+        final_ogc = []
+
+        if len(og_addr) > len(md_addr):
+            loopc = len(og_addr)
+        else:
+            loopc = len(md_addr)
+
+        for i in range(loopc):
+            # opcode manipulation
+            try:
+                if og_op[i] == md_op[i]:
+                    final_ops += ("%s%s%s%s" % (colors.BOLD, colors.BLUE, md_op[i], colors.END)),
+                else:
+                    final_ops += ("%s%s%s%s" % (colors.BOLD, colors.RED, md_op[i], colors.END)),
+            except IndexError:
+                try:
+                    final_ops += ("%s%s%s%s" % (colors.BOLD, colors.GRN, md_op[i], colors.END)),
+                except:
+                    pass
+            # instruction manipulation
+            try:
+                if og_ins[i] == md_ins[i]:
+                    final_asm += ("%s%s%s%s" % (colors.BOLD, colors.BLUE, og_ins[i], colors.END)),
+                else:
+                    final_asm += ("%s%s%s%s" % (colors.BOLD, colors.RED, md_ins[i], colors.END)),
+            except IndexError:
+                try:
+                    final_asm += ("%s%s%s%s" % (colors.BOLD, colors.GRN, md_ins[i], colors.END)),
+                except:
+                    pass
+
+        for i in range(len(final_asm)):
+            final_end += ("%s\t%s" % (
+            final_ops[i],
+            final_asm[i],
+        )).expandtabs(35),
+
+        for i in range(len(og_addr)):
+            final_ogc += ("%s\t%s" % (
+            og_op[i],
+            og_ins[i],
+        )).expandtabs(22),
+
+        alpha   = self.check_alpha(original[1])
+        alpha2  = self.check_alpha(modified[1])
+
+        print(colors.BOLD, colors.GRN)
+        print("\t[Original information]\t\t[Modified information]".expandtabs(25))
+        print(colors.BLUE)
+        print("Architecture\tAlphanumeric\tSize (bytes)\tSource\tArchitecture\tAlphanumeric\tSize (bytes)\tSource{:s}".format(colors.END).expandtabs(15))
+        print("{:s}-{:s}\t{}\t{:d}\t{:s}\t{:s}-{:s}\t{}\t{:d}\t{:s}".format(
+            self.arch, self.mode, alpha, original[2], original[0],
+            self.arch, self.mode, alpha2, modified[2], modified[0]
+        ).expandtabs(15))
+        print(colors.BOLD, colors.GRN)
+        print("\t[Shellcode disassembly]\t\t[Shellcode disassembly]".expandtabs(25))
+        print(colors.BLUE)
+        print("OpCodes\t  Assembly\t\tOpCodes\t  Assembly{:s}".format(colors.END).expandtabs(20))
+
+        if len(final_ogc) > len(final_end):
+            loopc = len(final_ogc)
+        else:
+            loopc = len(final_end)
+
+        for i in range(loopc):
+            try:
+                if len(final_ogc[i]) != 60:
+                    num_spaces = 60 - len(final_ogc[i])
+                    final_ogc[i] = final_ogc[i] + " " * num_spaces
+
+                print("%s\t%s".expandtabs(0) % (final_ogc[i], final_end[i]))
+            except:
+                if len(final_ogc) > len(final_end):
+                    print("%s".expandtabs(0) % (final_ogc[i]))
+                else:
+                    print("\t%s".expandtabs(60) % (final_end[i]))
+
+def run_shellcode(shellcode):
     # Methods used are heavily inspired by the following:
     #   http://hacktracking.blogspot.com/2015/05/execute-shellcode-in-python.html
     #   http://www.debasish.in/2012/04/execute-shellcode-using-python.html
-    print("Shellcode length: {:d}".format(len(fc)))
+
+    sbytes = read_in_bytes(shellcode, False)
+
+    print("Shellcode length: {:d}".format(sbytes[2]))
 
     if os.name == 'posix':
 
-        shellcode = bytes(fc)                       # convert shellcode into a bytes
+        shellcode = bytes(sbytes[1])                # convert shellcode into a bytes
         libc = CDLL('libc.so.6')                    # implement C functions (duh)
         sc = c_char_p(shellcode)                    # character pointer (NUL terminated)
         size = len(shellcode)                       # size of the shellcode executing
@@ -834,7 +784,7 @@ def deployment(byte_file):
 
     else:
 
-        shellcode = bytearray(fc)
+        shellcode = bytearray(sbytes[1])
 
         # LPVOID WINAPI VirtualAlloc(
         #   __in_opt  LPVOID lpAddress,         // Address of the region to allocate. If this parameter is NULL, the system determines where to allocate the region.
@@ -871,6 +821,8 @@ def deployment(byte_file):
 
     sys.exit()
 
+
+
 def objdump2shellcode(dumpfile):
     no_junk = []
     no_addr = []
@@ -878,17 +830,12 @@ def objdump2shellcode(dumpfile):
     instrut = []
     ops     = ""
 
-    # detect if the file exists
-    if os.path.isfile(dumpfile) is False:
-        print("File non-existent!")
-        sys.exit()
-
     # run objdump to disassemble the binary
     try:
         intel_dump = subprocess.Popen(['objdump', '-D', dumpfile, '-M', 'intel', '--insn-width=15'],
                 stdout=subprocess.PIPE).communicate()[0]
     except:
-        print("[-] error running command")
+        print("Error running objdump command")
         sys.exit()
 
     # here we begin to clean the output accordingly; this was
@@ -904,7 +851,6 @@ def objdump2shellcode(dumpfile):
             no_addr += addr_splt
         else:
             pass
-
     # separate opcodes and instructions
     list_len = len(no_addr)
     for i in range(list_len):
@@ -926,129 +872,111 @@ def objdump2shellcode(dumpfile):
 
     return raw_ops
 
+def read_in_bytes(binary_file, trigger):
+    if trigger == True:
+        fc = ""
+        try:
+            with open(binary_file, 'rb') as fd:
+                fcr = fd.read()
+                for byte in bytearray(fcr):
+                    fc += "\\x{:02x}".format(byte)
+            fn = binary_file
+            fs = os.path.getsize(binary_file)
+        except:
+            fcr = binary_file
+            for byte in bytearray(fcr):
+                fc += "\\x{:02x}".format(byte)
+            fn = "STDIN"
+            fs = len(fcr)
+    else:
+        try:
+            with open(binary_file, "rb") as fd:
+                fc = fd.read()
+            fn = binary_file
+            fs = os.path.getsize(binary_file)
+        except:
+            fc = binary_file
+            fn = "STDIN"
+            fs = len(fc)
+
+    data = [fn, fc, fs]
+
+    return data
 
 def main():
-
     # handle command line arguments
-    parser = argparse.ArgumentParser(description="Sickle - a shellcode development tool")
+    parser = argparse.ArgumentParser(description="Sickle - Shellcode development tool")
     parser.add_argument("-r", "--read",help="read byte array from the binary file")
     parser.add_argument("-s", "--stdin",help="read ops from stdin (EX: echo -ne \"\\xde\\xad\\xbe\\xef\" | sickle -s -f <format> -b '\\x00')", action="store_true")
     parser.add_argument("-obj","--objdump",help="binary to use for shellcode extraction (via objdump method)")
-    parser.add_argument("-f", "--format",help="output format (use --list for a list)")
+    parser.add_argument("-f", "--format",default='c',type=str,help="output format (use --list for a list)")
     parser.add_argument("-b", "--badchar",help="bad characters to avoid in shellcode")
-    parser.add_argument("-c", "--comment",  help="comments the shellcode output", action="store_true")
-    parser.add_argument("-v", "--varname",required=False, help="alternative variable name")
+    parser.add_argument("-c", "--comment",help="comments the shellcode output", action="store_true")
+    parser.add_argument("-v", "--varname",default='buf',type=str,help="alternative variable name")
     parser.add_argument("-l", "--list",help="list all available formats and arguments", action="store_true")
     parser.add_argument("-e", "--examine",help="examine a separate file containing original shellcode. mainly used to see if shellcode was recreated successfully")
     parser.add_argument("-d", "--disassemble",help="disassemble the binary file", action="store_true")
-    parser.add_argument("-a", "--arch",help="select architecture for disassembly")
-    parser.add_argument("-m", "--mode",help="select mode for disassembly")
     parser.add_argument('-rs', "--run-shellcode",help="run the shellcode (use at your own risk)", action="store_true")
+    parser.add_argument("-a", "--arch",default="x86",type=str,help="select architecture for disassembly")
+    parser.add_argument("-m", "--mode",default="32",type=str,help="select mode for disassembly")
 
     args = parser.parse_args()
 
     # assign arguments
-    byte_file   = args.read
-    badchars    = args.badchar
+    binary_file = args.read
+    format_mode = args.format
     compare     = args.examine
+    badchars    = args.badchar
     disassemble = args.disassemble
+    variable    = args.varname
+    obj_dumpfile= args.objdump
+    comment_code= args.comment
+    run         = args.run_shellcode
     arch        = args.arch
     mode        = args.mode
-    run         = args.run_shellcode
-    dumpfile    = args.objdump
-    comment_code= args.comment
 
-    trigger = False
+    def_check = check_default_formats(format_mode, comment_code, arch, mode)
 
-    # if a list is requested print it
-    # and then exit.
     if args.list == True:
-        printList = format_list("print")
-    # if a list was not requested check
-    # compatibility for formats etc
+        def_check.print_info()
     else:
-        formatList  = format_list("supFrm")
-        commentList = format_list("cmtFrm")
-        modesList   = format_list("modFrm")
-        archList    = format_list("arcFrm")
+        def_check.check()
 
-    # default variables if none given
-    if args.varname == None:
-        variable = "buf"
-    else:
-        variable = args.varname
-    # check if the format is supported and
-    # check if the format was provided
-    if args.format == None:
-        format_mode = 'c'
-    elif args.format not in formatList:
-        print("Currently %s format is not supported" % (args.format))
-        sys.exit(1)
-    else:
-        format_mode = args.format
-
-    if args.comment == True and args.format not in commentList:
-        print("Currently %s comment format is not supported" % (args.format))
-        sys.exit(1)
-
-    # if the architecture is not supported or not provided
-    # default to x86-32.
-    if arch == None or mode == None:
-        arch = "x86"
-        mode = "32"
-    elif arch not in archList or mode not in modesList:
-        arch = "x86"
-        mode = "32"
-
-
-    # if we are reading from STDIN
-    if args.stdin == True:
-        byte_file = sys.stdin.buffer.raw.read()
-
-    elif dumpfile:
-        if os.path.isfile(dumpfile) is False:
-            print("Error dumping shellcode. Is file present?")
-            sys.exit(1)
-
-        raw_ops     = objdump2shellcode(dumpfile)
-        byte_file   = dumpfile
-        trigger     = True
-
-    if byte_file:
-        if args.stdin == False:
-            if os.path.isfile(byte_file) is False:
-                print("Error dumping shellcode. Is file present?")
-                sys.exit(1)
-
-        if trigger == True:
-            byte_file = raw_ops
-
-        if run == True:
-            deployment(byte_file)
-
+    if args.stdin == False and binary_file or obj_dumpfile or compare:
+        if obj_dumpfile:
+            file2check = obj_dumpfile
         elif compare:
-            if args.stdin == True or trigger == True:
-                print("Please use read mode to compare shellcode")
-                sys.exit(1)
-
-            if os.path.isfile(compare) is False:
-                print("Error dumping shellcode. Is compare file present?")
-                sys.exit(1)
-
-            compareIT = reversing(byte_file, compare, arch="", mode="")
-            compareIT.compare_dump()
-
-        elif comment_code:
-            commentIT = formatting(byte_file, format_mode, badchars, variable, arch, mode)
-            commentIT.informational_dump()
-
-        elif disassemble:
-            disassIT = reversing(byte_file, compare, arch, mode)
-            disassIT.disassemble()
-
+            if os.path.isfile(binary_file) is False:
+                sys.exit("Error dumping shellcode. Is file present?")
+            file2check = compare
         else:
-            dumpIT = formatting(byte_file, format_mode, badchars, variable, None, None)
-            dumpIT.tactical_dump()
+            file2check = binary_file
+
+        if os.path.isfile(file2check) is False:
+            sys.exit("Error dumping shellcode. Is file present?")
+
+    if args.stdin == True:
+        binary_file = sys.stdin.buffer.raw.read()
+
+    if obj_dumpfile:
+        binary_file = objdump2shellcode(obj_dumpfile)
+        flag = 1
+
+    if binary_file:
+        if run == True:
+            run_shellcode(binary_file)
+        elif disassemble or compare:
+            dis = reversing_shellcode(binary_file, compare, arch, mode)
+            if disassemble:
+                dis.disassemble_shellcode()
+            elif compare:
+                dis.compare_shellcode()
+        else:
+            dump_shellcode = shellcode_manipulation(binary_file, format_mode, badchars, variable, arch, mode)
+            if comment_code:
+                dump_shellcode.commented_dump()
+            else:
+                dump_shellcode.standard_dump()
     else:
         parser.print_help()
 

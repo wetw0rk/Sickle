@@ -1,6 +1,6 @@
 # Sickle
 
-Sickle is a shellcode development tool, created to speed up the various steps needed to create functioning shellcode. 
+Sickle is a shellcode development tool created to speed up the various steps needed to create functioning shellcode. 
 
 Sickle can aid in the following:
 - Identifying instructions resulting in bad characters.
@@ -43,15 +43,15 @@ Sickle is written in Python3 and to have full functionality I recommend installi
 If you don't compile your shellcode in NASM I have added an "[objdump2shellcode](https://github.com/wetw0rk/objdump2shellcode)" like function. Although I recommend using NASM for a streamline experience. For ease of access I prefer to add Sickle to the /usr/bin/ directory however if you use [Black Arch Linux](https://blackarch.org/index.html) Sickle comes pre-installed. (previously known as objdump2shellcode):
 
 ```sh
-root@wetw0rk:~# git clone https://github.com/wetw0rk/Sickle.git
-root@wetw0rk:~# cd Sickle/
-root@wetw0rk:~# chmod +x sickle.py
-root@wetw0rk:~# cp sickle.py /usr/bin/sickle
-root@wetw0rk:~# sickle
+root@kali:~# git clone https://github.com/wetw0rk/Sickle.git
+root@kali:~# cd Sickle/
+root@kali:~# chmod +x sickle.py
+root@kali:~# cp sickle.py /usr/bin/sickle
+root@kali:~# sickle 
 usage: sickle [-h] [-r READ] [-s] [-obj OBJDUMP] [-f FORMAT] [-b BADCHAR] [-c]
-              [-v VARNAME] [-l] [-e EXAMINE] [-d] [-a ARCH] [-m MODE] [-rs]
+              [-v VARNAME] [-l] [-e EXAMINE] [-d] [-rs] [-a ARCH] [-m MODE]
 
-Sickle - a shellcode development tool
+Sickle - Shellcode development tool
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -74,8 +74,8 @@ optional arguments:
                         mainly used to see if shellcode was recreated
                         successfully
   -d, --disassemble     disassemble the binary file
+  -rs, --run-shellcode  run the shellcode (use at your own risk)
   -a ARCH, --arch ARCH  select architecture for disassembly
   -m MODE, --mode MODE  select mode for disassembly
-  -rs, --run-shellcode  run the shellcode (use at your own risk)
 ```
 
