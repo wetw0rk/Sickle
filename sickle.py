@@ -25,7 +25,7 @@
 # Script name     : sickle.py
 # Version         : 1.5
 # Created date    : 10/14/2017
-# Last update     : 2/11/2018
+# Last update     : 3/14/2018
 # Author          : Milton Valencia (wetw0rk)
 # Architecture    : x86, and x86-x64
 # Python version  : 3
@@ -38,7 +38,6 @@
 # Dependencies (if capstone is not installed)
 #   apt-get install python3-pip
 #   pip3 install capstone
-#
 
 from ctypes import CDLL, c_char_p, c_void_p, memmove, cast, CFUNCTYPE
 import os, sys, time, ctypes, codecs, argparse, binascii, subprocess
@@ -66,24 +65,14 @@ except:
 
 try:
 
-    ARCH = {
-        "all"   : CS_ARCH_ALL,
-        "arm"   : CS_ARCH_ARM,
-        "arm64" : CS_ARCH_ARM64,
-        "mips"  : CS_ARCH_MIPS,
-        "ppc"   : CS_ARCH_PPC,
-        "x86"   : CS_ARCH_X86,
-        "xcore" : CS_ARCH_XCORE
-    }
-    MODE = {
-        "16"            : CS_MODE_16,
-        "32"            : CS_MODE_32,
-        "64"            : CS_MODE_64,
-        "arm"           : CS_MODE_ARM,
-        "big_endian"    : CS_MODE_BIG_ENDIAN,
-        "little_endian" : CS_MODE_LITTLE_ENDIAN,
-        "micro"         : CS_MODE_MICRO,
-        "thumb"         : CS_MODE_THUMB
+    architecture_mode = {
+        'x86_32'    : Cs(CS_ARCH_X86,   CS_MODE_32),
+        'x86_64'    : Cs(CS_ARCH_X86,   CS_MODE_64),
+        'mips32'    : Cs(CS_ARCH_MIPS,  CS_MODE_32),
+        'mips64'    : Cs(CS_ARCH_MIPS,  CS_MODE_64),
+        'arm'       : Cs(CS_ARCH_ARM,   CS_MODE_ARM),
+        'arm64'     : Cs(CS_ARCH_ARM64, CS_MODE_ARM),
+        'arm_thumb' : Cs(CS_ARCH_ARM,   CS_MODE_THUMB)
     }
 
 except:
@@ -116,43 +105,29 @@ supported_comments = [
     "ruby-array",
 ]
 
-supported_architectures = [
-    "all",
-    "arm",
-    "arm64",
-    "mips",
-    "ppc",
-    "x86",
-    "xcore",
-]
-
-supported_modes = [
-    "16",
-    "32",
-    "64",
-    "13",
-    "64",
-    "arm",
-    "big_endian",
-    "little_endian",
-    "micro",
-    "thumb",
+supported_architecture_modes = [
+    'x86_32',
+    'x86_64',
+    'mips32',
+    'mips64',
+    'arm',
+    'arm64',
+    'arm_thumb'
 ]
 
 class check_default_formats():
-    def __init__(self, format_mode, comment_bool, arch, mode):
+    def __init__(self, format_mode, comment_bool, arch):
         self.format_mode    = format_mode
         self.comment_bool   = comment_bool
         self.arch           = arch
-        self.mode           = mode
 
     def check(self):
         if self.format_mode not in supported_formats:
             sys.exit("Currently %s format is not supported" % (self.format_mode))
         if self.comment_bool == True and self.format_mode not in supported_comments:
             sys.exit("Currently %s comment format is not supported" % (self.format_mode))
-        if self.arch not in supported_architectures or self.mode not in supported_modes:
-            sys.exit("Currently %s-%s architecture is not supported" % (self.arch, self.mode))
+        if self.arch not in supported_architecture_modes:
+            sys.exit("Currently %s architecture is not supported" % (self.arch))
 
         return
 
@@ -172,11 +147,8 @@ class check_default_formats():
         print("Comment dump formats:")
         self.loop(supported_comments)
 
-        print("Supported architectures:")
-        self.loop(supported_architectures)
-
-        print("Supported modes:")
-        self.loop(supported_modes)
+        print("Supported architectures modes:")
+        self.loop(supported_architecture_modes)
 
         sys.exit(0)
 
@@ -199,13 +171,12 @@ class colors():
         END     = ""
 
 class shellcode_manipulation():
-    def __init__(self, binary_file, format_mode, badchars, variable, arch, mode):
+    def __init__(self, binary_file, format_mode, badchars, variable, arch):
         self.binary_file    = binary_file
         self.format_mode    = format_mode
         self.badchars       = badchars
         self.variable       = variable
         self.arch           = arch
-        self.mode           = mode
 
     def character_analysis(self, num, op_str, results):
         op_line = []
@@ -246,7 +217,7 @@ class shellcode_manipulation():
         completed_conversion= []
         results             = []
 
-        mode = Cs(ARCH[self.arch], MODE[self.mode])
+        mode = architecture_mode[self.arch]
 
         rbytes = read_in_bytes(self.binary_file, False)
 
@@ -614,18 +585,17 @@ class shellcode_manipulation():
                     print('{:s} << "{:s}"'.format(self.variable, results[i]))
 
 class reversing_shellcode():
-    def __init__(self, binary_file, compare, arch, mode):
+    def __init__(self, binary_file, compare, arch):
         self.binary_file    = binary_file
         self.compare        = compare
         self.arch           = arch
-        self.mode           = mode
 
     def disassemble_bytes(self, source_file, shellcode, sc_size):
         instruction = []
         address     = []
         opcode      = []
 
-        mode = Cs(ARCH[self.arch], MODE[self.mode])
+        mode = architecture_mode[self.arch]
 
         try:
             for i in mode.disasm(shellcode, 0x10000000):
@@ -658,7 +628,7 @@ class reversing_shellcode():
         print("[Bytearray information]".center(60)),
         print(colors.BLUE),
         print("Architecture\tAlphanumeric\tSize (bytes)\tSource{:s}".format(colors.END).expandtabs(15)),
-        print("{:s}-{:s}\t{}\t{:d}\t{:s}".format(self.arch, self.mode, alpha, rbytes[2], rbytes[0]).expandtabs(15)),
+        print("{:s}\t{}\t{:d}\t{:s}".format(self.arch, alpha, rbytes[2], rbytes[0]).expandtabs(15)),
         print("%s%s" % (colors.BOLD, colors.GRN)),
         print("[Shellcode disassembly]".center(60)),
         print(colors.BLUE),
@@ -734,9 +704,9 @@ class reversing_shellcode():
         print("\t[Original information]\t\t[Modified information]".expandtabs(25))
         print(colors.BLUE)
         print("Architecture\tAlphanumeric\tSize (bytes)\tSource\tArchitecture\tAlphanumeric\tSize (bytes)\tSource{:s}".format(colors.END).expandtabs(15))
-        print("{:s}-{:s}\t{}\t{:d}\t{:s}\t{:s}-{:s}\t{}\t{:d}\t{:s}".format(
-            self.arch, self.mode, alpha, original[2], original[0],
-            self.arch, self.mode, alpha2, modified[2], modified[0]
+        print("{:s}\t{}\t{:d}\t{:s}\t{:s}\t{}\t{:d}\t{:s}".format(
+            self.arch, alpha, original[2], original[0],
+            self.arch, alpha2, modified[2], modified[0]
         ).expandtabs(15))
         print(colors.BOLD, colors.GRN)
         print("\t[Shellcode disassembly]\t\t[Shellcode disassembly]".expandtabs(25))
@@ -909,6 +879,7 @@ def main():
     parser.add_argument("-r", "--read",help="read byte array from the binary file")
     parser.add_argument("-s", "--stdin",help="read ops from stdin (EX: echo -ne \"\\xde\\xad\\xbe\\xef\" | sickle -s -f <format> -b '\\x00')", action="store_true")
     parser.add_argument("-obj","--objdump",help="binary to use for shellcode extraction (via objdump method)")
+    parser.add_argument("-a", "--arch",default="x86_32",type=str,help="select architecture for disassembly")
     parser.add_argument("-f", "--format",default='c',type=str,help="output format (use --list for a list)")
     parser.add_argument("-b", "--badchar",help="bad characters to avoid in shellcode")
     parser.add_argument("-c", "--comment",help="comments the shellcode output", action="store_true")
@@ -917,8 +888,6 @@ def main():
     parser.add_argument("-e", "--examine",help="examine a separate file containing original shellcode. mainly used to see if shellcode was recreated successfully")
     parser.add_argument("-d", "--disassemble",help="disassemble the binary file", action="store_true")
     parser.add_argument('-rs', "--run-shellcode",help="run the shellcode (use at your own risk)", action="store_true")
-    parser.add_argument("-a", "--arch",default="x86",type=str,help="select architecture for disassembly")
-    parser.add_argument("-m", "--mode",default="32",type=str,help="select mode for disassembly")
 
     args = parser.parse_args()
 
@@ -933,9 +902,8 @@ def main():
     comment_code= args.comment
     run         = args.run_shellcode
     arch        = args.arch
-    mode        = args.mode
 
-    def_check = check_default_formats(format_mode, comment_code, arch, mode)
+    def_check = check_default_formats(format_mode, comment_code, arch)
 
     if args.list == True:
         def_check.print_info()
@@ -966,13 +934,13 @@ def main():
         if run == True:
             run_shellcode(binary_file)
         elif disassemble or compare:
-            dis = reversing_shellcode(binary_file, compare, arch, mode)
+            dis = reversing_shellcode(binary_file, compare, arch)
             if disassemble:
                 dis.disassemble_shellcode()
             elif compare:
                 dis.compare_shellcode()
         else:
-            dump_shellcode = shellcode_manipulation(binary_file, format_mode, badchars, variable, arch, mode)
+            dump_shellcode = shellcode_manipulation(binary_file, format_mode, badchars, variable, arch)
             if comment_code:
                 dump_shellcode.commented_dump()
             else:

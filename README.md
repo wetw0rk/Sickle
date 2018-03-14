@@ -18,7 +18,7 @@ A task I found myself doing repetitively was compiling assembly source code then
 #### Recreating shellcode
 Sometimes you find a piece of shellcode that's fluent in its execution and you want to recreate it yourself to understand its underlying mechanisms. Sickle can help you compare the original shellcode to your "recreated" version.
 
-![alt text](https://raw.githubusercontent.com/wetw0rk/Sickle/master/example-pictures/c.png?style=centerme)
+![alt text](https://raw.githubusercontent.com/wetw0rk/Sickle/master/example-pictures/examine.png?style=centerme)
 
 #### Bad character identification
 It's important to note that currently bad character identification is best used within a Linux based operating system. When dumping shellcode on a Windows host bad characters will not be highlighted. Below is a usage example in a Unix environment:
@@ -28,7 +28,7 @@ It's important to note that currently bad character identification is best used 
 #### Disassembly
 Sickle can also take a binary file and convert the extracted opcodes (shellcode) to machine instructions (-obj). Keep in mind this works with raw opcodes (-r) and STDIN (-s) as well. In the following example I am converting a reverse shell designed by Stephen Fewer to assembly.
 
-![alt text](https://raw.githubusercontent.com/wetw0rk/Sickle/master/example-pictures/d.png?style=centerme)
+![alt text](https://raw.githubusercontent.com/wetw0rk/Sickle/master/example-pictures/disassembly.png?style=centerme)
 
 ### Windows Installation
 If you decide to opt-out of the disassembly functions and only want to use Sickle as a wrapper/dumping tool Sickle will work out of the box with any Python version (Including 2.7). I have only encountered issues when writing/testing 64 bit shellcode on a Windows 10 host. In order to avoid problems I recommend installing [Python 3.4.4  (amd64)](https://www.python.org/ftp/python/3.4.4/python-3.4.4.amd64.msi) however any other Windows version should not have this issue. Should you be writing x86 shellcode, Windows 10 will work with any Python version eg [Python 3.7.0a3](https://www.python.org/ftp/python/3.7.0/python-3.7.0a3.exe). Below is a usage example testing msfvenom generated shellcode ("windows/x64/shell_reverse_tcp") on a Windows 10 host
