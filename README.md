@@ -48,8 +48,8 @@ root@kali:~# cd Sickle/
 root@kali:~# chmod +x sickle.py
 root@kali:~# cp sickle.py /usr/bin/sickle
 root@kali:~# sickle 
-usage: sickle [-h] [-r READ] [-s] [-obj OBJDUMP] [-f FORMAT] [-b BADCHAR] [-c]
-              [-v VARNAME] [-l] [-e EXAMINE] [-d] [-rs] [-a ARCH] [-m MODE]
+usage: sickle [-h] [-r READ] [-s] [-obj OBJDUMP] [-a ARCH] [-f FORMAT]
+              [-b BADCHAR] [-c] [-v VARNAME] [-l] [-e EXAMINE] [-d] [-rs]
 
 Sickle - Shellcode development tool
 
@@ -61,6 +61,7 @@ optional arguments:
   -obj OBJDUMP, --objdump OBJDUMP
                         binary to use for shellcode extraction (via objdump
                         method)
+  -a ARCH, --arch ARCH  select architecture for disassembly
   -f FORMAT, --format FORMAT
                         output format (use --list for a list)
   -b BADCHAR, --badchar BADCHAR
@@ -75,7 +76,5 @@ optional arguments:
                         successfully
   -d, --disassemble     disassemble the binary file
   -rs, --run-shellcode  run the shellcode (use at your own risk)
-  -a ARCH, --arch ARCH  select architecture for disassembly
-  -m MODE, --mode MODE  select mode for disassembly
 ```
 
