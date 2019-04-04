@@ -25,7 +25,7 @@
 # Script name     : sickle.py
 # Version         : 1.5
 # Created date    : 10/14/2017
-# Last update     : 3/14/2018
+# Last update     : 04/04/2019
 # Author          : Milton Valencia (wetw0rk)
 # Architecture    : x86, and x86-x64
 # Python version  : 3
@@ -96,6 +96,7 @@ supported_formats = [
     "ruby-array",
     "ruby",
     "raw",
+    "raw_shell"
 ]
 
 supported_comments = [
@@ -368,6 +369,13 @@ class shellcode_manipulation():
             print('{:s} = ""'.format(self.variable))
             for i in range(len(results)):
                 print("{:s} += \"{:s}\"".format(self.variable, results[i]))
+
+        if self.format_mode == "raw_shell":
+            ops = ""
+            self.character_analysis(60, fbytes[1], results)
+            for i in range(len(results)):
+                ops += results[i]
+            print(ops)
 
         if self.format_mode == "python3":
             self.character_analysis(60, fbytes[1], results)
