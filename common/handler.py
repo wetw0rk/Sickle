@@ -101,7 +101,7 @@ class handle():
       self.binfile = objdump2shellcode(self.objdump) 
 
     if self.examine:
-      e = standard_bin(self.binfile, False)
+      e = standard_bin(self.examine, False)
     else:
       e = "NULL"
 

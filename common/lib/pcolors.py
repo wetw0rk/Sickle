@@ -16,3 +16,9 @@ class colors():
     BOLD  = '\033[1m'
     GRN   = '\033[92m'
     END   = '\033[0m'
+  else:
+    RED   = ''
+    BLUE  = ''
+    BOLD  = ''
+    GRN   = ''
+    END   = ''
