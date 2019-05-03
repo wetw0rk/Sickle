@@ -9,7 +9,7 @@ Sickle can aid in the following:
 - Executing shellcode in both Windows and Linux environments.
 - Comparing a bytecode sample to a modified binary.
 - Dissembling shellcode into assembly language (ARM, x86, etc).
-- Shellcode extraction via objdump (although binfiles are never fail)
+- Shellcode extraction via objdump (binfiles never fail)
 
 #### Quick failure check
 A task I found myself doing repetitively was compiling assembly source code then extracting the shellcode, placing it into a wrapper, and testing it. If it was a bad run, the process would be repeated until successful. Sickle takes care of placing the shellcode into a wrapper for quick testing. (Works on Windows and Unix systems):
@@ -33,7 +33,7 @@ It's important to note that currently bad character identification is best used 
 
 ### Module Based Design
 
-This tool was originally designed during the course of the CTP (OSCE course) as a one big script, however recently when a change needed to be done to the script I had to relearn my own code... In order to avoid this in the future I decided to keep all modules under the "modules" directory. I will be adding documentation on how to add your own formats and modules soon.
+This tool was originally designed during the CTP course (OSCE course) as a one big script, however recently when a change needed to be done to the script I had to relearn my own code... In order to avoid this in the future I decided to keep all modules under the "modules" directory. I will be adding documentation on how to add your own formats and modules soon. If you prefer the old design, I have kept a copy under the DOCUMENTATION directory.
 
 ```sh
 . <- Sickle/modules
