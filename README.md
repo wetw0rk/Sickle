@@ -14,17 +14,17 @@ Sickle can aid in the following:
 #### Quick failure check
 A task I found myself doing repetitively was compiling assembly source code then extracting the shellcode, placing it into a wrapper, and testing it. If it was a bad run, the process would be repeated until successful. Sickle takes care of placing the shellcode into a wrapper for quick testing. (Works on Windows and Unix systems):
 
-![alt text](https://raw.githubusercontent.com/wetw0rk/Sickle/master/example-pictures/r.png?style=centerme)
+![alt text](https://raw.githubusercontent.com/wetw0rk/Sickle/master/DOCUMENTATION/pictures/r.png?style=centerme)
 
 #### Recreating shellcode
 Sometimes you find a piece of shellcode that's fluent in its execution and you want to recreate it yourself to understand its underlying mechanisms. Sickle can help you compare the original shellcode to your "recreated" version. If you're not crafting shellcode and just need 2 binfiles to be the same this feature can also help verifying files are the same byte by byte.
 
-![alt text](https://raw.githubusercontent.com/wetw0rk/Sickle/master/example-pictures/examine.png?style=centerme)
+![alt text](https://raw.githubusercontent.com/wetw0rk/Sickle/master/DOCUMENTATION/pictures/examine.png?style=centerme)
 
 ### Disassembly
 Sickle can also take a binary file and convert the extracted opcodes (shellcode) to machine instructions (-obj). Keep in mind this works with raw opcodes (-r) and STDIN (-s) as well. In the following example I am converting a reverse shell designed by Stephen Fewer to assembly.
 
-![alt text](https://raw.githubusercontent.com/wetw0rk/Sickle/master/example-pictures/disassembly.png?style=centerme)
+![alt text](https://raw.githubusercontent.com/wetw0rk/Sickle/master/DOCUMENTATION/pictures/disassembly.png?style=centerme)
 
 #### Bad character identification
 It's important to note that currently bad character identification is best used within a Linux based operating system. When dumping shellcode on a Windows host bad characters will not be highlighted. 
