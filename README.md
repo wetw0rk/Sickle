@@ -29,11 +29,11 @@ Sickle can also take a binary file and convert the extracted opcodes (shellcode)
 #### Bad character identification
 It's important to note that currently bad character identification is best used within a Linux based operating system. When dumping shellcode on a Windows host bad characters will not be highlighted. 
 
-[![asciicast](https://asciinema.org/a/7vvVRjZGbY7OlqMsh6dBi7FDU.png)](https://asciinema.org/a/7vvVRjZGbY7OlqMsh6dBi7FDU)
+[![asciicast](https://asciinema.org/a/244211.svg)](https://asciinema.org/a/244211)
 
 ### Module Based Design
 
-This tool was originally designed during the CTP course (OSCE course) as a one big script, however recently when a change needed to be done to the script I had to relearn my own code... In order to avoid this in the future I decided to keep all modules under the "modules" directory. I will be adding documentation on how to add your own formats and modules soon. If you prefer the old design, I have kept a copy under the DOCUMENTATION directory.
+This tool was originally designed during the CTP course (OSCE) as a one big script, however recently when a change needed to be done to the script I had to relearn my own code... In order to avoid this in the future I decided to keep all modules under the "modules" directory. I will be adding documentation on how to add your own formats and modules soon. If you prefer the old design, I have kept a copy under the DOCUMENTATION directory.
 
 ```sh
 . <- Sickle/modules
@@ -76,7 +76,7 @@ Sickle is written in Python3 and to have full functionality I recommend installi
 - apt-get install python3-pip
 - pip3 install capstone
     
-If you don't compile your shellcode in NASM I have added an "[objdump2shellcode](https://github.com/wetw0rk/objdump2shellcode)" like function. Although I recommend using NASM for a streamline experience. For ease of access I prefer to add Sickle to the /usr/bin/ directory however if you use [Black Arch Linux](https://blackarch.org/index.html) Sickle comes pre-installed. (previously known as objdump2shellcode):
+If you don't compile your shellcode in NASM I have added an "[objdump2shellcode](https://github.com/wetw0rk/objdump2shellcode)" like function. Although I recommend using NASM for a streamline experience. If you use [Black Arch Linux](https://blackarch.org/index.html) Sickle comes pre-installed. (previously known as objdump2shellcode):
 
 ```sh
 root@kali:~/Sickle# ./sickle.py -h
