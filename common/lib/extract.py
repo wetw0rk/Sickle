@@ -5,7 +5,10 @@ extract: all extraction done on files or bytecode should be done here.
 '''
 
 import os
+import sys
+import codecs
 import binascii
+import subprocess
 
 from .pcolors import *
 
@@ -88,8 +91,8 @@ def objdump2shellcode(dumpfile):
   try:
     intel_dump = subprocess.Popen(['objdump', '-D', dumpfile, '-M', 'intel', '--insn-width=15'],
       stdout=subprocess.PIPE).communicate()[0]
-  except:
-    print("Error running objdump command")
+  except Exception as e:
+    print("Error running objdump command: %s" % e)
     sys.exit()
 
   # here we begin to clean the output accordingly; this was
