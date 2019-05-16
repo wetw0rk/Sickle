@@ -24,7 +24,7 @@ Sometimes you find a piece of shellcode that's fluent in its execution and you w
 ### Disassembly
 Sickle can also take a binary file and convert the extracted opcodes (shellcode) to machine instructions. Keep in mind this works with raw opcodes (-r), object files (-obj), and STDIN (-s) as well. In the following example I am converting a reverse shell designed by Stephen Fewer to assembly.
 
-![alt text](https://raw.githubusercontent.com/wetw0rk/Sickle/master/DOCUMENTATION/pictures/disassembly.png?style=centerme)
+![alt text](https://raw.githubusercontent.com/wetw0rk/Sickle/master/DOCUMENTATION/pictures/disassemble.png?style=centerme)
 
 ### Bad character identification
 It's important to note that currently bad character identification is best used within a Linux based operating system. When dumping shellcode on a Windows host bad characters will NOT be highlighted. 
