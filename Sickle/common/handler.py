@@ -7,9 +7,9 @@ handler: consider this the body, execution flow is generally directed here
 import os
 import sys
 
-from modules.dev import *
-from modules.formats import *
-from common.lib.extract import *
+from Sickle.modules.dev import *
+from Sickle.modules.formats import *
+from Sickle.common.lib.extract import *
 
 class handle():
   def __init__(self, args):
@@ -25,8 +25,9 @@ class handle():
     self.list     = args.list       # list all formats / archs
 
     # variables not passed but generated for other functions
-    self.formats = self.gather_modules("modules/formats")
-    self.modules = self.gather_modules("modules/dev")
+    root_dir = os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..'))
+    self.formats = self.gather_modules("%s/modules/formats" % root_dir)
+    self.modules = self.gather_modules("%s/modules/dev" % root_dir)
 
   # gather_modules: obtain all modules in modules directory
   def gather_modules(self, directory):

@@ -1,4 +1,4 @@
-from common.lib.extract import *
+from Sickle.common.lib.extract import *
 
 class module():
 
@@ -11,21 +11,21 @@ class module():
   @staticmethod
   def info(info_req):
     information = {
-      "name"        : "perl",
-      "description" : "format bytecode for Perl",
+      "name"        : "uint8array",
+      "description" : "format bytecode for Javascript as a Uint8Array directly",
+      "modes"       : ["payload"]
     }
 
     return information[info_req]
 
   def general(self):
     print("Payload size: {:d} bytes".format(self.robject[2]))
-    print('my $%s =' % self.varname)
 
   def pformat(self):
-    results = analysis(60, self.eobject[1], self.badchrs)
+    op_str = "var %s = new Uint8Array([" % self.varname
+
     self.general()
-    for i in range(len(results)):
-      if i == (len(results) -1):
-        print("\"{:s}\";".format(results[i]))
-      else:
-        print("\"{:s}\" .".format(results[i]))
+    for byte in bytearray(self.robject[1]):
+      op_str += "%d, " % byte
+    op_str = "%s]);" % op_str[:-2]
+    print(op_str)

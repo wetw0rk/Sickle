@@ -1,4 +1,4 @@
-from common.lib.extract import *
+from Sickle.common.lib.extract import *
 
 class module():
 
@@ -11,14 +11,16 @@ class module():
   @staticmethod
   def info(info_req):
     information = {
-      "name"        : "hex_space",
-      "description" : "format bytecode in hex, seperated by a space (e.g 65 77 77 74 72 30 00 6b)",
+      "name"        : "javascript",
+      "description" : "format bytecode for Javascript (neatly then into a Uint8Array)",
     }
 
     return information[info_req]
 
   def general(self):
     print("Payload size: {:d} bytes".format(self.robject[2]))
+    print('var %s = "";' % self.varname)
+    print('var bytes = [];\n')
 
   def pformat(self):
     op_str = ""
@@ -33,11 +35,18 @@ class module():
       pass
 
     for byte in bytearray(self.robject[1]):
-      op_str += "{:02x} ".format(byte)
+      op_str += "{:02x}".format(byte)
 
-    results = analysis(8, op_str, self.badchrs)
-    for i in range(len(results)):
-      ops += results[i]
+    results = analysis(60, op_str, self.badchrs)
 
     self.general()
-    print(ops)
+    for i in range(len(results)):
+      print('%s += \"%s\";' % (self.varname, results[i]))
+
+    print("")
+    print("/* fp: contains the final payload in proper format */")
+    print("for (var i = 0, len = %s.length; i < len; i+=2)" % (self.varname))
+    print("{")
+    print("  bytes.push(parseInt(%s.substr(i,2),16));" % self.varname)
+    print("}")
+    print("var fp = new Uint8Array(bytes);")

@@ -1,4 +1,4 @@
-from common.lib.extract import *
+from Sickle.common.lib.extract import *
 
 class module():
 
@@ -11,8 +11,8 @@ class module():
   @staticmethod
   def info(info_req):
     information = {
-      "name"        : "dword",
-      "description" : "format bytecode in dword",
+      "name"        : "hex_space",
+      "description" : "format bytecode in hex, seperated by a space (e.g 65 77 77 74 72 30 00 6b)",
     }
 
     return information[info_req]
@@ -22,31 +22,22 @@ class module():
 
   def pformat(self):
     op_str = ""
-    dwrd= ""
-    dlst= []
-
+    ops = ""
     # setup bad chars properly
     try:
       split_badchar = self.badchrs.split(',')
       for i in range(len(split_badchar)):
         mod_badchars += "%s," % (split_badchar[i][2:])
-      self.badchars = mod_badchars.rstrip(',')
+      self.badchrs = mod_badchars.rstrip(',')
     except:
       pass
 
     for byte in bytearray(self.robject[1]):
-      dwrd += "{:02x}".format(byte)
+      op_str += "{:02x} ".format(byte)
 
-    # format the hex bytes into dword
-    splits = [dwrd[x:x+8] for x in range(0,len(dwrd),8)]
-    for i in range(len(splits)):
-      s = splits[i]
-      dlst += "0x" + "".join(map(str.__add__, s[-2::-2] ,s[-1::-2])),
-    for i in range(int(len(dlst)/8+1)):
-      op_str += ", ".join(dlst[i*8:(i+1)*8])
-
-    # send it of for character character_analysis
-    results = analysis(94, op_str, self.badchrs)
-    self.general()
+    results = analysis(8, op_str, self.badchrs)
     for i in range(len(results)):
-      print(results[i])
+      ops += results[i]
+
+    self.general()
+    print(ops)

@@ -1,4 +1,4 @@
-from common.lib.extract import *
+from Sickle.common.lib.extract import *
 
 class module():
 
@@ -11,20 +11,21 @@ class module():
   @staticmethod
   def info(info_req):
     information = {
-      "name"        : "ruby",
-      "description" : "format bytecode for Ruby",
+      "name"        : "perl",
+      "description" : "format bytecode for Perl",
     }
+
     return information[info_req]
 
   def general(self):
     print("Payload size: {:d} bytes".format(self.robject[2]))
-    print('%s = ""' % self.varname)
+    print('my $%s =' % self.varname)
 
   def pformat(self):
-    results = analysis(56, self.eobject[1], self.badchrs)
+    results = analysis(60, self.eobject[1], self.badchrs)
     self.general()
     for i in range(len(results)):
       if i == (len(results) -1):
-        print("\"{:s}\"".format(results[i]))
+        print("\"{:s}\";".format(results[i]))
       else:
-        print("\"{:s}\" +".format(results[i]))
+        print("\"{:s}\" .".format(results[i]))

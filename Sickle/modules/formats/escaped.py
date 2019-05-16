@@ -1,4 +1,4 @@
-from common.lib.extract import *
+from Sickle.common.lib.extract import *
 
 class module():
 
@@ -11,9 +11,8 @@ class module():
   @staticmethod
   def info(info_req):
     information = {
-      "name"        : "uint8array",
-      "description" : "format bytecode for Javascript as a Uint8Array directly",
-      "modes"       : ["payload"]
+      "name"        : "escaped",
+      "description" : "format bytecode for one-liner hex escape paste (e.g \x42\x42)",
     }
 
     return information[info_req]
@@ -22,10 +21,9 @@ class module():
     print("Payload size: {:d} bytes".format(self.robject[2]))
 
   def pformat(self):
-    op_str = "var %s = new Uint8Array([" % self.varname
-
+    ops = ""
+    results = analysis(60, self.eobject[1], self.badchrs)
+    for i in range(len(results)):
+      ops += results[i]
     self.general()
-    for byte in bytearray(self.robject[1]):
-      op_str += "%d, " % byte
-    op_str = "%s]);" % op_str[:-2]
-    print(op_str)
+    print(ops)

@@ -4,8 +4,8 @@ pinpoint: pinpoint where in your shellcode bad characters occur
 
 '''
 
-from modules.dev.deps import *
-from common.lib.extract import *
+from Sickle.modules.dev.deps import *
+from Sickle.common.lib.extract import *
 
 class module():
 

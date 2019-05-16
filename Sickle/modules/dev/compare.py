@@ -4,8 +4,8 @@ compare: compare two binary files and view differences
 
 '''
 
-from modules.dev.deps import *
-from common.lib.extract import *
+from Sickle.modules.dev.deps import *
+from Sickle.common.lib.extract import *
 
 class module():
   

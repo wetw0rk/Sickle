@@ -1,4 +1,4 @@
-from common.lib.extract import *
+from Sickle.common.lib.extract import *
 
 class module():
 
@@ -11,8 +11,8 @@ class module():
   @staticmethod
   def info(info_req):
     information = {
-      "name"        : "nasm",
-      "description" : "format bytecode for NASM (useful for encoder stubs)",
+      "name"        : "num",
+      "description" : "format bytecode in num format",
     }
 
     return information[info_req]
@@ -22,21 +22,22 @@ class module():
 
   def pformat(self):
     op_str = ""
-    # setup bad chars properly
     try:
-      split_badchar = self.badchrs.split(',')
+      split_badchar = self.badchars.split(',')
       for i in range(len(split_badchar)):
         mod_badchars += "0x%s," % (split_badchar[i][2:])
-      self.badchrs = mod_badchars.rstrip(',')
+      self.badchars = mod_badchars.rstrip(',')
     except:
       pass
 
     for byte in bytearray(self.robject[1]):
-      op_str += "0x{:02x},".format(byte)
-
-    results = analysis(60, op_str, self.badchrs)
+      op_str += "0x{:02x}, ".format(byte)
 
     self.general()
+    results = analysis(84, op_str, self.badchrs)
     for i in range(len(results)):
-      snip = len(results[i]) - 1
-      print("db " + results[i][:snip])
+      snip = len(results[i]) - 2
+      if i == (len(results)-1):
+        print(results[i][:snip])
+      else:
+        print(results[i])
