@@ -33,7 +33,7 @@ It's important to note that currently bad character identification is best used 
 
 ### Module Based Design
 
-This tool was originally designed during the CTP course (OSCE) as a one big script, however recently when a change needed to be done to the script I had to relearn my own code... In order to avoid this in the future I decided to keep all modules under the "modules" directory. I will be adding documentation on how to add your own formats and modules soon. If you prefer the old design, I have kept a copy under the DOCUMENTATION directory.
+This tool was originally designed as a one big script, however recently when a change needed to be done to the script I had to relearn my own code... In order to avoid this in the future I've decided to keep all modules under the "modules" directory. If you prefer the old design, I have kept a copy under the DOCUMENTATION directory.
 
 ```sh
 ~# sickle -l

@@ -5,7 +5,7 @@ setuptools.setup(
   version="2.0",
   author="Milton Valencia (wetw0rk)",
   author_email="tmp@tmp.com",
-  description="sickle is a payload development tool designed to be used when developing assembly shellcode in bytes or payloads",
+  description="shellcode development tool",
   url="https://github.com/wetw0rk/Sickle",
   packages=setuptools.find_packages(exclude=['DOCUMENTATION']),
   entry_points={
