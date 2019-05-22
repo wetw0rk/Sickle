@@ -1,6 +1,6 @@
 # Sickle
 
-Sickle is a shellcode development tool created to speed up the various steps in creating a functioning payload. Although modules are aimed towards assembler, sickle is geared towards crafting payloads in various languages and is not limited to bytecode.
+Sickle is a shellcode development tool created to speed up the various steps in creating a functioning payload. Although modules are aimed towards assembler, sickle is geared towards crafting payloads in various languages and is not limited to shellcode.
 
 Sickle can aid in the following:
 - Identifying instructions resulting in bad characters when crafting shellcode
