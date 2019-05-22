@@ -84,7 +84,7 @@ Sickle is written in Python3 and to have full functionality I recommend installi
 - pip3 install -r requirements.txt
 - python3 setup.py install
     
-If you don't compile your shellcode in NASM I have added an "[objdump2shellcode](https://github.com/wetw0rk/objdump2shellcode)" like function. Although I recommend using NASM for a streamline experience. If you use [Black Arch Linux](https://blackarch.org/index.html) Sickle comes pre-installed. (previously known as objdump2shellcode):
+If you don't compile your shellcode in NASM I have added an "[objdump2shellcode](https://github.com/wetw0rk/objdump2shellcode)" like function. Although I recommend using NASM for a streamline experience.
 
 ```sh
 root@kali:~# sickle -h
@@ -118,3 +118,6 @@ optional arguments:
 
 ```
 
+### License
+
+Sickle is release under the MIT license. Check the COPYRIGHT file under the DOCUMENTATION directory.

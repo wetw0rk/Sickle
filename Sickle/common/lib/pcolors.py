@@ -1,6 +1,6 @@
 '''
 
-colors
+pcolors.py: colors for dumping. If you use windows and use custom modules your gonna wanna modify this file.
 
 '''
 

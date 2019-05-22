@@ -4,7 +4,6 @@ setuptools.setup(
   name='sickle',
   version="2.0",
   author="Milton Valencia (wetw0rk)",
-  author_email="tmp@tmp.com",
   description="shellcode development tool",
   url="https://github.com/wetw0rk/Sickle",
   packages=setuptools.find_packages(exclude=['DOCUMENTATION']),

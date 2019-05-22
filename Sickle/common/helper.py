@@ -1,6 +1,6 @@
 '''
 
-helper: handles all arguments passed to sickle
+helper.py: handles all arguments passed to sickle
 
 '''
 

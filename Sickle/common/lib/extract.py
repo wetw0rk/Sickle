@@ -1,6 +1,6 @@
 '''
 
-extract: all extraction done on files or bytecode should be done here.
+extract.py: all extraction done on files or bytecode should be done here.
 
 '''
 

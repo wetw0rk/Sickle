@@ -1,3 +1,9 @@
+'''
+
+deps.py: This file contains dependencies that may not be installed on systems (e.g capstone).
+
+'''
+
 try:
   from capstone import *
 except:
