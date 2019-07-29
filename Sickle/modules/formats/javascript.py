@@ -12,7 +12,7 @@ class module():
   def info(info_req):
     information = {
       "name"        : "javascript",
-      "description" : "format bytecode for Javascript (neatly then into a Uint8Array)",
+      "description" : "format bytecode for Javascript (Blob to send via XHR)",
     }
 
     return information[info_req]
@@ -44,9 +44,11 @@ class module():
       print('%s += \"%s\";' % (self.varname, results[i]))
 
     print("")
-    print("/* fp: contains the final payload in proper format */")
+    print("/* blob: contains the final payload in proper format */")
     print("for (var i = 0, len = %s.length; i < len; i+=2)" % (self.varname))
     print("{")
     print("  bytes.push(parseInt(%s.substr(i,2),16));" % self.varname)
     print("}")
-    print("var fp = new Uint8Array(bytes);")
+    print("var fp = new Uint8Array(bytes);\n")
+
+    print("var blob = new Blob([fp])")
