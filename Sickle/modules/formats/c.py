@@ -12,7 +12,7 @@ class module():
   def info(info_req):
     information = {
       "name"        : "c",
-      "description" : "format bytecode for a C (aka the best language in history)",
+      "description" : "format bytecode for a C",
     }
 
     return information[info_req]

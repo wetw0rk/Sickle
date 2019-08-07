@@ -12,7 +12,7 @@ class module():
   def info(info_req):
     information = {
       "name"        : "java",
-      "description" : "format bytecode for Java (e.g (byte) 0xBE, (byte) 0xEF)",
+      "description" : "format bytecode for Java",
     }
 
     return information[info_req]

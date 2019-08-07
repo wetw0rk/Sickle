@@ -12,7 +12,7 @@ class module():
   def info(info_req):
     information = {
       "name"        : "hex",
-      "description" : "format bytecode in hex (e.g 657777747230006b)",
+      "description" : "format bytecode in hex",
     }
 
     return information[info_req]

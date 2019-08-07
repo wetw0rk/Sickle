@@ -12,7 +12,7 @@ class module():
   def info(info_req):
     information = {
       "name"        : "nasm",
-      "description" : "format bytecode for NASM (useful for encoder stubs)",
+      "description" : "format bytecode for NASM",
     }
 
     return information[info_req]

@@ -12,7 +12,7 @@ class module():
   def info(info_req):
     information = {
       "name"        : "python3",
-      "description" : "format bytecode for Python3 (minor changes to the language but they matter)",
+      "description" : "format bytecode for Python3",
     }
 
     return information[info_req]

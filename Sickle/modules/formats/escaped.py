@@ -12,7 +12,7 @@ class module():
   def info(info_req):
     information = {
       "name"        : "escaped",
-      "description" : "format bytecode for one-liner hex escape paste (e.g \x42\x42)",
+      "description" : "format bytecode for one-liner hex escape paste",
     }
 
     return information[info_req]

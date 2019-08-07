@@ -37,42 +37,42 @@ This tool was originally designed as a one big script, however recently when a c
 
 ```sh
 ~# sickle -l
-MODULE     	 DESCRIPTION                                                                     
+MODULE           DESCRIPTION                                                                     
 
-pinpoint   	 pinpoint where in your shellcode bad characters occur                           
-run        	 execute the shellcode on either windows or unix                                 
-disassemble 	 disassemble bytecode in respective architecture                                 
-compare    	 compare two binary files and view differences                                   
+pinpoint         pinpoint where in your shellcode bad characters occur                           
+run              execute the shellcode on either windows or unix                                 
+disassemble      disassemble bytecode in respective architecture                                 
+compare          compare two binary files and view differences                                   
 
-FORMAT     	 DESCRIPTION                                                                     
+FORMAT           DESCRIPTION                                                                     
 
-powershell 	 format bytecode for Powershell                                                  
-uint8array 	 format bytecode for Javascript as a Uint8Array directly                         
-python     	 format bytecode for Python                                                      
-bash       	 format bytecode for bash script (UNIX)                                          
-cs         	 format bytecode for C#                                                          
-ruby       	 format bytecode for Ruby                                                        
-nasm       	 format bytecode for NASM (useful for encoder stubs)                             
-escaped    	 format bytecode for one-liner hex escape paste (e.g BB)                         
-hex_space  	 format bytecode in hex, seperated by a space (e.g 65 77 77 74 72 30 00 6b)      
-hex        	 format bytecode in hex (e.g 657777747230006b)                                   
-perl       	 format bytecode for Perl                                                        
-javascript 	 format bytecode for Javascript (neatly then into a Uint8Array)                  
-python3    	 format bytecode for Python3 (minor changes to the language but they matter)     
-dword      	 format bytecode in dword                                                        
-c          	 format bytecode for a C (aka the best language in history)                      
-java       	 format bytecode for Java (e.g (byte) 0xBE, (byte) 0xEF)                         
-num        	 format bytecode in num format                                                   
+powershell       format bytecode for Powershell                                                  
+uint8array       format bytecode for Javascript as a Uint8Array directly                         
+python           format bytecode for Python                                                      
+bash             format bytecode for bash script (UNIX)                                          
+cs               format bytecode for C#                                                          
+ruby             format bytecode for Ruby                                                        
+nasm             format bytecode for NASM                                                        
+escaped          format bytecode for one-liner hex escape paste                                  
+hex_space        format bytecode in hex, seperated by a space                                    
+hex              format bytecode in hex                                                          
+perl             format bytecode for Perl                                                        
+javascript       format bytecode for Javascript (Blob to send via XHR)                           
+python3          format bytecode for Python3                                                     
+dword            format bytecode in dword                                                        
+c                format bytecode for a C                                                         
+java             format bytecode for Java                                                        
+num              format bytecode in num format                                                   
 
 ARCHITECTURES
 
-x86_32
 x86_64
-mips32
-mips64
-arm
-arm64
+x86_32
 arm_thumb
+mips64
+arm64
+mips32
+arm
 ```
 
 ### Windows Installation

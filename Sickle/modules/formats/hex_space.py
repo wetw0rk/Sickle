@@ -12,7 +12,7 @@ class module():
   def info(info_req):
     information = {
       "name"        : "hex_space",
-      "description" : "format bytecode in hex, seperated by a space (e.g 65 77 77 74 72 30 00 6b)",
+      "description" : "format bytecode in hex, seperated by a space",
     }
 
     return information[info_req]
