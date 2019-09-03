@@ -26,6 +26,7 @@ class module():
     return information[info_req]
 
   def check_alpha(self, shellcode):
+    alpha = None
     try:
       shellcode.decode('ascii')
     except:
