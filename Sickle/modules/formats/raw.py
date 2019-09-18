@@ -21,8 +21,9 @@ class module():
 
   def general(self):
     rbytes = self.robject
-    sys.stderr.write("Payload size: {:d} bytes".format(rbytes[2]))
+    sys.stderr.write("Payload size: {:d} bytes\n".format(rbytes[2]))
     sys.stdout.buffer.write(rbytes[1])
+    
 
   def pformat(self):
     ops = ""
