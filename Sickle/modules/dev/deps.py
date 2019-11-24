@@ -45,12 +45,16 @@ def argument_check(module_arguments, user_arguments):
   ulist = []
   fails = ""
   check = 0
-  
-  for i in range(len(user_arguments)):
-    arg = user_arguments[i].split('=')[0]
-    var = user_arguments[i].split('=')[1]
-    ulist += arg,
-    adict[arg] = var
+
+  try:  
+    for i in range(len(user_arguments)):
+      arg = user_arguments[i].split('=')[0]
+      var = user_arguments[i].split('=')[1]
+      ulist += arg,
+      adict[arg] = var
+  except:
+    print("Error parsing arguments")
+    sys.exit(-1)
 
   for i in range(len(module_arguments)):
     if module_arguments[i] not in ulist:
