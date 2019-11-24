@@ -8,17 +8,18 @@ import argparse
 
 def parser():
 
-  parser = argparse.ArgumentParser(description="Sickle - Payload development tool")
-  parser.add_argument("-r", "--read",help="read bytes from binary file (any file)")
-  parser.add_argument("-f", "--format",default='c',type=str,help="output format (--list for more info)")
-  parser.add_argument("-s", "--stdin",help="read ops from stdin (EX: echo -ne \"\\xde\\xad\\xbe\\xef\" | sickle -s -f <format> -b '\\x00')", action="store_true")
-  parser.add_argument("-e", "--examine",help="examine a separate file containing original shellcode. mainly used to see if shellcode was recreated successfully")
-  parser.add_argument("-obj","--objdump",help="binary to use for shellcode extraction (via objdump method)")
-  parser.add_argument("-m", "--module", help="development module")
-  parser.add_argument("-a", "--arch",default="x86_32",type=str,help="select architecture for disassembly")
-  parser.add_argument("-b", "--badchars",help="bad characters to avoid in shellcode")
-  parser.add_argument("-v", "--varname",default='buf',type=str,help="alternative variable name")
-  parser.add_argument("-l", "--list",help="list all available formats and arguments", action="store_true")
+  formatter = lambda prog: argparse.HelpFormatter(prog, max_help_position=52)
+  parser = argparse.ArgumentParser(description="Sickle - Payload development framework", formatter_class=formatter, add_help=False)
+  parser.add_argument("pargs", nargs="*")
+  parser.add_argument('-h', '--help', default=False, action="store_true")
+  parser.add_argument("-r", "--read", help="Read bytes from binary file (use - for stdin)")
+  parser.add_argument("-f", "--format", default='c', type=str, help="Output format (--list for more info)")
+  parser.add_argument("-m", "--module", default="format", help="Development module")
+  parser.add_argument("-a", "--arch", default="x86_32", type=str, help="Select architecture for disassembly")
+  parser.add_argument("-b", "--badchars", help="Bad characters to avoid in shellcode")
+  parser.add_argument("-v", "--varname",  default='buf', type=str, help="Alternative variable name")
+  parser.add_argument("-i", "--info", help="Print detailed info for module or payload", action="store_true")
+  parser.add_argument("-l", "--list", help="List available formats, payloads, or modules",  action="store_true")
 
   args = parser.parse_args()
 

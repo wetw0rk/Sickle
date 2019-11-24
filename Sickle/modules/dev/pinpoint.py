@@ -1,16 +1,15 @@
 '''
 
-pinpoint: pinpoint where in your shellcode bad characters occur
+pinpoint: find what instruction(s) are causing issues in your shellcode
 
 '''
 
 from Sickle.modules.dev.deps import *
-from Sickle.common.lib.extract import *
 
 class module():
 
-  def __init__(self, arg_list):
-    self.robject = arg_list[1]
+  def __init__(self, arg_list, dynamic_args):
+    self.robject = arg_list[0]
     self.arch    = arg_list[2]
     self.varname = arg_list[3]
     self.badchrs = arg_list[4]
@@ -20,7 +19,7 @@ class module():
   def info(info_req):
     information = {
       "name"        : "pinpoint",
-      "description" : "pinpoint where in your shellcode bad characters occur",
+      "description" : "Pinpoint where in shellcode bad characters occur",
     }
 
     return information[info_req]
@@ -53,20 +52,21 @@ class module():
     for i in range(len(hex_opcode_string)):
       results += analysis(66, hex_opcode_string[i], self.badchrs)
 
+    # calculate the longest line
+    ll = len(hex_opcode_string[0])
+    for i in range(len(hex_opcode_string)):
+      if len(hex_opcode_string[i]) > ll:
+        ll = len(hex_opcode_string[i])
+
     for i in range(len(instruction_line)):
       if ID in results[i]:
-        completed_conversion += ("\"%s\"\t %s%s// %s%s" % (
-          hex_opcode_string[i],
-          colors.BOLD,
-          colors.RED,
-          instruction_line[i],
-          colors.END)
-        ).expandtabs(40),
+        h = ansi_ljust(f"{hex_opcode_string[i]}", (ll+1))
+        i = f"{colors.BOLD}{colors.RED}# /* {instruction_line[i]} */{colors.END}"
+        completed_conversion += f"{h}{i}",
       else:
-        completed_conversion += ("\"%s\"\t // %s" % (
-          results[i],
-          instruction_line[i])
-        ).expandtabs(40),
+        h = ansi_ljust(f"{results[i]}", (ll+1))
+        i = f"# /* {instruction_line[i]} */"
+        completed_conversion += f"{h}{i}",
 
     for i in range(len(completed_conversion)):
       print(completed_conversion[i])

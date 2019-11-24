@@ -11,44 +11,42 @@ class module():
   @staticmethod
   def info(info_req):
     information = {
-      "name"        : "javascript",
-      "description" : "format bytecode for Javascript (Blob to send via XHR)",
+      "name"        : "dword",
+      "description" : "Format bytecode in dword",
     }
 
     return information[info_req]
 
   def general(self):
     print("Payload size: {:d} bytes".format(self.robject[2]))
-    print('var %s = "";' % self.varname)
-    print('var bytes = [];\n')
 
   def pformat(self):
     op_str = ""
-    ops = ""
+    dwrd= ""
+    dlst= []
+
     # setup bad chars properly
     try:
       split_badchar = self.badchrs.split(',')
       for i in range(len(split_badchar)):
         mod_badchars += "%s," % (split_badchar[i][2:])
-      self.badchrs = mod_badchars.rstrip(',')
+      self.badchars = mod_badchars.rstrip(',')
     except:
       pass
 
     for byte in bytearray(self.robject[1]):
-      op_str += "{:02x}".format(byte)
+      dwrd += "{:02x}".format(byte)
 
-    results = analysis(60, op_str, self.badchrs)
+    # format the hex bytes into dword
+    splits = [dwrd[x:x+8] for x in range(0,len(dwrd),8)]
+    for i in range(len(splits)):
+      s = splits[i]
+      dlst += "0x" + "".join(map(str.__add__, s[-2::-2] ,s[-1::-2])),
+    for i in range(int(len(dlst)/8+1)):
+      op_str += ", ".join(dlst[i*8:(i+1)*8])
 
+    # send it of for character character_analysis
+    results = analysis(94, op_str, self.badchrs)
     self.general()
     for i in range(len(results)):
-      print('%s += \"%s\";' % (self.varname, results[i]))
-
-    print("")
-    print("/* blob: contains the final payload in proper format */")
-    print("for (var i = 0, len = %s.length; i < len; i+=2)" % (self.varname))
-    print("{")
-    print("  bytes.push(parseInt(%s.substr(i,2),16));" % self.varname)
-    print("}")
-    print("var fp = new Uint8Array(bytes);\n")
-
-    print("var blob = new Blob([fp])")
+      print(results[i])

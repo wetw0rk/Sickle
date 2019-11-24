@@ -11,8 +11,8 @@ class module():
   @staticmethod
   def info(info_req):
     information = {
-      "name"        : "num",
-      "description" : "format bytecode in num format",
+      "name"        : "hex",
+      "description" : "Format bytecode in hex",
     }
 
     return information[info_req]
@@ -22,22 +22,22 @@ class module():
 
   def pformat(self):
     op_str = ""
+    ops = ""
+    # setup bad chars properly
     try:
-      split_badchar = self.badchars.split(',')
+      split_badchar = self.badchrs.split(',')
       for i in range(len(split_badchar)):
-        mod_badchars += "0x%s," % (split_badchar[i][2:])
-      self.badchars = mod_badchars.rstrip(',')
+        mod_badchars += "%s," % (split_badchar[i][2:])
+      self.badchrs = mod_badchars.rstrip(',')
     except:
       pass
 
     for byte in bytearray(self.robject[1]):
-      op_str += "0x{:02x}, ".format(byte)
+      op_str += "{:02x}".format(byte)
+
+    results = analysis(8, op_str, self.badchrs)
+    for i in range(len(results)):
+      ops += results[i]
 
     self.general()
-    results = analysis(84, op_str, self.badchrs)
-    for i in range(len(results)):
-      snip = len(results[i]) - 2
-      if i == (len(results)-1):
-        print(results[i][:snip])
-      else:
-        print(results[i])
+    print(ops)

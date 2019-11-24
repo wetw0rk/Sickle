@@ -11,10 +11,9 @@ class module():
   @staticmethod
   def info(info_req):
     information = {
-      "name"        : "python",
-      "description" : "format bytecode for Python", # remember when a strings worked?
+      "name"        : "ruby",
+      "description" : "Format bytecode for Ruby",
     }
-
     return information[info_req]
 
   def general(self):
@@ -22,7 +21,10 @@ class module():
     print('%s = ""' % self.varname)
 
   def pformat(self):
-    results = analysis(60, self.eobject[1], self.badchrs)
+    results = analysis(56, self.eobject[1], self.badchrs)
     self.general()
     for i in range(len(results)):
-      print("{:s} += \"{:s}\"".format(self.varname, results[i]))
+      if i == (len(results) -1):
+        print("\"{:s}\"".format(results[i]))
+      else:
+        print("\"{:s}\" +".format(results[i]))

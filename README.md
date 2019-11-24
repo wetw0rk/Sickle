@@ -1,123 +1,71 @@
 # Sickle
 
-Sickle is a shellcode development tool created to speed up the various steps in creating a functioning payload. Although modules are aimed towards assembler, sickle is geared towards crafting payloads in various languages and is not limited to shellcode.
+Sickle is a payload development tool originally created to aid me in crafting shellcode, however it can be used in crafting payloads for other exploit types as well (non-binary). Although the current modules are mostly aimed towards assembly this tool is not limited to shellcode.
 
 Sickle can aid in the following:
 - Identifying instructions resulting in bad characters when crafting shellcode
 - Formatting output in various languages (python, perl, javascript, etc).
 - Accepting bytecode via STDIN and formatting it.
 - Executing shellcode in both Windows and Linux environments.
-- Comparing a bytecode sample to a modified binary.
+- Diffing for two binaries (hexdump, raw, asm, byte)
 - Dissembling shellcode into assembly language (ARM, x86, etc).
-- Shellcode extraction via objdump (although binfiles never fail!)
+- Shellcode extraction from raw bins (nasm sc.asm -o sc)
 
 ### Quick failure check
+
 A task I found myself doing repetitively was compiling assembler source code then extracting the shellcode, placing it into a wrapper, and testing it. If it was a bad run, the process would be repeated until successful. Sickle takes care of placing the shellcode into a wrapper for quick testing. (Works on Windows and Unix systems):
 
-![alt text](https://raw.githubusercontent.com/wetw0rk/Sickle/master/DOCUMENTATION/pictures/r.png?style=centerme)
+![alt text](https://raw.githubusercontent.com/wetw0rk/Sickle/master/Documentation/pictures/r.png?style=centerme)
 
 ### Recreating shellcode
-Sometimes you find a piece of shellcode that's fluent in its execution and you want to recreate it yourself to understand its underlying mechanisms. Sickle can help you compare the original shellcode to your "recreated" version. If you're not crafting shellcode and just need 2 binfiles to be the same this feature can also help verifying files are the same byte by byte.
 
-![alt text](https://raw.githubusercontent.com/wetw0rk/Sickle/master/DOCUMENTATION/pictures/examine.png?style=centerme)
+Sometimes you find a piece of shellcode that's fluent in its execution and you want to recreate it yourself to understand its underlying mechanisms. Sickle can help you compare the original shellcode to your "recreated" version.
+
+![alt text](https://raw.githubusercontent.com/wetw0rk/Sickle/master/Documentation/pictures/asm_compare.png?style=centerme)
+
+If you're not crafting shellcode and just need 2 binfiles to be the same this feature can also help verifying files are the same byte by byte (multiple modes).
+
+![alt text](https://raw.githubusercontent.com/wetw0rk/Sickle/master/Documentation/pictures/hexdump_diff.png?style=centerme)
 
 ### Disassembly
-Sickle can also take a binary file and convert the extracted opcodes (shellcode) to machine instructions. Keep in mind this works with raw opcodes (-r), object files (-obj), and STDIN (-s) as well. In the following example I am converting a reverse shell designed by Stephen Fewer to assembly.
 
-![alt text](https://raw.githubusercontent.com/wetw0rk/Sickle/master/DOCUMENTATION/pictures/disassemble.png?style=centerme)
+Sickle can also take a binary file and convert the extracted opcodes (shellcode) to machine instructions. Keep in mind this works with raw opcodes (-r) and STDIN (-r -) as well. In the following example I am converting a reverse shell designed by Stephen Fewer to assembly.
+
+![alt text](https://raw.githubusercontent.com/wetw0rk/Sickle/master/Documentation/pictures/disassemble.png?style=centerme)
 
 ### Bad character identification
-It's important to note that currently bad character identification is best used within a Linux based operating system. When dumping shellcode on a Windows host bad characters will NOT be highlighted. 
 
 [![asciicast](https://asciinema.org/a/244211.svg)](https://asciinema.org/a/244211)
 
 ### Module Based Design
 
-This tool was originally designed as a one big script, however recently when a change needed to be done to the script I had to relearn my own code... In order to avoid this in the future I've decided to keep all modules under the "modules" directory. If you prefer the old design, I have kept a copy under the DOCUMENTATION directory.
+This tool was originally designed as a one big script, however recently when a change needed to be done to the script I had to relearn my own code... In order to avoid this in the future I've decided to keep all modules under the "modules" directory (default module: format). If you prefer the old design, I have kept a copy under the Documentation directory.
 
-```sh
-~# sickle -l
-MODULE           DESCRIPTION                                                                     
-
-pinpoint         pinpoint where in your shellcode bad characters occur                           
-run              execute the shellcode on either windows or unix                                 
-disassemble      disassemble bytecode in respective architecture                                 
-compare          compare two binary files and view differences                                   
-
-FORMAT           DESCRIPTION                                                                     
-
-powershell       format bytecode for Powershell                                                  
-uint8array       format bytecode for Javascript as a Uint8Array directly                         
-python           format bytecode for Python                                                      
-bash             format bytecode for bash script (UNIX)                                          
-cs               format bytecode for C#                                                          
-ruby             format bytecode for Ruby                                                        
-nasm             format bytecode for NASM                                                        
-escaped          format bytecode for one-liner hex escape paste                                  
-hex_space        format bytecode in hex, seperated by a space                                    
-hex              format bytecode in hex                                                          
-perl             format bytecode for Perl                                                        
-javascript       format bytecode for Javascript (Blob to send via XHR)                           
-python3          format bytecode for Python3                                                     
-dword            format bytecode in dword                                                        
-c                format bytecode for a C                                                         
-java             format bytecode for Java                                                        
-num              format bytecode in num format                                                   
-
-ARCHITECTURES
-
-x86_64
-x86_32
-arm_thumb
-mips64
-arm64
-mips32
-arm
-```
-
-### Windows Installation
-If you decide to opt-out of the disassembly functions and only want to use Sickle as a wrapper/dumping tool Sickle will work out of the box with any Python version (Including 2.7). I have only encountered issues when writing/testing 64 bit shellcode on a Windows 10 host. In order to avoid problems I recommend installing [Python 3.4.4  (amd64)](https://www.python.org/ftp/python/3.4.4/python-3.4.4.amd64.msi) however any other Windows version should not have this issue. Should you be writing x86 shellcode, Windows 10 will work with any Python version e.g. [Python 3.7.0a3](https://www.python.org/ftp/python/3.7.0/python-3.7.0a3.exe).
-
-### Linux Installation
-Sickle is written in Python3 and to have full functionality I recommend installing [capstone](http://www.capstone-engine.org/) directly. If you don't need the disassembly function Sickle should work out of the box. Installation of Capstone is as easy as 1,2,3:
-- apt-get install python3-pip
-- pip3 install -r requirements.txt
-- python3 setup.py install
-    
-If you don't compile your shellcode in NASM I have added an "[objdump2shellcode](https://github.com/wetw0rk/objdump2shellcode)" like function. Although I recommend using NASM for a streamline experience.
-
-```sh
-root@kali:~# sickle -h
-usage: sickle.py [-h] [-r READ] [-f FORMAT] [-s] [-e EXAMINE] [-obj OBJDUMP]
-                 [-m MODULE] [-a ARCH] [-b BADCHARS] [-v VARNAME] [-l]
-
-Sickle - Payload development tool
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -r READ, --read READ  read bytes from binary file (any file)
-  -f FORMAT, --format FORMAT
-                        output format (--list for more info)
-  -s, --stdin           read ops from stdin (EX: echo -ne "\xde\xad\xbe\xef" |
-                        sickle -s -f <format> -b '\x00')
-  -e EXAMINE, --examine EXAMINE
-                        examine a separate file containing original shellcode.
-                        mainly used to see if shellcode was recreated
-                        successfully
-  -obj OBJDUMP, --objdump OBJDUMP
-                        binary to use for shellcode extraction (via objdump
-                        method)
-  -m MODULE, --module MODULE
-                        development module
-  -a ARCH, --arch ARCH  select architecture for disassembly
-  -b BADCHARS, --badchars BADCHARS
-                        bad characters to avoid in shellcode
-  -v VARNAME, --varname VARNAME
-                        alternative variable name
-  -l, --list            list all available formats and arguments
 
 ```
+~# sickle.py -l
 
-### License
+  Name                Description
+  ----                -----------
+  diff                Compare two binaries / shellcode(s). Supports hexdump, byte, raw, and asm modes
+  run                 Execute shellcode on either windows or unix
+  format              Format bytecode into desired format / language
+  badchar             Generate bad characters in respective format
+  disassemble         Disassemble bytecode in respective architecture
+  pinpoint            Pinpoint where in shellcode bad characters occur
 
-Sickle is release under the MIT license. Check the COPYRIGHT file under the DOCUMENTATION directory.
+~# sickle -i -m diff
+Options for diff
+
+Options:
+
+  Name        Required    Description
+  ----        --------    -----------
+  BINFILE     yes         Additional binary file needed to perform diff
+  MODE        yes         hexdump, byte, raw, or asm
+
+Description:
+
+  Compare two binaries / shellcode(s). Supports hexdump, byte, raw, and asm modes
+
+```

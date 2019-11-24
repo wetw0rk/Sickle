@@ -9,14 +9,14 @@ from ctypes import CDLL, c_char_p, c_void_p, memmove, cast, CFUNCTYPE
 
 class module():
 
-  def __init__(self, arg_list):
-    self.shellcode = arg_list[1]
+  def __init__(self, arg_list, dynamic_args):
+    self.shellcode = arg_list[0]
 
   @staticmethod
   def info(info_req):
     information = {
       "name"        : "run",
-      "description" : "execute the shellcode on either windows or unix",
+      "description" : "Execute shellcode on either windows or unix",
     }
 
     return information[info_req]

@@ -1,16 +1,15 @@
 '''
 
-disassemble: disassemble bytes in X arch
+disassemble: disassemble bytes in X architecture
 
 '''
 
 from Sickle.modules.dev.deps import *
-from Sickle.common.lib.extract import *
 
 class module():
 
-  def __init__(self, arg_list):
-    self.robject = arg_list[1]
+  def __init__(self, arg_list, dynamic_args):
+    self.robject = arg_list[0]
     self.arch    = arg_list[2]
     self.varname = arg_list[3]
     self.badchrs = arg_list[4]
@@ -20,7 +19,7 @@ class module():
   def info(info_req):
     information = {
       "name"        : "disassemble",
-      "description" : "disassemble bytecode in respective architecture"
+      "description" : "Disassemble bytecode in respective architecture"
     }
 
     return information[info_req]
@@ -58,12 +57,12 @@ class module():
 
     alpha = self.check_alpha(rbytes[1])
 
-    print("%s%s" % (colors.BOLD, colors.GRN)),
+    print("%s%s" % (colors.BOLD, colors.GREEN)),
     print("[Bytearray information]".center(60)),
     print(colors.BLUE),
     print("Architecture\tAlphanumeric\tSize (bytes)\tSource{:s}".format(colors.END).expandtabs(15)),
     print("{:s}\t{}\t{:d}\t{:s}".format(self.arch, alpha, rbytes[2], rbytes[0]).expandtabs(15)),
-    print("%s%s" % (colors.BOLD, colors.GRN)),
+    print("%s%s" % (colors.BOLD, colors.GREEN)),
     print("[Shellcode disassembly]".center(60)),
     print(colors.BLUE),
     print("Address\tOpCodes\tAssembly{:s}".format(colors.END).expandtabs(22)),

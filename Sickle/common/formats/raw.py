@@ -14,7 +14,7 @@ class module():
   def info(info_req):
     information = {
       "name"        : "raw",
-      "description" : "format bytecode in RAW",
+      "description" : "Format bytecode in RAW",
     }
 
     return information[info_req]
@@ -23,7 +23,7 @@ class module():
     rbytes = self.robject
     sys.stderr.write("Payload size: {:d} bytes\n".format(rbytes[2]))
     sys.stdout.buffer.write(rbytes[1])
-    
+
 
   def pformat(self):
     ops = ""

@@ -11,8 +11,8 @@ class module():
   @staticmethod
   def info(info_req):
     information = {
-      "name"        : "hex_space",
-      "description" : "format bytecode in hex, seperated by a space",
+      "name"        : "nasm",
+      "description" : "Format bytecode for NASM",
     }
 
     return information[info_req]
@@ -22,22 +22,21 @@ class module():
 
   def pformat(self):
     op_str = ""
-    ops = ""
     # setup bad chars properly
     try:
       split_badchar = self.badchrs.split(',')
       for i in range(len(split_badchar)):
-        mod_badchars += "%s," % (split_badchar[i][2:])
+        mod_badchars += "0x%s," % (split_badchar[i][2:])
       self.badchrs = mod_badchars.rstrip(',')
     except:
       pass
 
     for byte in bytearray(self.robject[1]):
-      op_str += "{:02x} ".format(byte)
+      op_str += "0x{:02x},".format(byte)
 
-    results = analysis(8, op_str, self.badchrs)
-    for i in range(len(results)):
-      ops += results[i]
+    results = analysis(60, op_str, self.badchrs)
 
     self.general()
-    print(ops)
+    for i in range(len(results)):
+      snip = len(results[i]) - 1
+      print("db " + results[i][:snip])

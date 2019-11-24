@@ -2,9 +2,9 @@ import setuptools
 
 setuptools.setup(
   name='sickle',
-  version="2.0",
+  version="2.0.2",
   author="Milton Valencia (wetw0rk)",
-  description="shellcode development tool",
+  description="Payload development tool",
   url="https://github.com/wetw0rk/Sickle",
   packages=setuptools.find_packages(exclude=['DOCUMENTATION']),
   entry_points={

@@ -3,26 +3,24 @@ from Sickle.common.lib.extract import *
 class module():
 
   def __init__(self, eobject, robject, varname, badchrs):
-    self.robject = robject # raw byte object
-    self.eobject = eobject # escaped object
-    self.varname = varname # variable name
-    self.badchrs = badchrs # bad characters
+    self.robject = robject
+    self.eobject = eobject
+    self.varname = varname
+    self.badchrs = badchrs
 
   @staticmethod
   def info(info_req):
     information = {
-      "name"        : "c",
-      "description" : "format bytecode for a C",
+      "name"        : "perl",
+      "description" : "Format bytecode for Perl",
     }
 
     return information[info_req]
 
-  # general: general header and payload information
   def general(self):
     print("Payload size: {:d} bytes".format(self.robject[2]))
-    print("unsigned char {:s}[] = ".format(self.varname))
+    print('my $%s =' % self.varname)
 
-  # pformat: simply print the payload to the console
   def pformat(self):
     results = analysis(60, self.eobject[1], self.badchrs)
     self.general()
@@ -30,4 +28,4 @@ class module():
       if i == (len(results) -1):
         print("\"{:s}\";".format(results[i]))
       else:
-        print("\"{:s}\"".format(results[i]))
+        print("\"{:s}\" .".format(results[i]))
