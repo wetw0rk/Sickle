@@ -1,5 +1,6 @@
-common/__pycache__/*
-modules/__pycache__/*
-modules/dev/__pycache__/*
-modules/formats/__pycache__/*
-common/lib/__pycache__/*
+Sickle/__pycache__/*
+Sickle/common/__pycache__/*
+Sickle/common/lib/__pycache__/*
+Sickle/common/formats/__pycache__/*
+Sickle/modules/__pycache__/*
+Sickle/modules/dev/__pycache__/*

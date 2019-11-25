@@ -89,15 +89,11 @@ class module():
 
     print(colors.BOLD, colors.GREEN)
     tables = f"{ansi_ljust('FILE1', 26, ' ', 'l')}{ansi_ljust('FILE2', 54, ' ', 'l')}"
-    print(tables)
-    print(colors.BLUE)
+    print(f"{tables}{colors.BLUE}\n")
     
-    print("Architecture\tAlphanumeric\tSize (bytes)\tSource\tArchitecture\tAlphanumeric\tSize (bytes)\tSource{:s}".format(colors.END).expandtabs(15))
-    print("{:s}\t{}\t{:d}\t{:s}\t{:s}\t{}\t{:d}\t{:s}".format(
-      self.arch, alpha, original[2], original[0],
-      self.arch, alpha2, modified[2], modified[0]
-      ).expandtabs(15))
-    
+    print(f"{'Architecture':<15}{'Alphanumeric':<15}{'Size (bytes)':<15}{'Source':<17}{'Architecture':<15}{'Alphanumeric':<15}{'Size (bytes)':<15}{'Source'}{colors.END}")
+    print(f"{self.arch:<15}{alpha:<15}{original[2]:<15}{original[0]:<17}{self.arch:<15}{alpha2:<15}{modified[2]:<15}{modified[0]}")
+
     print(colors.BOLD, colors.GREEN)
     tables = f"{ansi_ljust('Disassembly', 29, ' ', 'l')}{ansi_ljust('Disassembly', 54, ' ', 'l')}"
     print(tables)
@@ -196,14 +192,12 @@ class module():
 
   # check_alpha: check if the buffer is completely alphanumeric
   def check_alpha(self, shellcode):
+    for i in range(len(shellcode)):
+      test = str.isalpha(chr(shellcode[i]))
+      if test == False:
+        return "False"
 
-    alpha = None
-    try:
-      shellcode.decode('ascii')
-    except:
-      alpha = False
-
-    return alpha
+    return "True"
 
   # raw_repr: print both binary files as strings escaping
   # non-printable characters
