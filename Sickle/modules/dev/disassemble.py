@@ -25,12 +25,11 @@ class module():
     return information[info_req]
 
   def check_alpha(self, shellcode):
-    alpha = None
-    try:
-      shellcode.decode('ascii')
-    except:
-      alpha = False
-    return alpha
+    for i in range(len(shellcode)):
+      test = str.isalpha(chr(shellcode[i]))
+      if test == False:
+        return "False"
+    return "True"
 
   def disassemble_bytes(self, source_file, shellcode, sc_size):
     instruction = []
