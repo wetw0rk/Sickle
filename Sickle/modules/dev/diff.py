@@ -39,9 +39,10 @@ class module():
     information = {
       "name"              : "diff",
       "description"       : "Compare two binaries / shellcode(s). Supports hexdump, byte, raw, and asm modes",
-      "arguments"         : ["BINFILE", "MODE"],
-      "arg_descriptions"  : ["Additional binary file needed to perform diff", "hexdump, byte, raw, or asm"],
-      "arg_reqs"          : ["yes", "yes"],
+      "arguments"         : {
+                              "BINFILE" : ["yes", "Additional binary file needed to perform diff", "hexdump, byte, raw, or asm"],
+                              "MODE"    : ["yes", "hexdump", "byte", "raw", "asm"]
+                            },
       "modes"             : ["hexdump", "byte", "raw", "asm"]
     }
 

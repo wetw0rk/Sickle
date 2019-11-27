@@ -41,28 +41,48 @@ def arch_modes():
 # argument_check: Verify that the users arguments will work
 # on the current module. If so, return dictionary.
 def argument_check(module_arguments, user_arguments):
-  adict = {}
-  ulist = []
+
+  adict = {} # returned dictionary
+  olist = [] # optional arg list
+  elist = [] # expected arg list
+  ulist = [] # user list
   fails = ""
   check = 0
 
-  try:  
+  for k, v in module_arguments.items():
+    if v[0] == "yes":
+      elist += k,
+    olist += k,
+
+  try:
+
     for i in range(len(user_arguments)):
+
       arg = user_arguments[i].split('=')[0]
       var = user_arguments[i].split('=')[1]
-      ulist += arg,
-      adict[arg] = var
+
+      if arg not in olist:
+        continue
+      else:
+        ulist += arg,
+        adict[arg] = var
+
   except:
+
     print("Error parsing arguments")
     sys.exit(-1)
 
-  for i in range(len(module_arguments)):
-    if module_arguments[i] not in ulist:
-      fails += "{:s}, ".format(module_arguments[i])
+  for i in range(len(elist)):
+    if elist[i] not in ulist:
+      fails += "{:s}, ".format(elist[i])
       check = 1
-  
+
   if check == 1:
     print(f"Missing arguments: {fails.rstrip(', ')}")
     return -1
 
+  for k,v in adict.items():
+    if len(v) < 1:
+      print("Empty arguments")
+      sys.exit(-1)
   return adict

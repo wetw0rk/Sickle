@@ -50,8 +50,8 @@ class handle():
       if m.module.info("arguments"):
         print(f"  {'Name':<12}{'Required':<12}{'Description'}")
         print(f"  {'----':<12}{'--------':<12}{'-----------'}")
-        for i in range(len(m.module.info("arguments"))):
-          print(f"  {m.module.info('arguments')[i]:<12}{m.module.info('arg_reqs')[i]:<12}{m.module.info('arg_descriptions')[i]}")
+        for k, v in m.module.info("arguments").items():
+          print(f"  {k:<12}{v[0]:<12}{v[1]}")
     except:
       try:
         m.module.info("formats")
