@@ -5,6 +5,7 @@ run: execute the shellcode on either windows or unix
 '''
 
 import os
+import ctypes
 from ctypes import CDLL, c_char_p, c_void_p, memmove, cast, CFUNCTYPE
 
 class module():
