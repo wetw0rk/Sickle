@@ -20,6 +20,7 @@ class module():
     information = {
       "name"        : "pinpoint",
       "description" : "Pinpoint where in shellcode bad characters occur",
+      "arguments"   : True
     }
 
     return information[info_req]

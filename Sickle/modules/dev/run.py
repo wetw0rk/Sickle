@@ -18,6 +18,7 @@ class module():
     information = {
       "name"        : "run",
       "description" : "Execute shellcode on either windows or unix",
+      "arguments"   : True
     }
 
     return information[info_req]

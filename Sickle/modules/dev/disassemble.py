@@ -19,7 +19,8 @@ class module():
   def info(info_req):
     information = {
       "name"        : "disassemble",
-      "description" : "Disassemble bytecode in respective architecture"
+      "description" : "Disassemble bytecode in respective architecture",
+      "arguments"   : True
     }
 
     return information[info_req]

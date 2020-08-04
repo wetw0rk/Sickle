@@ -52,6 +52,8 @@ class handle():
         print(f"  {'----':<12}{'--------':<12}{'-----------'}")
         for k, v in m.module.info("arguments").items():
           print(f"  {k:<12}{v[0]:<12}{v[1]}")
+      else:
+        print("  None")
     except:
       try:
         m.module.info("formats")
@@ -174,6 +176,19 @@ class handle():
           self.format     # format
         ],
         self.pargs        # Positional args: X=Y (e.g: LPORT=1337)
+      )
+      module.do_thing()
+    elif self.module != "format" and eval(self.module).module.info("arguments") == False:
+      module = eval(self.module).module(
+        [
+          None,
+          None,
+          self.arch,
+          self.varname,
+          self.badchars,
+          self.format
+        ],
+        self.pargs
       )
       module.do_thing()
     else:

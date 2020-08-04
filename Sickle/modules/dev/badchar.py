@@ -43,6 +43,7 @@ class module():
     information = {
       "name"        : "badchar",
       "description" : "Generate bad characters in respective format",
+      "arguments"   : False
     }
 
     return information[info_req]
