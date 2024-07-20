@@ -4,12 +4,12 @@ setuptools.setup(
   name='sickle',
   version="2.0.2",
   author="Milton Valencia (wetw0rk)",
-  description="Payload development tool",
+  description="Payload development framework",
   url="https://github.com/wetw0rk/Sickle",
-  packages=setuptools.find_packages(exclude=['DOCUMENTATION']),
+  packages=setuptools.find_packages(exclude=['documentation']),
   entry_points={
     'console_scripts': [
-      'sickle = Sickle.__main__:entry_point'
+      'sickle = sickle.__main__:entry_point'
     ]
   },
 
@@ -17,6 +17,7 @@ setuptools.setup(
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.6",
     "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.11",
     "License :: OSI Approved :: MIT license",
     "Operating System :: OS Independent",
   ],

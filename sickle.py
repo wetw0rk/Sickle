@@ -2,10 +2,10 @@
 
 '''
 
-sickle.py: this script runs sickle
+sickle: this script runs sickle
 
 '''
 
-from Sickle import __main__
+from sickle import __main__
 
 __main__.entry_point()
