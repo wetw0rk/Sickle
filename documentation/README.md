@@ -11,7 +11,58 @@ Hopefully this will be complete in the next major release.
 
 # Linux Installation
 
-TODO
+After Python has been installed, simply clone the Sickle repository.
+
+```
+wetw0rk@remachine:/opt$ git clone https://github.com/wetw0rk/Sickle
+Cloning into 'Sickle'...
+remote: Enumerating objects: 535, done.
+remote: Counting objects: 100% (95/95), done.
+remote: Compressing objects: 100% (69/69), done.
+remote: Total 535 (delta 24), reused 88 (delta 22), pack-reused 440
+Receiving objects: 100% (535/535), 161.92 MiB | 1019.00 KiB/s, done.
+Resolving deltas: 100% (251/251), done.
+Updating files: 100% (65/65), done.
+```
+
+Once cloned, enter the `Sickle` directory and install the requirements using `pip3`. 
+
+```
+wetw0rk@remachine:/opt/Sickle$ sudo pip3 install -r requirements.txt 
+Collecting capstone>=3.0.5
+  Downloading capstone-5.0.1-py3-none-manylinux1_x86_64.manylinux_2_5_x86_64.whl (2.9 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.9/2.9 MB 12.4 MB/s eta 0:00:00
+Requirement already satisfied: setuptools in /usr/lib/python3/dist-packages (from -r requirements.txt (line 2)) (59.6.0)
+Installing collected packages: capstone
+Successfully installed capstone-5.0.1
+```
+
+Once dependencies have been installed simply run `setup.py` as shown below.
+
+```
+wetw0rk@remachine:/opt/Sickle$ sudo python3 setup.py install
+running install
+```
+
+And you should be good to go!
+
+```
+wetw0rk@remachine:/opt/Sickle$ sickle -h
+usage: sickle [-h] [-r READ] [-f FORMAT] [-m MODULE] [-a ARCH] [-b BADCHARS] [-v VARNAME] [-i] [-l]
+
+Sickle - Payload development framework
+
+options:
+  -h, --help                        Show this help message and exit
+  -r READ, --read READ              Read bytes from binary file (use - for stdin)
+  -f FORMAT, --format FORMAT        Output format (--list for more info)
+  -m MODULE, --module MODULE        Development module
+  -a ARCH, --arch ARCH              Select architecture for disassembly
+  -b BADCHARS, --badchars BADCHARS  Bad characters to avoid in shellcode
+  -v VARNAME, --varname VARNAME     Alternative variable name
+  -i, --info                        Print detailed info for module or payload
+  -l, --list                        List available formats, payloads, or modules
+```
 
 # Windows Installation
 
@@ -29,7 +80,7 @@ Resolving deltas: 100% (249/249), done.
 Updating files: 100% (65/65), done.
 ```
 
-Once cloned enter the `Sickle` directory and install the requirements using `pip3`.
+Once cloned, enter the `Sickle` directory and install the requirements using `pip3`.
 
 ```
 C:\Sickle>pip3 install -r requirements.txt
@@ -55,7 +106,7 @@ C:\Sickle>python setup.py install
 running install
 ```
 
-The last step is to enable ANSI colors. To do this simply double click the `enable-ansi.reg` located in the **documentation** folder within the repository. Upon comletion, if everything went well, you should be able to run sickle from anywhere.
+The last step is to enable ANSI colors. To do this simply double click the enable-ansi.reg located in the documentation folder within the repository. Upon completion, if everything went well, you should be able to run sickle from anywhere.
 
 ```
 C:\>sickle -h
