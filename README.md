@@ -1,6 +1,6 @@
 # Sickle
 
-![alt text](./documentation/logo/panda_logo.png)
+![alt text](./docs/logo/panda_logo.png)
 
 Sickle is a tool I originally developed to help me be more effective, in both developing and understanding shellcode. However, throughout the course of its development and usage It has evolved into a payload development framework. Although current modules are mostly aimed towards assembly, this tool is not limited to shellcode.
 
@@ -16,11 +16,11 @@ Currently sickle can assist in the following.
 
 This functionality of sickle was originally implemented to aid me in understanding public shellcode stubs. When assembly diffing is performed the diff will occur on both the assembly and opcode level individually.
 
-![alt text](./documentation/screenshots/diff_shellcode.png)
+![alt text](./docs/screenshots/diff_shellcode.png)
 
 Additionally, sickle supports multiple modes in which to perform the diff and can be useful even outside of shellcode development. Notably sickle currently supports both Windows and Linux for all modules not just diffing.
 
-![alt text](./documentation/screenshots/hexdump_diff.png)
+![alt text](./docs/screenshots/hexdump_diff.png)
 
 ## Shellcode Execution
 
@@ -33,13 +33,13 @@ A task you may find yourself doing repeatedly is testing your shellcode. These s
 
 Although these steps may not seem like a lot they add up when you do them over and over until you get your expected outcome. Sickle takes care of placing the shellcode into a wrapper for quick testing and works on both Windows and Unix systems.
 
-![alt text](./documentation/screenshots/r.png)
+![alt text](./docs/screenshots/r.png)
 
 ## Disassembly
 
 Sickle can also take a binary file and convert the extracted opcodes (shellcode) to machine instructions (assembly). Keep in mind this works with raw binary only and disassembly is currently only done in a linear fashion.
 
-![alt text](./documentation/screenshots/disassemble.png)
+![alt text](./docs/screenshots/disassemble.png)
 
 Shown above the module disassembles a reverse shell designed by Stephen Fewer to assembly.
 
@@ -47,7 +47,7 @@ Shown above the module disassembles a reverse shell designed by Stephen Fewer to
 
 Shellcode extraction was the first module or rather functionality for sickle as opcodes are interpreted differently depending on the wrapper you are using. You cannot expect JavaScript to store and interpret shellcode the same way a C program would.
 
-![alt text](./documentation/gifs/format.gif)
+![alt text](./docs/gifs/format.gif)
 
 Perhaps the biggest inspiration for this was `msfvenom`.
 
@@ -55,7 +55,7 @@ Perhaps the biggest inspiration for this was `msfvenom`.
 
 Although not prevalent in 64bit exploits there may be times an exploit restricts certain characters from being used. This is where the pinpoint module shines as it directly shows the assembly instructions responsible for the identified bad character.
 
-![alt text](./documentation/gifs/pinpoint.gif)
+![alt text](./docs/gifs/pinpoint.gif)
 
 # Module Based Design
 
