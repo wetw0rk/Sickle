@@ -22,6 +22,7 @@ def parser():
     parser.add_argument("pargs", nargs="*", help=argparse.SUPPRESS)
     parser.add_argument("-h", "--help", action='help', default=argparse.SUPPRESS, help="Show this help message and exit")
     parser.add_argument("-r", "--read", help="Read bytes from binary file (use - for stdin)")
+    parser.add_argument("-p", "--payload", help="Shellcode to use")
     parser.add_argument("-f", "--format", default='c', type=str, help="Output format (--list for more info)")
     parser.add_argument("-m", "--module", default="format", help="Development module")
     parser.add_argument("-a", "--arch", default="x64", type=str, help="Select architecture for disassembly")

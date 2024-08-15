@@ -1,11 +1,12 @@
 import os
 import sys
 
-from sickle.common.handlers.format_handler import FormatHandler
-from sickle.common.handlers.module_handler import ModuleHandler
+from sickle.common.handlers.format_handler import FormatHandler # NEW
+from sickle.common.handlers.module_handler import ModuleHandler # NEW
+from sickle.common.handlers.shellcode_handler import ShellcodeHandler # NEW
 
-from sickle.common.lib.generic.mparser import print_module_info
 from sickle.common.lib.generic.extract import read_bytes_from_file
+from sickle.common.lib.generic.mparser import print_module_info
 
 class Handle():
     """This class should be looked at as the coordinator of the framework. Execution
@@ -20,10 +21,11 @@ class Handle():
         args = arg_parser.parse_args()
 
         self.arg_parser = arg_parser      # parser object used for help output
+        self.payload    = args.payload    # shellcode to use
         self.binfile    = args.read       # read from binary file
         self.module     = args.module     # module to use on binfile
         self.list       = args.list       # list all formats / archs
-        self.info       = args.info       # detailed info for module
+        self.info       = args.info       # detailed info for module or payload
 
         self.module_args = {}
         self.module_args["format"] = args.format
@@ -37,6 +39,7 @@ class Handle():
         supported by sickle.
         """
 
+        ShellcodeHandler.print_stubs()
         ModuleHandler.print_modules()
         FormatHandler.print_formats()
         
@@ -49,9 +52,15 @@ class Handle():
         if self.list == True:
             self.print_supported()
 
+        # Display more information on either shellcode or a given module. Since format is technically
+        # a module, we always wanna avoid printing information on it.
         if self.info == True:
-            if (self.module != "format"):
+            if (self.payload and self.module != "format"):
+                sys.exit(f"Payload and the module information at the same time? Go get some coffee..")
+            elif (self.module != "format"):
                 print_module_info("modules", self.module)
+            elif (self.payload):
+                print_module_info("payloads", self.payload)
             else:
                 sys.exit(f"What do you want information for?")
 
@@ -67,12 +76,18 @@ class Handle():
                 if os.path.isfile(self.binfile) is False:
                     sys.exit("Error dumping bytecode. Is file present?")
         
+        if self.payload:                                                # RM FROM PUBLIC RELEASE
+            read_source = "Sickle Generated Stub"                       # RM FROM PUBLIC RELEASE
+
         self.module_args["source"] = read_source
 
         # This is where we actually read the bytecode / binary data and assign it to the module_args
         # dictionary.
         if self.binfile:
             read_bytes = read_bytes_from_file(self.binfile)
+        elif self.payload:                                               # TODO: make the below wayyyy more dynamic like modules
+            generator = ShellcodeHandler(self.payload, self.module_args) # NEW
+            read_bytes = generator.get_shellcode()                       # NEW
         else:
             read_bytes = None
 

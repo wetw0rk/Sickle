@@ -53,7 +53,7 @@ def check_module_support(module_class, module_name):
 
     try:
         imported_module = importlib.import_module(f"sickle.{module_class}.{module_name.replace('/', '.')}")
-    except Error as e:
+    except Exception as e:
         sys.exit(f"Failed to import {module_name}, error: {e}")
 
     return imported_module

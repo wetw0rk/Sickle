@@ -1,3 +1,5 @@
+import struct
+import socket
 import binascii
 
 def from_hex_to_raw(line):
@@ -48,3 +50,9 @@ def from_raw_to_escaped(raw_bytes):
     for i in range(len(raw_bytes)):
         escaped_bytes += "\\x{:02x}".format(raw_bytes[i])
     return escaped_bytes
+
+def ip_str_to_inet_addr(ip):
+    return struct.unpack('<L', (socket.inet_aton(ip)))[0]
+
+def port_str_to_htons(port):
+    return socket.htons(int(port))
