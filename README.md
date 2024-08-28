@@ -12,6 +12,8 @@ Currently sickle can assist in the following.
 - Disassembly
 - Shellcode Extraction
 
+**WARNING**: Sickle is currently undergoing massive changes to support shellcode generation. For a stable version, please use the latest release.
+
 ## Diffing
 
 This functionality of sickle was originally implemented to aid me in understanding public shellcode stubs. When assembly diffing is performed the diff will occur on both the assembly and opcode level individually.
