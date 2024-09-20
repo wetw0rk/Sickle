@@ -11,6 +11,10 @@ import os
 import sys
 import time
 
+PYTHON_NAME = "python3"
+if (sys.platform == "win32"):
+    PYTHON_NAME = "python"
+
 SICKLE_PATH = f"{os.path.dirname(__file__)}/../src"
 
 IGNORE = ['__init__.py', "__pycache__"]
@@ -19,29 +23,34 @@ SLEEP_TIME = 0
 
 MODULE_TESTS = \
 {
-    "diff": [f"python3 -B {SICKLE_PATH}/sickle.py -a x64 -m diff -r generic_sc BINFILE=modified_sc MODE=hexdump",
-             f"python3 -B {SICKLE_PATH}/sickle.py -a x64 -m diff -r modified_sc BINFILE=generic_sc MODE=hexdump",
-             f"python3 -B {SICKLE_PATH}/sickle.py -a x64 -m diff -r generic_sc BINFILE=modified_sc MODE=byte",
-             f"python3 -B {SICKLE_PATH}/sickle.py -a x64 -m diff -r modified_sc BINFILE=generic_sc MODE=byte",
-             f"python3 -B {SICKLE_PATH}/sickle.py -a x64 -m diff -r generic_sc BINFILE=modified_sc MODE=raw",
-             f"python3 -B {SICKLE_PATH}/sickle.py -a x64 -m diff -r modified_sc BINFILE=generic_sc MODE=raw",
-             f"python3 -B {SICKLE_PATH}/sickle.py -a x64 -m diff -r generic_sc BINFILE=modified_sc MODE=asm",
-             f"python3 -B {SICKLE_PATH}/sickle.py -a x64 -m diff -r modified_sc BINFILE=generic_sc MODE=asm"],
+    "diff": [f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -a x64 -m diff -r generic_sc BINFILE=modified_sc MODE=hexdump",
+             f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -a x64 -m diff -r modified_sc BINFILE=generic_sc MODE=hexdump",
+             f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -a x64 -m diff -r generic_sc BINFILE=modified_sc MODE=byte",
+             f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -a x64 -m diff -r modified_sc BINFILE=generic_sc MODE=byte",
+             f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -a x64 -m diff -r generic_sc BINFILE=modified_sc MODE=raw",
+             f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -a x64 -m diff -r modified_sc BINFILE=generic_sc MODE=raw",
+             f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -a x64 -m diff -r generic_sc BINFILE=modified_sc MODE=asm",
+             f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -a x64 -m diff -r modified_sc BINFILE=generic_sc MODE=asm"],
 
-    "badchar": [f"python3 -B {SICKLE_PATH}/sickle.py -m badchar -f c"],
+    "badchar": [f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -m badchar -f c"],
 
-    "disassemble": [f"python3 -B {SICKLE_PATH}/sickle.py -a x64 -m disassemble -r generic_sc"],
+    "disassemble": [f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -a x64 -m disassemble -r generic_sc"],
 
-    "pinpoint": [f"python3 -B {SICKLE_PATH}/sickle.py -a x64 -r generic_sc -b \"\\x00\\x0a\\x0d\" -m pinpoint -f c",
-                 f"python3 -B {SICKLE_PATH}/sickle.py -a x64 -r generic_sc -b \"\\x00\\x0a\\x0d\" -m pinpoint -f cs",
-                 f"python3 -B {SICKLE_PATH}/sickle.py -a x64 -r generic_sc -b \"\\x00\\x0a\\x0d\" -m pinpoint -f bash",
-                 f"python3 -B {SICKLE_PATH}/sickle.py -a x64 -r generic_sc -b \"\\x00\\x0a\\x0d\" -m pinpoint -f java",
-                 f"python3 -B {SICKLE_PATH}/sickle.py -a x64 -r generic_sc -b \"\\x00\\x0a\\x0d\" -m pinpoint -f nasm",
-                 f"python3 -B {SICKLE_PATH}/sickle.py -a x64 -r generic_sc -b \"\\x00\\x0a\\x0d\" -m pinpoint -f perl",
-                 f"python3 -B {SICKLE_PATH}/sickle.py -a x64 -r generic_sc -b \"\\x00\\x0a\\x0d\" -m pinpoint -f ruby",
-                 f"python3 -B {SICKLE_PATH}/sickle.py -a x64 -r generic_sc -b \"\\x00\\x0a\\x0d\" -m pinpoint -f python",
-                 f"python3 -B {SICKLE_PATH}/sickle.py -a x64 -r generic_sc -b \"\\x00\\x0a\\x0d\" -m pinpoint -f python3",
-                 f"python3 -B {SICKLE_PATH}/sickle.py -a x64 -r generic_sc -b \"\\x00\\x0a\\x0d\" -m pinpoint -f powershell"]
+    "pinpoint": [f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -a x64 -r generic_sc -b \"\\x00\\x0a\\x0d\" -m pinpoint -f c",
+                 f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -a x64 -r generic_sc -b \"\\x00\\x0a\\x0d\" -m pinpoint -f cs",
+                 f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -a x64 -r generic_sc -b \"\\x00\\x0a\\x0d\" -m pinpoint -f bash",
+                 f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -a x64 -r generic_sc -b \"\\x00\\x0a\\x0d\" -m pinpoint -f java",
+                 f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -a x64 -r generic_sc -b \"\\x00\\x0a\\x0d\" -m pinpoint -f nasm",
+                 f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -a x64 -r generic_sc -b \"\\x00\\x0a\\x0d\" -m pinpoint -f perl",
+                 f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -a x64 -r generic_sc -b \"\\x00\\x0a\\x0d\" -m pinpoint -f ruby",
+                 f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -a x64 -r generic_sc -b \"\\x00\\x0a\\x0d\" -m pinpoint -f python",
+                 f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -a x64 -r generic_sc -b \"\\x00\\x0a\\x0d\" -m pinpoint -f python3",
+                 f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -a x64 -r generic_sc -b \"\\x00\\x0a\\x0d\" -m pinpoint -f powershell"]
+}
+
+PAYLOAD_TESTS = \
+{
+    "linux": [ f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -p linux/x86/shell_reverse_tcp LHOST=127.0.0.1 LPORT=42 -f c" ]
 }
 
 def get_clean_module_list(path):
@@ -70,16 +79,16 @@ def execute_test(test):
 def test_all_help_pages():
     modules = get_clean_module_list(f"{SICKLE_PATH}/sickle/modules")
 
-    help_pages = [f"python3 -B {SICKLE_PATH}/sickle.py -l",
-                  f"python3 -B {SICKLE_PATH}/sickle.py -h",
-                  f"python3 -B {SICKLE_PATH}/sickle.py"]
+    help_pages = [f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -l",
+                  f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -h",
+                  f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py"]
 
     for i in range(len(help_pages)):
         execute_test(help_pages[i])
         time.sleep(SLEEP_TIME)
 
     for i in range(len(modules)):
-        test = f"python3 -B {SICKLE_PATH}/sickle.py -m {modules[i]} -i"
+        test = f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -m {modules[i]} -i"
         execute_test(test)
         time.sleep(SLEEP_TIME)
 
@@ -89,7 +98,7 @@ def test_all_formats():
     formats = get_clean_module_list(f"{SICKLE_PATH}/sickle/formats")
     
     for i in range(len(formats)):
-        test = f"python3 -B {SICKLE_PATH}/sickle.py -r generic_sc -f {formats[i]} -b \"\\x00\\x0a\\x0d\""
+        test = f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -r generic_sc -f {formats[i]} -b \"\\x00\\x0a\\x0d\""
         execute_test(test)
 
     return
@@ -101,11 +110,18 @@ def test_modules():
             execute_test(commands[i])
     return
 
+def test_payloads():
+    for payload, commands in PAYLOAD_TESTS.items():
+        print(f"[*] Testing {payload} payload")
+        for i in range(len(commands)):
+            execute_test(commands[i])
+    return
+
 def test_flag_errors():
-    test_cases = [f"python3 -B {SICKLE_PATH}/sickle.py -r poop -f c", # Read from non-existing file
-                  f"python3 -B {SICKLE_PATH}/sickle.py -r generic_sc -f poop", # Use invalid format
-                  f"python3 -B {SICKLE_PATH}/sickle.py -a x80-6 -m disassemble -r generic_sc -f c", # Invalid arch
-                  f"python3 -B {SICKLE_PATH}/sickle.py -m doeverything4me", # Invalid module
+    test_cases = [f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -r poop -f c", # Read from non-existing file
+                  f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -r generic_sc -f poop", # Use invalid format
+                  f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -a x80-6 -m disassemble -r generic_sc -f c", # Invalid arch
+                  f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -m doeverything4me", # Invalid module
     ]
 
     for i in range(len(test_cases)):
@@ -116,6 +132,7 @@ def main():
     test_all_help_pages()
     test_all_formats()
     test_modules()
+    test_payloads()
     test_flag_errors()
 
 main()
