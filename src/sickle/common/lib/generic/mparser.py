@@ -18,7 +18,8 @@ def get_module_list(target_path):
     modules_path = f"{os.path.dirname(__file__)}/../../../{target_path}"
 
     # Here we traverse into the target module directory. If we are including the
-    # sub directories, we have to remove the target path and traversal path.
+    # sub directories, we have to remove the target path and traversal path. In
+    # order to work under Windows we convert '\\' to '/'
     for root, dirs, files in os.walk(modules_path):
         for file in files:
             if (file.endswith(".py") and ("__" not in file)):
@@ -26,8 +27,8 @@ def get_module_list(target_path):
                 module_name = f"{root}/{module_name}"
                 module_name = module_name[module_name.find(target_path):]
                 module_name = module_name.lstrip(f"{target_path}")
-                module_name = module_name.lstrip('/')
-                module_list.append(module_name)
+                module_name = module_name.replace('\\', '/')
+                module_list.append(module_name[1:])
 
     return module_list
 
@@ -52,7 +53,10 @@ def check_module_support(module_class, module_name):
         return None
 
     try:
-        imported_module = importlib.import_module(f"sickle.{module_class}.{module_name.replace('/', '.')}")
+        formatted_module_name = module_name.replace('\\', '.')
+        formatted_module_name = module_name.replace('/', '.')
+        #print(f"sickle.{module_class}.{formatted_module_name}")
+        imported_module = importlib.import_module(f"sickle.{module_class}.{formatted_module_name}")
     except Exception as e:
         sys.exit(f"Failed to import {module_name}, error: {e}")
 
