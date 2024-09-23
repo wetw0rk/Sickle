@@ -64,9 +64,12 @@ class Assembler():
         """
 
         asm_code = self.remove_comments_from_asm(asm_code)
-
+        
         try:
             byte_list, count = self.target_arch.asm(asm_code)
+            if (count == 0):
+                print("Failed to generate bytes")
+                return
         except Exception as e:
             print(f"Error: {e}")
             return
