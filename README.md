@@ -6,6 +6,7 @@ Sickle is a tool I originally developed to help me be more effective, in both de
 
 Currently sickle can assist in the following.
 
+- Shellcode Generation
 - Diffing
 - Bad Character Identification
 - Shellcode Execution
@@ -13,6 +14,12 @@ Currently sickle can assist in the following.
 - Shellcode Extraction
 
 **WARNING**: Sickle is currently undergoing massive changes to support shellcode generation. For a stable version, please use the latest release.
+
+## Shellcode Generation
+
+Sickle supports shellcode generation via the [Keystone Engine](https://www.keystone-engine.org/). Due to this being a newly added feature, payload support is limited.
+
+![alt text](./docs/screenshots/generation.gif)
 
 ## Diffing
 
