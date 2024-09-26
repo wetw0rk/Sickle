@@ -18,6 +18,8 @@ class Shellcode():
     arguments["PROCESS"]["optional"] = "yes"
     arguments["PROCESS"]["description"] = "Target process to modify"
 
+    tested_platforms = ["Windows 11"]
+
     def __init__(self, arg_object):
 
         self.arg_list = arg_object["positional arguments"]
