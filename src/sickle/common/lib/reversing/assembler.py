@@ -45,7 +45,7 @@ class Assembler():
             {
                 'x86'       : Ks(KS_ARCH_X86,   KS_MODE_32),
                 'x64'       : Ks(KS_ARCH_X86,   KS_MODE_64),
-                'arm'       : Ks(KS_ARCH_ARM,   KS_MODE_ARM),
+                'arm64'     : Ks(KS_ARCH_ARM64, KS_MODE_LITTLE_ENDIAN),
             }
         except Exception as e:
             print(f"Failed to load keystone, error: {e}")
