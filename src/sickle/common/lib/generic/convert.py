@@ -56,3 +56,23 @@ def ip_str_to_inet_addr(ip):
 
 def port_str_to_htons(port):
     return socket.htons(int(port))
+
+def from_str_to_win_hash(function_name):
+    """ This function will convert a string into the proper hash format used by most
+    Windows shellcode(s) when attempting to search for a function.
+
+    :param function_name: The name of the function to convert into a hash
+    :type function_name: str
+    """
+    
+    bits = 32
+    count = 0xD
+    int_hash = 0x00
+    mask = 0xFFFFFFFF
+    for i in range(len(function_name)):
+        int_hash += ord(function_name[i]) & mask
+        if (i < len(function_name)-1):
+            int_hash = ((int_hash >> count) | (int_hash << (bits - count))) & mask # ROR
+    hashed = hex(int_hash)
+
+    return hashed
