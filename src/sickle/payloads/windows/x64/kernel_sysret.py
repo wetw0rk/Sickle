@@ -9,12 +9,12 @@ from sickle.common.lib.generic.mparser import argument_check
 class Shellcode():
 
     author      = ["Kristal-g", "wetw0rk"]
-    description = "Windows (x64) Kernel Token Stealing Stub"
+    description = "Windows (x64) Kernel SYSRET Shellcode (Generic return to userland)"
     example_run = f"{sys.argv[0]} -p windows/x64/kernel_token_stealer -f c"
 
     arguments = None
 
-    tested_platforms = ["Windows 11"]
+    tested_platforms = ["Windows 11", "Windows 10"]
 
     def __init__(self, arg_object):
 
