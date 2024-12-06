@@ -12,7 +12,7 @@ from sickle.common.lib.generic.convert import port_str_to_htons
 
 class Shellcode():
 
-    author      = "wetw0rk"
+    author      = ["Morten Schenk", "Alexandru Uifalvi", "Matteo Memelli", "wetw0rk"]
     description = "Windows (x64) CMD Reverse Shell"
     example_run = f"{sys.argv[0]} -p windows/x64/shell_reverse_tcp LHOST=192.168.81.144 LPORT=1337 -f c"
 

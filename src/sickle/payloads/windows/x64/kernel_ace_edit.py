@@ -8,7 +8,7 @@ from sickle.common.lib.generic.mparser import argument_check
 
 class Shellcode():
 
-    author      = "wetw0rk"
+    author      = ["Morten Schenk", "wetw0rk"]
     description = "Windows (x64) Kernel ACE Edit"
     example_run = f"{sys.argv[0]} -p windows/x64/kernel_ace_edit PROCESS=winlogon.exe -f c"
 

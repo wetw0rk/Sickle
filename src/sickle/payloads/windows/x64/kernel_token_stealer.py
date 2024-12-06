@@ -8,7 +8,7 @@ from sickle.common.lib.generic.mparser import argument_check
 
 class Shellcode():
 
-    author      = "wetw0rk"
+    author      = ["Mark Dowd", "Barnaby Jack", "wetw0rk"]
     description = "Windows (x64) Kernel Token Stealing Stub"
     example_run = f"{sys.argv[0]} -p windows/x64/kernel_token_stealer -f c"
 
