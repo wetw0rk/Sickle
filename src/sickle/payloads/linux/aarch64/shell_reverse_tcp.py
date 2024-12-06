@@ -41,7 +41,7 @@ class Shellcode():
         else:
             lport = argv_dict["LPORT"]
 
-        sc_builder = Assembler('arm64')
+        sc_builder = Assembler('aarch64')
 
         source_code = "_start:\n"
         source_code += "\n"

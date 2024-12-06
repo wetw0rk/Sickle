@@ -48,7 +48,7 @@ class Disassembler():
             {
                 'x86'       : Cs(CS_ARCH_X86,   CS_MODE_32),
                 'x64'       : Cs(CS_ARCH_X86,   CS_MODE_64),
-                'arm'       : Cs(CS_ARCH_ARM,   CS_MODE_ARM),
+                'aarch64'   : Cs(CS_ARCH_ARM64, CS_MODE_LITTLE_ENDIAN),
             }
         except Exception as e:
             print(f"Failed to load capstone, error: {e}")
