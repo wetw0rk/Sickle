@@ -71,7 +71,7 @@ Although not prevalent in 64bit exploits there may be times an exploit restricts
 This tool was originally designed as a one big script, however as the tool evolved, I found myself needing to re-learn my code every update. As such, sickle now follows a modular approach with the goal being to implement new functionality as needed with minimal time spent re-learning sickles design.
 
 ```
-$ sickle
+$ sickle -l
 
   Shellcode                                                                        Description
   ---------                                                                        -----------
