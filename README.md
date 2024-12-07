@@ -68,22 +68,33 @@ Although not prevalent in 64bit exploits there may be times an exploit restricts
 
 # Module Based Design
 
-This tool was originally designed as a one big script, however as the tool evolved, I found myself needing to re-learn my code every update. As such, sickle now follows a modular approach with the goal being to implement new functionality as needed with minimal time spent re-learning sickles design. In addition, this allows for a way to self-document each functionality provided by respective modules.
+This tool was originally designed as a one big script, however as the tool evolved, I found myself needing to re-learn my code every update. As such, sickle now follows a modular approach with the goal being to implement new functionality as needed with minimal time spent re-learning sickles design.
 
 ```
-$ sickle -l
+$ sickle
+
+  Shellcode                                                                        Description
+  ---------                                                                        -----------
+  windows/x64/kernel_token_stealer                                                 Kernel token stealing shellcode (Windows x64)
+  windows/x64/kernel_sysret                                                        Kernel shellcode for returning to user-mode from kernel-mode
+  windows/x64/kernel_ace_edit                                                      Kernel shellcode to modify the _SECURITY_DESCRIPTOR of a process
+  windows/x64/shell_reverse_tcp                                                    TCP based reverse shell over IPV4 which returns an interactive cmd.exe session
+  windows/x86/kernel_token_stealer                                                 Kernel token stealing shellcode (Windows x86)
+  linux/aarch64/shell_reverse_tcp                                                  TCP based reverse shell over IPV4 which returns an interactive /bin/sh session (Linux AARCH64)
+  linux/x86/shell_reverse_tcp                                                      TCP based reverse shell over IPV4 which returns an interactive /bin/sh session (Linux x86)
 
   Modules             Description
   -------             -----------
-  disassemble         Disassemble bytecode in respective architecture
-  diff                Compare two binaries / shellcode(s). Supports hexdump, byte, raw, and asm modes
-  format              Format bytecode into desired format / language (-f)
-  run                 Execute shellcode on either windows or unix
-  badchar             Generate bad characters in respective format
-  pinpoint            Pinpoint where in the shellcode bad characters occur
+  asm_shell           Interactive assembler and disassembler
+  disassemble         Simple linear disassembler for multiple architectures
+  diff                Bytecode diffing too for comparing two binaries (or shellcode)
+  format              Converts bytecode into a respective format
+  run                 Wrapper used for executing bytecode
+  badchar             Generates bad characters for bad character validation
+  pinpoint            Highlight bad characters within a disassembly to id bad characters
 
-  Formats             Description
-  -------             -----------
+  Format              Description
+  ------              -----------
   c                   Format bytecode for a C application
   java                Format bytecode for Java
   hex                 Format bytecode in hex
@@ -102,39 +113,73 @@ $ sickle -l
   javascript          Format bytecode for Javascript (Blob to send via XHR)
   perl                Format bytecode for Perl
   ruby                Format bytecode for Ruby
+```
 
-  Architectures
-  -------------
-  x86
-  x64
-  arm
+In addition, this allows for a way to self-document each functionality provided by respective modules.
 
-$ sickle -i -m diff
+```
+$ sickle -i -m run                            
 
-Usage information for diff module
+Usage information for run
 
+              Name: Shellcode Runner
+            Module: run
+      Architecture: Multi
+          Platform: Multi
+              Ring: 3
+
+Author(s):
+    wetw0rk
+
+Tested against:
+    Linux
+    Windows
 
 Description:
+    
+    Executes bytecode from a binary file (-r) or a payload module (-p) under the
+    context of the currently running operating system and architecture. Meaning if
+    you are running on AARCH64 bytecode will be interpreted as such and if your on
+    x64 it will interpret it as x64 respectively.
+    
+Example:
 
-  Compare two binaries / shellcode(s). Supports hexdump, byte, raw, and asm modes
+    sickle.py -m run -r shellcode
+```
 
-Argument Information:
+
+This also includes shellcode stubs.
+
+```
+$ sickle -i -p linux/aarch64/shell_reverse_tcp
+
+Usage information for linux/aarch64/shell_reverse_tcp
+
+              Name: Linux (AARCH64 or ARM64) SH Reverse Shell
+            Module: linux/aarch64/shell_reverse_tcp
+      Architecture: aarch64
+          Platform: Linux
+              Ring: 3
+
+Author(s):
+    wetw0rk
+
+Tested against:
+    Kali Linux
+
+Argument Information
 
   Argument Name        Argument Description                               Optional
   -------------        --------------------                               --------
-  BINFILE              Additional binaries needed to perform diff         no
-  MODE                 Method in which to output diff results             no
+  LHOST                Listener host to receive the callback              no
+  LPORT                Listening port on listener host                    yes
 
-Argument Options:
-
-  MODE                 Option Description
-  ----                 ------------------
-  hexdump              Output will include both hexadecimal opcodes and ASCII similiar to hexdump
-  byte                 Output will be byte by byte and include individual char representation
-  raw                  Output in "raw" format, this is similiar to pythons repr() function
-  asm                  Output disassembled opcodes to selected assembly language
-
+Description:
+    
+    Simple reverse shellcode that will spawn a connection back to a listening tcp
+    server. Connection is made via TCP over IPV4.
+    
 Example:
 
-   sickle -a x64 -m diff -r original_shellcode BINFILE=modified_shellcode MODE=asm
+    sickle.py -p linux/aarch64/shell_reverse_tcp LHOST=127.0.0.1 LPORT=1337 -f c
 ```

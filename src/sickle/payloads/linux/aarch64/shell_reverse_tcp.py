@@ -16,7 +16,7 @@ class Shellcode():
 
     example_run = f"{sys.argv[0]} -p {module} LHOST=127.0.0.1 LPORT=1337 -f c"
 
-    platform = "Windows"
+    platform = "Linux"
 
     arch = 'aarch64'
 
