@@ -115,7 +115,7 @@ $ sickle -l
   ruby                Format bytecode for Ruby
 ```
 
-In addition, this allows for a way to self-document each functionality provided by respective modules.
+Allowing for a way to self-document each functionality provided by respective modules.
 
 ```
 $ sickle -i -m run                            
