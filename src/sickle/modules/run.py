@@ -11,10 +11,30 @@ from ctypes import CDLL, c_char_p, c_void_p, memmove, cast, CFUNCTYPE
 
 class Module():
 
-    author      = "wetw0rk"
-    module_name = "run"
-    description = "Execute shellcode on either windows or unix"
-    example_run = f"{sys.argv[0]} -m run -r shellcode"
+    name = "Shellcode Runner"
+
+    module = "run"
+
+    example_run = f"{sys.argv[0]} -m {module} -r shellcode"
+
+    platform = "Multi"
+
+    arch = "Multi"
+
+    ring = 3
+
+    author = ["wetw0rk"]
+
+    tested_platforms = ["Linux", "Windows"]
+
+    summary = "Wrapper used for executing bytecode"
+
+    description = """
+    Executes bytecode from a binary file (-r) or a payload module (-p) under the
+    context of the currently running operating system and architecture. Meaning if
+    you are running on AARCH64 bytecode will be interpreted as such and if your on
+    x64 it will interpret it as x64 respectively.
+    """
 
     arguments = None
 

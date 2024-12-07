@@ -8,19 +8,37 @@ from sickle.common.lib.generic.mparser import argument_check
 
 class Shellcode():
 
-    author      = ["Kristal-g", "wetw0rk"]
-    description = "Windows (x64) Kernel SYSRET Shellcode (Generic return to userland)"
+    name = "Windows (x64) Kernel SYSRET Shellcode"
+
+    module = "windows/x64/kernel_sysret"
+
     example_run = f"{sys.argv[0]} -p windows/x64/kernel_sysret -f c"
 
-    arguments = None
+    platform = "Windows"
+
+    arch = "x64"
+
+    ring = 0
+
+    author = ["Kristal-g", "wetw0rk"]
 
     tested_platforms = ["Windows 11", "Windows 10"]
+
+    summary = "Kernel shellcode for returning to user-mode from kernel-mode"
+
+    description = """
+    This shellcode stub will restore a threads execution context, ultimately
+    transitioning from kernel-mode to user-mode. This helps avoid manually having
+    to restore execution flow from an exploit development perspective.
+    """
+
+    arguments = None
 
     def __init__(self, arg_object):
 
 
         self.arg_list = arg_object["positional arguments"]
-        self.builder = Assembler('x64')
+        self.builder = Assembler(Shellcode.arch)
 
         return
 

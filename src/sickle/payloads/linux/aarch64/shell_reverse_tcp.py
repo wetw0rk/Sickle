@@ -10,9 +10,29 @@ import binascii
 
 class Shellcode():
 
-    author      = "wetw0rk"
-    description = "Linux (AARCH64 or ARM64) SH Reverse Shell"
-    example_run = f"{sys.argv[0]} -p linux/aarch64/shell_reverse_tcp LHOST=127.0.0.1 LPORT=1337 -f c"
+    name = "Linux (AARCH64 or ARM64) SH Reverse Shell"
+
+    module = "linux/aarch64/shell_reverse_tcp"
+
+    example_run = f"{sys.argv[0]} -p {module} LHOST=127.0.0.1 LPORT=1337 -f c"
+
+    platform = "Windows"
+
+    arch = 'aarch64'
+
+    ring = 3
+
+    author = ["wetw0rk"]
+
+    tested_platforms = ["Kali Linux"]
+
+    summary = "TCP based reverse shell over IPV4 which returns an interactive /bin/sh"
+    summary += " session (Linux AARCH64)"
+
+    description = """
+    Simple reverse shellcode that will spawn a connection back to a listening tcp
+    server. Connection is made via TCP over IPV4.
+    """
 
     arguments = {}
 

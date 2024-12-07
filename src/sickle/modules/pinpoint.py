@@ -23,10 +23,30 @@ from sickle.common.lib.reversing.disassembler import Disassembler
 
 class Module():
 
-    author      = "wetw0rk"
-    module_name = "pinpoint"
-    description = "Pinpoint where in the shellcode bad characters occur"
-    example_run = f"{sys.argv[0]} -r shellcode -b \"\\x00\\x0a\\x0d\" -m pinpoint -a x64 -f c"
+    name = "Pinpoint"
+
+    module = "pinpoint"
+
+    example_run = f"{sys.argv[0]} -r shellcode -b \"\\x00\\x0a\\x0d\" -m {module} -a x64 -f c"
+
+    platform = "Multi"
+
+    arch = "Multi"
+
+    ring = "N/A"
+
+    author = ["wetw0rk"]
+
+    tested_platforms = ["Linux"]
+
+    summary = "Highlight bad characters within a disassembly to id bad characters"
+
+    description = """
+    Often when crafting shellcode for the x86 architecture your shellcode may
+    contain bad characters. Often looking at a bunch of bytes can be difficult, so
+    this module will highlight where in the assembly your bad character is being
+    generated.
+    """
 
     arguments = None
 

@@ -4,10 +4,27 @@ from sickle.common.handlers.format_handler import FormatHandler
 
 class Module():
 
-    author      = "wetw0rk"
-    module_name = "format"
-    description = "Format bytecode into desired format / language (-f)"
+    name = "Format"
+
+    module = "format"
+
     example_run = f"{sys.argv[0]} -r shellcode -f c"
+
+    platform = "N/A"
+
+    arch = "N/A"
+
+    ring = "N/A"
+
+    author = ["wetw0rk"]
+
+    tested_platforms = ["N/A"]
+
+    summary = "Converts bytecode into a respective format"
+
+    description = """
+    Formats bytecode into a format for a target language
+    """
 
     arguments = None
 

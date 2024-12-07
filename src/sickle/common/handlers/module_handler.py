@@ -42,6 +42,6 @@ class ModuleHandler():
         print(f"  {'-------':<20}{'-----------'}") 
         for i in range(len(modules)):
             dev_module = check_module_support("modules", modules[i])
-            print(f"  {modules[i]:<20}{dev_module.Module.description}")
+            print(f"  {modules[i]:<20}{dev_module.Module.summary}")
 
         return

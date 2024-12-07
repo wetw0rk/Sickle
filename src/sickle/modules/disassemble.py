@@ -10,10 +10,27 @@ from sickle.common.lib.reversing.disassembler import Disassembler
 
 class Module():
 
-    author      = "wetw0rk"
-    module_name = "disassemble"
-    description = "Disassemble bytecode in respective architecture"
-    example_run = f"{sys.argv[0]} -a x64 -m disassembler -r shellcode"
+    name = "Disassembler"
+
+    module = "disassemble"
+
+    example_run = f"{sys.argv[0]} -a x64 -m {module} -r shellcode"
+
+    platform = "N/A"
+
+    arch = 'Multi'
+
+    ring = "N/A"
+
+    author = ["wetw0rk"]
+
+    tested_platforms = ["Linux", "Windows"]
+
+    summary = "Simple linear disassembler for multiple architectures"
+
+    description = """
+    Simple linear disassembler for multiple architectures
+    """
 
     arguments = None
 

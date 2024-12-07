@@ -8,9 +8,29 @@ from sickle.common.lib.generic.mparser import argument_check
 
 class Shellcode():
 
-    author      = "wetw0rk"
-    description = "Windows (x86) Kernel Token Stealing Stub"
-    example_run = f"{sys.argv[0]} -p windows/x86/kernel_token_stealer -f c"
+    name = "Windows (x86) Kernel Token Stealing Stub"
+
+    module = "windows/x86/kernel_token_stealer"
+
+    example_run = f"{sys.argv[0]} -p {module} -f c"
+
+    platform = "Windows"
+
+    arch = 'x86'
+
+    ring = 0
+
+    author = ["Mark Dowd", "Barnaby Jack", "wetw0rk"]
+
+    tested_platforms = ["Windows 7"]
+
+    summary = "Kernel token stealing shellcode (Windows x86)"
+
+    description = """
+    Hijacks a security token of another process (specifically NT/AUTHORITY SYSTEM),
+    allowing for elevation of privledges. Due to the nature of kernel exploitation
+    this shellcode DOES NOT contain instructions for returning to userland.
+    """
 
     arguments = None
 
@@ -20,7 +40,7 @@ class Shellcode():
 
 
         self.arg_list = arg_object["positional arguments"]
-        self.builder = Assembler('x86')
+        self.builder = Assembler(Shellcode.arch)
 
         return
 

@@ -87,8 +87,25 @@ def print_module_info(module_class, module_name):
         sys.exit(f"Invalid module class: {module_class}")
 
     # The description of the module overall
-    print("\nDescription:\n")
-    print(f"  {m.description}\n")
+   # print(f"Name:  {m.description}\n".rjust(40))
+    try:
+        print("{}{}".format("Name: ".rjust(20), m.name))
+        print("{}{}".format("Module: ".rjust(20), m.module))
+        print("{}{}".format("Architecture: ".rjust(20), m.arch))
+        print("{}{}".format("Platform: ".rjust(20), m.platform))
+        print("{}{}".format("Ring: ".rjust(20), m.ring))
+    except:
+        pass        
+
+
+    print("\nAuthor(s):")
+    for i in range(len(m.author)):
+        print("".rjust(4) + m.author[i])
+
+    print("\nTested against:")
+    for i in range(len(m.tested_platforms)):
+        print("".rjust(4) + m.tested_platforms[i])
+    print("")
 
     # Information on each argument for a given module and what it does
     mod_args = m.arguments
@@ -113,8 +130,11 @@ def print_module_info(module_class, module_name):
                 print(f"  {opt:<20} {opt_desc}")
             print("")
 
+    print("Description:")
+    print(f"{''.rjust(4)}{m.description}")
+
     print("Example:\n")
-    print(f"   {m.example_run}\n")
+    print(f"{''.rjust(4)}{m.example_run}\n")
 
     exit(0)
 

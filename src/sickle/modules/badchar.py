@@ -4,10 +4,31 @@ from sickle.common.handlers.format_handler import FormatHandler
 
 class Module():
 
-    author      = "wetw0rk"
-    module_name = "badchar"
-    description = "Generate bad characters in respective format"
-    example_run = f"{sys.argv[0]} -m badchar -f c"
+    name = "Bad Character Generator"
+
+    module = "badchar"
+
+    example_run = f"{sys.argv[0]} -m {module} -f c"
+
+    platform = "Multi"
+
+    arch = "Multi"
+
+    ring = "0-3"
+
+    author = ["wetw0rk"]
+
+    tested_platforms = ["Linux", "Windows"]
+
+    summary = "Generates bad characters for bad character validation"
+
+    description = """
+    When creating an exploit the first thing you likely want to do is validate all
+    bad characters. The best way to do this is send them all, then see where your
+    buffer gets truncated. Remove the offending byte then rinse and repeat. Since,
+    your likely embedding the shellcode in the exploit simply past this generated
+    buffer into your shellcode variable to do just that.
+    """
 
     arguments = None
 

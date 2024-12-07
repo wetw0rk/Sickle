@@ -46,4 +46,4 @@ class ShellcodeHandler():
         print(f"  {'---------':<80} {'-----------'}")
         for i in range(len(payloads)):
             sc_module = check_module_support("payloads", payloads[i]) #, True)
-            print(f"  {payloads[i]:<80} {sc_module.Shellcode.description}")
+            print(f"  {payloads[i]:<80} {sc_module.Shellcode.summary}")

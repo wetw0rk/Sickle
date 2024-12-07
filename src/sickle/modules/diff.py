@@ -14,10 +14,28 @@ from sickle.common.lib.reversing.disassembler import Disassembler
 
 class Module():
 
-    author      = "wetw0rk"
-    module_name = "diff"
-    description = "Compare two binaries / shellcode(s). Supports hexdump, byte, raw, and asm modes"
-    example_run = f"{sys.argv[0]} -a x64 -m diff -r original_shellcode BINFILE=modified_shellcode MODE=asm"
+    name = "Diff"
+
+    module = "diff"
+
+    example_run = f"{sys.argv[0]} -a x64 -m {module} -r original_shellcode BINFILE=modified_shellcode MODE=asm"
+
+    platform = "N/A"
+
+    arch = "N/A"
+
+    ring = "N/A"
+
+    author = ["wetw0rk"]
+
+    tested_platforms = ["N/A"]
+
+    summary = "Bytecode diffing too for comparing two binaries (or shellcode)"
+
+    description = """
+    This module performs a diff on two binary blobs. Since this was designed for
+    shellcode it currently supports hexdump, byte, raw, and asm modes
+    """
 
     arguments = {}
 

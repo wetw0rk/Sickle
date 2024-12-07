@@ -12,10 +12,28 @@ from sickle.common.lib.reversing.disassembler import Disassembler
 
 class Module():
 
-    author      = "wetw0rk"
-    module_name = "asm_shell"
-    description = "An interactive assembler and disassembler"
-    example_run = f"{sys.argv[0]} -a x64 -m asm_shell -f c"
+    name = "ASM Shell"
+
+    module = "asm_shell"
+
+    example_run = f"{sys.argv[0]} -a x64 -m {module} -f c"
+
+    platform = "Multi"
+
+    arch = "Multi"
+
+    author = ["wetw0rk"]
+   
+    ring = "N/A"
+ 
+    tested_platforms = ["Linux"]
+
+    summary = "Interactive assembler and disassembler"
+
+    description = """
+    ASM Shell is as the name suggests an "Assembly Shell". It currently can be used
+    to convert assembler code to opcode and vice versa. 
+    """
 
     arguments = None
 

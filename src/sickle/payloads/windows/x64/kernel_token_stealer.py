@@ -8,19 +8,38 @@ from sickle.common.lib.generic.mparser import argument_check
 
 class Shellcode():
 
-    author      = ["Mark Dowd", "Barnaby Jack", "wetw0rk"]
-    description = "Windows (x64) Kernel Token Stealing Stub"
-    example_run = f"{sys.argv[0]} -p windows/x64/kernel_token_stealer -f c"
+    name = "Windows (x64) Kernel Token Stealing Shellcode"
+    
+    module = "windows/x64/kernel_token_stealer"
+    
+    example_run = f"{sys.argv[0]} -p {module} -f c"
+    
+    platform = "Windows"
+    
+    arch = 'x64'
+    
+    ring = 0
+    
+    author = ["Mark Dowd", "Barnaby Jack", "wetw0rk"]
+    
+    tested_platforms = ["Windows 11", "Windows 10"]
+
+    summary = "Kernel token stealing shellcode (Windows x64)"
+
+    description = """
+    Hijacks a security token of another process (specifically NT/AUTHORITY SYSTEM),
+    allowing for elevation of privledges. Due to the nature of kernel exploitation
+    this shellcode DOES NOT contain instructions for returning to userland. You've
+    been warned...
+    """
 
     arguments = None
-
-    tested_platforms = ["Windows 11"]
 
     def __init__(self, arg_object):
 
 
         self.arg_list = arg_object["positional arguments"]
-        self.builder = Assembler('x64')
+        self.builder = Assembler(Shellcode.arch)
 
         return
 
