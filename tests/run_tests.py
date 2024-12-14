@@ -57,6 +57,11 @@ PAYLOAD_TESTS = \
     "linux": [ f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -i -p linux/x86/shell_reverse_tcp",
                f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -p linux/x86/shell_reverse_tcp LHOST=127.0.0.1 LPORT=42 -f c",
 
+               f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -i -p linux/x64/memfd_reflective_elf_tcp",
+               f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -p linux/x64/memfd_reflective_elf_tcp LHOST=127.0.0.1 LPORT=42 -f c",
+
+               f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -i -p linux/aarch64/memfd_reflective_elf_tcp",
+               f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -p linux/aarch64/memfd_reflective_elf_tcp LHOST=127.0.0.1 LPORT=42 -f c",
                f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -i -p linux/aarch64/shell_reverse_tcp",
                f"{PYTHON_NAME} -B {SICKLE_PATH}/sickle.py -p linux/aarch64/shell_reverse_tcp LHOST=127.0.0.1 LPORT=1337 -f c", ],
 

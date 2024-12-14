@@ -27,13 +27,13 @@ class Module():
 
     tested_platforms = ["Linux", "Windows"]
 
-    summary = "Wrapper used for executing bytecode"
+    summary = "Wrapper used for executing bytecode (shellcode)"
 
     description = """
     Executes bytecode from a binary file (-r) or a payload module (-p) under the
     context of the currently running operating system and architecture. Meaning if
-    you are running on AARCH64 bytecode will be interpreted as such and if your on
-    x64 it will interpret it as x64 respectively.
+    you are running on AARCH64 bytecode will be interpreted as such and if you're
+    on x64 it will interpret it as x64 respectively.
     """
 
     arguments = None

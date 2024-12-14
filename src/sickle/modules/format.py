@@ -20,7 +20,7 @@ class Module():
 
     tested_platforms = ["N/A"]
 
-    summary = "Converts bytecode into a respective format"
+    summary = "Converts bytecode into a respective format (activated anytime '-f' is used)"
 
     description = """
     Formats bytecode into a format for a target language

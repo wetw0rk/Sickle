@@ -39,7 +39,8 @@ class Module():
 
     tested_platforms = ["Linux"]
 
-    summary = "Highlight bad characters within a disassembly to id bad characters"
+    summary = ("Highlights opcodes within a disassembly to identify instructions responsible"
+               " for bad characters")
 
     description = """
     Often when crafting shellcode for the x86 architecture your shellcode may

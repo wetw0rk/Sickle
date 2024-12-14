@@ -16,29 +16,15 @@ After Python has been installed, simply clone the Sickle repository.
 
 ```
 wetw0rk@remachine:/opt$ git clone https://github.com/wetw0rk/Sickle
-Cloning into 'Sickle'...
-remote: Enumerating objects: 535, done.
-remote: Counting objects: 100% (95/95), done.
-remote: Compressing objects: 100% (69/69), done.
-remote: Total 535 (delta 24), reused 88 (delta 22), pack-reused 440
-Receiving objects: 100% (535/535), 161.92 MiB | 1019.00 KiB/s, done.
-Resolving deltas: 100% (251/251), done.
-Updating files: 100% (65/65), done.
 ```
 
 Once cloned, enter the `Sickle/src` directory and install the requirements using `pip3`. 
 
 ```
 wetw0rk@remachine:/opt/Sickle/src$ sudo pip3 install -r requirements.txt 
-Collecting capstone>=3.0.5
-  Downloading capstone-5.0.1-py3-none-manylinux1_x86_64.manylinux_2_5_x86_64.whl (2.9 MB)
-     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.9/2.9 MB 12.4 MB/s eta 0:00:00
-Requirement already satisfied: setuptools in /usr/lib/python3/dist-packages (from -r requirements.txt (line 2)) (59.6.0)
-Installing collected packages: capstone
-Successfully installed capstone-5.0.1
 ```
 
-Once dependencies have been installed simply run `setup.py` as shown below.
+If you encounter any issues installing from requirements.txt you may need to install cmake as it is used by the Keystone Engine (`sudo apt install cmake -y`). Once dependencies have been installed simply run `setup.py` as shown below.
 
 ```
 wetw0rk@remachine:/opt/Sickle/src$ sudo python3 setup.py install

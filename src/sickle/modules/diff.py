@@ -30,11 +30,11 @@ class Module():
 
     tested_platforms = ["N/A"]
 
-    summary = "Bytecode diffing too for comparing two binaries (or shellcode)"
+    summary = "Bytecode diffing module for comparing two binaries (or shellcode)"
 
     description = """
     This module performs a diff on two binary blobs. Since this was designed for
-    shellcode it currently supports hexdump, byte, raw, and asm modes
+    shellcode it currently supports hexdump, byte, raw, and asm modes.
     """
 
     arguments = {}

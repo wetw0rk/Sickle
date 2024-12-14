@@ -8,23 +8,25 @@ from sickle.common.lib.generic.mparser import argument_check
 
 class Shellcode():
 
+    arch = "x64"
+
+    platform = "windows"
+
     name = "Windows (x64) Kernel SYSRET Shellcode"
 
-    module = "windows/x64/kernel_sysret"
+    module = f"{platform}/{arch}/kernel_sysret"
 
     example_run = f"{sys.argv[0]} -p windows/x64/kernel_sysret -f c"
 
-    platform = "Windows"
-
-    arch = "x64"
-
     ring = 0
 
-    author = ["Kristal-g", "wetw0rk"]
+    author = ["Kristal-g",
+              "wetw0rk"]
 
-    tested_platforms = ["Windows 11", "Windows 10"]
+    tested_platforms = ["Windows 11 (10.0.26100 N/A Build 26100)",
+                        "Windows 10 (10.0.19045 N/A Build 19045)"]
 
-    summary = "Kernel shellcode for returning to user-mode from kernel-mode"
+    summary = "Generic method of returning from kernel space to user space"
 
     description = """
     This shellcode stub will restore a threads execution context, ultimately
@@ -36,13 +38,15 @@ class Shellcode():
 
     def __init__(self, arg_object):
 
-
         self.arg_list = arg_object["positional arguments"]
         self.builder = Assembler(Shellcode.arch)
 
         return
 
     def generate_source(self):
+        """Generates source code to be assembled by the keystone engine
+        """
+
         shellcode = """
         _start:
             mov rax, qword ptr gs:[0x188]    ; _KPCR.Prcb.CurrentThread
@@ -66,6 +70,3 @@ class Shellcode():
         """
 
         return self.builder.get_bytes_from_asm(self.generate_source())
-
-def generate():
-    return Shellcode().get_shellcode()

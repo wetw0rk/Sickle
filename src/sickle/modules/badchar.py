@@ -20,14 +20,14 @@ class Module():
 
     tested_platforms = ["Linux", "Windows"]
 
-    summary = "Generates bad characters for bad character validation"
+    summary = "Produces a set of all potential invalid characters for validation purposes"
 
     description = """
     When creating an exploit the first thing you likely want to do is validate all
     bad characters. The best way to do this is send them all, then see where your
-    buffer gets truncated. Remove the offending byte then rinse and repeat. Since,
-    your likely embedding the shellcode in the exploit simply past this generated
-    buffer into your shellcode variable to do just that.
+    buffer gets truncated. Remove the offending byte then rinse and repeat. Since
+    you're likely embedding the shellcode into an exploit simply past this buffer
+    into your shellcode variable to do just that.
     """
 
     arguments = None
