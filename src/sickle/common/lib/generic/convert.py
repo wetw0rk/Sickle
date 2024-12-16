@@ -1,3 +1,4 @@
+import math
 import struct
 import socket
 import binascii
@@ -76,3 +77,45 @@ def from_str_to_win_hash(function_name):
     hashed = hex(int_hash)
 
     return hashed
+
+def from_str_to_xwords(string):
+    """This function will get a string and return the number of qwords, dwords,
+    words, and bytes needed to create said string. Each X-WORD will be formatted
+    in big endain. This is used by shellcode stubs that need to push the string
+    onto the stack or simply store it within registers.
+
+    :param string: The string to be converted into mutliple "xwords"
+    :type string: str
+    """
+
+    len_of_str = len(string)
+    written = len_of_str
+
+    count = {     "QWORDS": 0x00,     "DWORDS": 0x00,     "WORDS": 0x00,     "BYTES": 0x00 }
+    sizes = { "QWORD_SIZE": 0x08, "DWORD_SIZE": 0x04, "WORD_SIZE": 0x02, "BYTE_SIZE": 0x01 }
+    lists = { "QWORD_LIST": [],   "DWORD_LIST": [],   "WORD_LIST": [],   "BYTE_LIST": [] }
+
+    for (count_type), (size_type) in zip(count.keys(), sizes.keys()):
+        if (written != 0):
+            count[count_type] = math.floor(written/sizes[size_type])
+            written -= (count[count_type] * sizes[size_type])
+
+    total_written = (count["QWORDS"] * sizes["QWORD_SIZE"]) + \
+        (count["DWORDS"] * sizes["DWORD_SIZE"]) + \
+        (count["WORDS"] * sizes["WORD_SIZE"]) + \
+        (count["BYTES"] * sizes["BYTE_SIZE"])
+
+    if (total_written != len_of_str):
+        print(f"Failed to generate xword encoded format for {string}")
+        exit(-1)
+
+    tmp_str_name = string
+    for count_type, size_type, list_type in zip(count.keys(), sizes.keys(), lists.keys()):
+        for i in range(count[count_type]):
+            byte_format = bytes(tmp_str_name[:sizes[size_type]], 'latin-1')
+            big_int = int.from_bytes(byte_format, 'big')
+
+            lists[list_type] += big_int,
+            tmp_str_name = tmp_str_name[sizes[size_type]:]
+
+    return lists

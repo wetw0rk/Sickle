@@ -6,6 +6,7 @@ import binascii
 from sickle.common.lib.reversing.assembler import Assembler
 from sickle.common.lib.generic.mparser import argument_check
 
+from sickle.common.lib.generic.convert import from_str_to_xwords
 from sickle.common.lib.generic.convert import from_str_to_win_hash
 from sickle.common.lib.generic.convert import ip_str_to_inet_addr
 from sickle.common.lib.generic.convert import port_str_to_htons
@@ -190,58 +191,29 @@ error:
         """Generates the stub to load a library not currently loaded into a process
         """
 
-
-        # TODO: The following code is also present in kernel_ace_edit add this to the convert.py function
-        len_lib_name = len(lib)
-        written = len_lib_name
-
-        count = {     "QWORDS": 0x00,     "DWORDS": 0x00,     "WORDS": 0x00,     "BYTES": 0x00 }
-        sizes = { "QWORD_SIZE": 0x08, "DWORD_SIZE": 0x04, "WORD_SIZE": 0x02, "BYTE_SIZE": 0x01 }
-        lists = { "QWORD_LIST": [],   "DWORD_LIST": [],   "WORD_LIST": [],   "BYTE_LIST": [] }
-
-        for (count_type), (size_type) in zip(count.keys(), sizes.keys()):
-            if (written != 0):
-                count[count_type] = math.floor(written/sizes[size_type])
-                written -= (count[count_type] * sizes[size_type])
-
-        total_written = (count["QWORDS"] * sizes["QWORD_SIZE"]) + \
-            (count["DWORDS"] * sizes["DWORD_SIZE"]) + \
-            (count["WORDS"] * sizes["WORD_SIZE"]) + \
-            (count["BYTES"] * sizes["BYTE_SIZE"])
-
-        if (total_written != len_lib_name):
-            print(f"Failed to generate function encoded format for {lib}")
-            exit(-1)
-
-        tmp_lib_name = lib
-
-        for count_type, size_type, list_type in zip(count.keys(), sizes.keys(), lists.keys()):
-            for i in range(count[count_type]):
-                lists[list_type] += tmp_lib_name[:sizes[size_type]],
-                tmp_lib_name = tmp_lib_name[sizes[size_type]:]
-
+        lists = from_str_to_xwords(lib)
         write_index = 0x100
 
         src = "\nload_library_{}:\n".format(lib.rstrip(".dll"))
         for i in range(len(lists["QWORD_LIST"])):
-            src += "    mov rcx, 0x{}\n".format( struct.pack('<Q', int.from_bytes(bytes(lists["QWORD_LIST"][i], 'latin-1'))).hex() )
+            src += "    mov rcx, 0x{}\n".format( struct.pack('<Q', lists["QWORD_LIST"][i]).hex() )
             src += "    mov [r15+{}], rcx\n".format(hex(write_index))
-            write_index += sizes["QWORD_SIZE"]
+            write_index += 8
 
         for i in range(len(lists["DWORD_LIST"])):
-            src += "    mov ecx, dword 0x{}\n".format( struct.pack('<L', int.from_bytes(bytes(lists["DWORD_LIST"][i], 'latin-1'))).hex() ) 
+            src += "    mov ecx, dword 0x{}\n".format( struct.pack('<L', lists["DWORD_LIST"][i]).hex() ) 
             src += "    mov [r15+{}], ecx\n".format(hex(write_index))
-            write_index += sizes["DWORD_SIZE"]
+            write_index += 4
 
         for i in range(len(lists["WORD_LIST"])):
-            src += "    mov cx, 0x{}\n".format( struct.pack('<H', int.from_bytes(bytes(lists["WORD_LIST"][i], 'latin-1'))).hex() )
+            src += "    mov cx, 0x{}\n".format( struct.pack('<H', lists["WORD_LIST"][i]).hex() )
             src += "    mov [r15+{}], cx\n".format(hex(write_index))
-            write_index += sizes["WORD_SIZE"]
+            write_index += 2
 
         for i in range(len(lists["BYTE_LIST"])):
-            src += "    mov cl, 0x{}\n".format( hex(ord(lists["BYTE_LIST"][i])) )
+            src += "    mov cl, 0x{}\n".format( hex(lists["BYTE_LIST"][i]) )
             src += "    mov [r15+{}], cl\n".format(hex(write_index))
-            write_index += sizes["BYTE_SIZE"]
+            write_index += 1
 
         src += """
     lea rcx, [r15+0x100]

