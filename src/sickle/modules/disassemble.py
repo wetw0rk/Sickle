@@ -1,7 +1,4 @@
 import sys
-import binascii
-
-from capstone import *
 
 from sickle.common.lib.generic.colors import Colors
 from sickle.common.lib.generic.colors import ansi_ljust

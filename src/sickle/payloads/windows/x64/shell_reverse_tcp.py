@@ -1,15 +1,12 @@
 import sys
-import math
 import struct
-import binascii
 
 from sickle.common.lib.reversing.assembler import Assembler
 from sickle.common.lib.generic.mparser import argument_check
-
-from sickle.common.lib.generic.convert import from_str_to_xwords
-from sickle.common.lib.generic.convert import from_str_to_win_hash
-from sickle.common.lib.generic.convert import ip_str_to_inet_addr
 from sickle.common.lib.generic.convert import port_str_to_htons
+from sickle.common.lib.generic.convert import from_str_to_xwords
+from sickle.common.lib.generic.convert import ip_str_to_inet_addr
+from sickle.common.lib.generic.convert import from_str_to_win_hash
 
 class Shellcode():
 
@@ -53,6 +50,7 @@ class Shellcode():
     def __init__(self, arg_object):
 
         self.arg_list = arg_object["positional arguments"]
+        arg_object["architecture"] = Shellcode.arch
         self.builder = Assembler(Shellcode.arch)
 
         return

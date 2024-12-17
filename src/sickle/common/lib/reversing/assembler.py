@@ -1,6 +1,9 @@
-import binascii
-
-from keystone import *
+from keystone import Ks
+from keystone import KS_ARCH_X86
+from keystone import KS_ARCH_ARM64
+from keystone import KS_MODE_32
+from keystone import KS_MODE_64
+from keystone import KS_MODE_LITTLE_ENDIAN
 
 class Assembler():
     """This class is responsible for all assembling operations such as converting instructions

@@ -1,8 +1,6 @@
 import sys
 import cmd
 
-from keystone import *
-
 from sickle.formats import *
 
 from sickle.common.handlers.format_handler import FormatHandler

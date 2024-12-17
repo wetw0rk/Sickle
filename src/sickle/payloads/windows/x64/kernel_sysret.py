@@ -1,7 +1,4 @@
 import sys
-import math
-import struct
-import binascii
 
 from sickle.common.lib.reversing.assembler import Assembler
 from sickle.common.lib.generic.mparser import argument_check
@@ -39,6 +36,7 @@ class Shellcode():
     def __init__(self, arg_object):
 
         self.arg_list = arg_object["positional arguments"]
+        arg_object["architecture"] = Shellcode.arch
         self.builder = Assembler(Shellcode.arch)
 
         return

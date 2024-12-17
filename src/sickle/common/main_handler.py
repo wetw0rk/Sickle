@@ -1,12 +1,12 @@
 import os
 import sys
 
-from sickle.common.handlers.format_handler import FormatHandler # NEW
-from sickle.common.handlers.module_handler import ModuleHandler # NEW
-from sickle.common.handlers.shellcode_handler import ShellcodeHandler # NEW
-
-from sickle.common.lib.generic.extract import read_bytes_from_file
 from sickle.common.lib.generic.mparser import print_module_info
+from sickle.common.lib.generic.extract import read_bytes_from_file
+
+from sickle.common.handlers.format_handler import FormatHandler
+from sickle.common.handlers.module_handler import ModuleHandler
+from sickle.common.handlers.shellcode_handler import ShellcodeHandler
 
 class Handle():
     """This class should be looked at as the coordinator of the framework. Execution
@@ -76,8 +76,9 @@ class Handle():
                 if os.path.isfile(self.binfile) is False:
                     sys.exit("Error dumping bytecode. Is file present?")
         
-        if self.payload:                                                # RM FROM PUBLIC RELEASE
-            read_source = "Sickle Generated Stub"                       # RM FROM PUBLIC RELEASE
+        # Necessary for modules that provide source such as the diff module
+        if self.payload:
+            read_source = "Sickle Generated Stub"
 
         self.module_args["source"] = read_source
 
@@ -85,9 +86,9 @@ class Handle():
         # dictionary.
         if self.binfile:
             read_bytes = read_bytes_from_file(self.binfile)
-        elif self.payload:                                               # TODO: make the below wayyyy more dynamic like modules
-            generator = ShellcodeHandler(self.payload, self.module_args) # NEW
-            read_bytes = generator.get_shellcode()                       # NEW
+        elif self.payload:
+            generator = ShellcodeHandler(self.payload, self.module_args)
+            read_bytes = generator.get_shellcode()
         else:
             read_bytes = None
 

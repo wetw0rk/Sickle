@@ -1,6 +1,5 @@
 import os
 import sys
-import binascii
 
 from sickle.common.lib.generic.mparser import argument_check
 from sickle.common.lib.generic.extract import read_bytes_from_file

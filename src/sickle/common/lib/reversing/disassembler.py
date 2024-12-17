@@ -1,7 +1,13 @@
 import sys
 import binascii
 
-from capstone import *
+from capstone import Cs
+from capstone import CS_ARCH_X86
+from capstone import CS_ARCH_ARM64
+from capstone import CS_MODE_32
+from capstone import CS_MODE_64
+from capstone import CS_MODE_LITTLE_ENDIAN
+
 from sickle.common.lib.generic.colors import ansi_ljust
 
 class Disassembler():

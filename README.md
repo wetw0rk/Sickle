@@ -44,7 +44,7 @@ Although these steps may seem minor, they can become time-consuming when done re
 
 ## Disassembly
 
-Sickle can also convert a binary file into extracted opcodes (shellcode) and then translate those into machine instructions (assembly). Note that this process only works with raw binary files and currently performs disassembly in a linear fashion.
+Sickle can also convert a binary file into extracted opcodes (shellcode) and then translate those into machine instructions (assembly). Note that this process only works with raw binary files and currently performs disassembly in a linear fashion via [Capstone](https://www.capstone-engine.org/).
 
 ![alt text](./docs/screenshots/disassemble.png)
 

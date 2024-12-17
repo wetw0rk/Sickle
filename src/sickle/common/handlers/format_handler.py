@@ -1,5 +1,3 @@
-import os
-
 from sickle.common.lib.generic.mparser import get_module_list
 from sickle.common.lib.generic.mparser import check_module_support
 

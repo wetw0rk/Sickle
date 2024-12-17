@@ -1,8 +1,3 @@
-import os
-import sys
-import codecs
-import binascii
-
 from sickle.common.lib.generic.colors import Colors
 from sickle.common.lib.generic.colors import ansi_ljust
 

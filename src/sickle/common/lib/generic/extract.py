@@ -1,6 +1,3 @@
-import os
-import sys
-
 def read_bytes_from_file(filename):
     """This function is responsible for reading bytes from any file.
 
