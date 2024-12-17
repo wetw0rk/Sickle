@@ -13,7 +13,7 @@ def read_bytes_from_file(filename):
         return filename
 
     try:
-        with (open(filename, "rb") as fd):
+        with open(filename, "rb") as fd:
             all_bytes = fd.read()
         fd.close()
     except Exception as e:
