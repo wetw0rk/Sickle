@@ -1,9 +1,3 @@
-'''
-
-helper: handles all arguments passed to sickle
-
-'''
-
 import argparse
 
 def parser():
