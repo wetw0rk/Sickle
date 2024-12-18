@@ -1,6 +1,7 @@
 import sys
 import struct
 
+from sickle.common.lib.reversing.mappings import Mappings # Experimental
 from sickle.common.lib.reversing.assembler import Assembler
 from sickle.common.lib.generic.mparser import argument_check
 from sickle.common.lib.generic.convert import port_str_to_htons
@@ -52,12 +53,17 @@ class Shellcode():
         self.arg_list = arg_object["positional arguments"]
         arg_object["architecture"] = Shellcode.arch
         self.builder = Assembler(Shellcode.arch)
+        self.registers = Mappings(Shellcode.arch) # Experimental
 
         return
 
     def get_kernel32(self):
         """Generates stub for obtaining the base address of Kernel32.dll
         """
+
+        r64 = self.registers.gen_regs(5, 64)
+        print(r64)
+        exit()
 
         stub = """
 ; DWORD64 getKernel32()
