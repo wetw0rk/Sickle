@@ -21,7 +21,8 @@ class Shellcode():
 
     author = ["wetw0rk"]
 
-    tested_platforms = ["Debian 14.2.0-6"]
+    tested_platforms = ["Debian 14.2.0-6",
+                        "6.6.30-android15-7-gbb616d66d8a9-ab11968886-4k"]
 
     summary = "TCP-based reverse shell over IPV4 that provides an interactive /bin/sh"
     summary += " session"
