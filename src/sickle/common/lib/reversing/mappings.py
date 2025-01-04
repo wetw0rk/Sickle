@@ -5,11 +5,13 @@ class Mappings():
     def __init__(self, architecture="x64"):
         self.arch = architecture
 
-    def maps(self):
+    def maps(self, exclusion_list=["x29", "x30", "sp", "rsp", "rbp"]):
         """This function is responsible for returning the map respective to
         the target architecture. Right now, critical registers such as the
         base and stack pointer won't be included in the mapping.
         """
+
+        mappings = {}
 
         # TODO: ARM32 MAPPING
         # Name   | Purpose/Usage
@@ -24,49 +26,51 @@ class Mappings():
         # CPSR   | Current Program Status Register - holds condition flags, interrupt status, and processor mode.
         # SPSR   | Saved Program Status Register (used in exception handling).
 
-        aarch64_mapping = {
+        mappings["aarch64"] = {
         # 64-bit | 32-bit #
         # --------------- #
-            'x0':   'w0',  
-            'x1':   'w1',  
-            'x2':   'w2',  
-            'x3':   'w3',  
-            'x4':   'w4',  
-            'x5':   'w5',  
-            'x6':   'w6',  
-            'x7':   'w7',  
-            'x8':   'w8',  
-            'x9':   'w9',  
-           'x10':   'w10', 
-           'x11':   'w11', 
-           'x12':   'w12', 
-           'x13':   'w13', 
-           'x14':   'w14', 
-           'x15':   'w15', 
-           'x16':   'w16', 
-           'x17':   'w17', 
-           'x18':   'w18', 
-           'x19':   'w19', 
-           'x20':   'w20', 
-           'x21':   'w21', 
-           'x22':   'w22', 
-           'x23':   'w23', 
-           'x24':   'w24', 
-           'x25':   'w25', 
-           'x26':   'w26', 
-           'x27':   'w27', 
-           'x28':   'w28', 
-           'x29':   'w29', # (Frame Pointer, FP)
-           'x30':   'w30', # (Link Register, LR)
-            'sp':    None, # (Stack Pointer)
+            'x0': ['w0'],  
+            'x1': ['w1'],  
+            'x2': ['w2'],  
+            'x3': ['w3'],  
+            'x4': ['w4'],  
+            'x5': ['w5'],  
+            'x6': ['w6'],  
+            'x7': ['w7'],  
+            'x8': ['w8'],  
+            'x9': ['w9'],  
+           'x10': ['w10'], 
+           'x11': ['w11'], 
+           'x12': ['w12'], 
+           'x13': ['w13'], 
+           'x14': ['w14'], 
+           'x15': ['w15'], 
+           'x16': ['w16'], 
+           'x17': ['w17'], 
+           'x18': ['w18'], 
+           'x19': ['w19'], 
+           'x20': ['w20'], 
+           'x21': ['w21'], 
+           'x22': ['w22'], 
+           'x23': ['w23'], 
+           'x24': ['w24'], 
+           'x25': ['w25'], 
+           'x26': ['w26'], 
+           'x27': ['w27'], 
+           'x28': ['w28'], 
+           'x29': ['w29'], # (Frame Pointer, FP)
+           'x30': ['w30'], # (Link Register, LR)
+            'sp': [None], # (Stack Pointer)
         }
 
         # Remove frame pointer, link register, and stack pointer
-        del aarch64_mapping['x29']
-        del aarch64_mapping['x30']
-        del aarch64_mapping['sp']
 
-        x64_mapping = {
+
+        #del aarch64_mapping['x29']
+        #del aarch64_mapping['x30']
+        #del aarch64_mapping['sp']
+
+        mappings["x64"] = {
         # 64-bit | 32-bit | 16-bit | 8-bit High | 8-bit Low #
         # ------------------------------------------------- #
            'rax': [ 'eax',   'ax',      'ah',       'al' ],
@@ -87,15 +91,41 @@ class Mappings():
            'r15': ['r15d', 'r15w',      None,     'r15b' ]
         }
 
-        # Remove stack pointer and base pointer
-        del x64_mapping['rsp']
-        del x64_mapping['rbp']
+        if exclusion_list != None:
+
+            for arch, regs in mappings.items():
+       #         print(f"[DEBUG] Working with {arch} mapping")
+            
+                # Obtain the registers to be removed from each mapping and store them in a
+                # list to be later removed from final mapping.
+                large_del_list = []
+                small_del_list = []
+                for large, small in mappings[arch].items():
+                    if (large in exclusion_list):
+                        large_del_list += large,
+                    if small != None:
+                        for i in range(len(small)):
+                            if (small[i] in exclusion_list):
+                                small_del_list += small[i],
+
+        #        print("[DEBUG] Removing: " + arch + "="+ str(small_del_list))
+        #        print("[DEBUG] Removing: " + arch + "="+ str(large_del_list)) 
+               
+                # First remove the small registers from the mapping
+                for large, small in mappings[arch].items():
+                    mappings[arch][large] = [reg for reg in small if reg not in exclusion_list]
+
+                # Next remove the large registers from the mapping
+                for i in range(len(large_del_list)):
+                    del mappings[arch][large_del_list[i]]
+
+        #        print(f"[DEBUG] new mapping: {mappings[arch].items()}")
 
         # Return the respective mapping
         if (self.arch == "x64"):
-            return x64_mapping
+            return mappings["x64"]
         elif (self.arch == "aarch64"):
-            return aarch64_mapping
+            return mappings["aarch64"]
         else:
             return None
 

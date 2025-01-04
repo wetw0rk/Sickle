@@ -3,6 +3,7 @@ import struct
 
 from sickle.common.lib.reversing.mappings import Mappings # Experimental
 from sickle.common.lib.reversing.assembler import Assembler
+
 from sickle.common.lib.generic.mparser import argument_check
 from sickle.common.lib.generic.convert import port_str_to_htons
 from sickle.common.lib.generic.convert import from_str_to_xwords
@@ -69,7 +70,8 @@ class Shellcode():
 
         if self.randomize_regs:
             full_map = self.map.get_full_mapping()
-            rcx, r8, rdi, rax, rsi = self.map.gen_regs(5, 64)
+            rcx, r8, rdi, rsi = self.map.gen_regs(4, 64)
+            rax = "rax"
             cx = full_map[rcx][1]
             dl = self.map.gen_regs(1, 8)[0]
         else:
