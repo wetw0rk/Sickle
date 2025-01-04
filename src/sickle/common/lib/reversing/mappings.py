@@ -4,8 +4,9 @@ class Mappings():
 
     def __init__(self, architecture="x64"):
         self.arch = architecture
+        self.exclusion_list = None
 
-    def maps(self, exclusion_list=["x29", "x30", "sp", "rsp", "rbp"]):
+    def maps(self):
         """This function is responsible for returning the map respective to
         the target architecture. Right now, critical registers such as the
         base and stack pointer won't be included in the mapping.
@@ -91,7 +92,7 @@ class Mappings():
            'r15': ['r15d', 'r15w',      None,     'r15b' ]
         }
 
-        if exclusion_list != None:
+        if self.exclusion_list != None:
 
             for arch, regs in mappings.items():
        #         print(f"[DEBUG] Working with {arch} mapping")
@@ -101,25 +102,26 @@ class Mappings():
                 large_del_list = []
                 small_del_list = []
                 for large, small in mappings[arch].items():
-                    if (large in exclusion_list):
+                    if (large in self.exclusion_list):
                         large_del_list += large,
                     if small != None:
                         for i in range(len(small)):
-                            if (small[i] in exclusion_list):
+                            if (small[i] in self.exclusion_list):
                                 small_del_list += small[i],
 
-        #        print("[DEBUG] Removing: " + arch + "="+ str(small_del_list))
-        #        print("[DEBUG] Removing: " + arch + "="+ str(large_del_list)) 
+#                print("[DEBUG] Removing: " + arch + "="+ str(small_del_list))
+#                print("[DEBUG] Removing: " + arch + "="+ str(large_del_list)) 
                
                 # First remove the small registers from the mapping
                 for large, small in mappings[arch].items():
-                    mappings[arch][large] = [reg for reg in small if reg not in exclusion_list]
+                    mappings[arch][large] = [reg for reg in small if reg not in self.exclusion_list]
 
                 # Next remove the large registers from the mapping
                 for i in range(len(large_del_list)):
+#                    print(f"removing {large_del_list[i]}")
                     del mappings[arch][large_del_list[i]]
 
-        #        print(f"[DEBUG] new mapping: {mappings[arch].items()}")
+#                print(f"[DEBUG] new mapping: {mappings[arch].items()}")
 
         # Return the respective mapping
         if (self.arch == "x64"):
@@ -135,11 +137,11 @@ class Mappings():
 
         return self.maps()
 
-    def gen_regs(self, count, size, exclusion_list=["rsp"]):
+    def gen_regs(self, count, size):
         """Get x amount of registers of size y
         """
         
-        mapping = self.maps(exclusion_list)
+        mapping = self.maps()
         generated_registers = []
         list_obj = []
 

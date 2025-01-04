@@ -69,8 +69,9 @@ class Shellcode():
         """
 
         if self.randomize_regs:
+            self.map.exclusion_list = ["rsp", "rax", "rbp"]
             full_map = self.map.get_full_mapping()
-            rcx, r8, rdi, rsi = self.map.gen_regs(4, 64, ["rsp", "rax", "rbp"])
+            rcx, r8, rdi, rsi = self.map.gen_regs(4, 64)
             rax = "rax"
             cx = full_map[rcx][1]
             dl = self.map.gen_regs(1, 8)[0]
