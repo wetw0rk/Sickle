@@ -135,11 +135,11 @@ class Mappings():
 
         return self.maps()
 
-    def gen_regs(self, count, size):
+    def gen_regs(self, count, size, exclusion_list=["rsp"]):
         """Get x amount of registers of size y
         """
         
-        mapping = self.maps()
+        mapping = self.maps(exclusion_list)
         generated_registers = []
         list_obj = []
 
