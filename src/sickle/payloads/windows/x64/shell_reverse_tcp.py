@@ -69,15 +69,23 @@ class Shellcode():
         """
 
         if self.randomize_regs:
-            self.map.exclusion_list = ["rsp", "rax", "rbp", "rdx", "rcx", "cx"]
-            full_map = self.map.get_full_mapping()
-            r8, rdi, rsi = self.map.gen_regs(3, 64)
 
-            print(f"R8  => {r8}")
-            print(f"RDI => {rdi}")
-            print(f"RSI => {rsi}")
+            # Avoid modifying the return value or the stack frame
+            self.map.exclusion_list = ["rsp", "rax", "rbp"]
+
+            # Generate the initial registers used   
+            rcx, r8, rdi, rsi = self.map.gen_regs(4, 64)
+            full_map = self.map.get_full_mapping()
+            cx = full_map[rcx][1]
+
+            # Update the exclusion list to avoid collision with previously used registers
+            self.map.exclusion_list.extend([rcx, r8, rdi, rsi])
+
+            # Generate last register used with exclusion list updated
+            dl = self.map.gen_regs(1, 8)[0]
 
         else:
+
             rcx, r8, rdi, rax, rsi, cx, dl = "rcx", "r8", "rdi", "rax", "rsi", "cx", "dl"
 
         stub = f"""
