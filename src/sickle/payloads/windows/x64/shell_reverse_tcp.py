@@ -29,7 +29,7 @@ class Shellcode():
 
     tested_platforms = ["Windows 10 (10.0.17763 N/A Build 17763)"]
 
-    summary = ("A TCP-based reverse shell over IPv4 that provides an interactive cmd.exe "
+    summary = ("TCP-based reverse shell over IPv4 that provides an interactive cmd.exe "
                "session")
 
     description = """
