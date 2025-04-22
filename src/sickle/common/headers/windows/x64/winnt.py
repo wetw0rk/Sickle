@@ -81,3 +81,78 @@ class _IMAGE_NT_HEADERS64(ctypes.Structure):
         ("FileHeader",     _IMAGE_FILE_HEADER),
         ("OptionalHeader", _IMAGE_OPTIONAL_HEADER64),
     ]
+
+# These are the settings of the Machine field.
+IMAGE_SIZEOF_SHORT_NAME = 8
+
+class _IMAGE_SECTION_HEADER(ctypes.Structure):
+    class _Misc(ctypes.Union):
+        _fields_ = [
+            ("PhysicalAddress", ctypes.c_int32),
+            ("VirtualSize",     ctypes.c_int32),
+        ]
+
+    _anonymous = ("Misc",)
+
+    _fields_ = [
+        ("Name",                 ctypes.c_byte * IMAGE_SIZEOF_SHORT_NAME),
+        ("Misc",                 _Misc),
+        ("VirtualAddress",       ctypes.c_int32),
+        ("SizeOfRawData",        ctypes.c_int32),
+        ("PointerToRawData",     ctypes.c_int32),
+        ("PointerToRelocations", ctypes.c_int32),
+        ("PointerToLinenumbers", ctypes.c_int32),
+        ("NumberOfRelocations",  ctypes.c_int16),
+        ("NumberOfLinenumbers",  ctypes.c_int16),
+        ("Characteristics",      ctypes.c_int32),
+    ]
+
+class _IMAGE_DATA_DIRECTORY(ctypes.Structure):
+    _fields_ = [
+        ("VirtualAddress", ctypes.c_int32),
+        ("Size",           ctypes.c_int32),
+    ]
+
+class _IMAGE_BASE_RELOCATION(ctypes.Structure):
+    _fields_ = [
+        ("VirtualAddress", ctypes.c_int32),
+        ("SizeOfBlock",    ctypes.c_int32),
+    ]
+
+class _IMAGE_IMPORT_DESCRIPTOR(ctypes.Structure):
+    class _DUMMYUNIONNAME(ctypes.Union):
+        _fields_ = [
+            ("Characteristics",    ctypes.c_int32),
+            ("OriginalFirstThunk", ctypes.c_int32),
+        ]
+
+    _anonymous = ("DUMMYUNIONNAME",)
+
+    _fields_ = [
+        ("DUMMYUNIONNAME", _DUMMYUNIONNAME),
+        ("TimeDateStamp",  ctypes.c_int32),
+        ("ForwarderChain", ctypes.c_int32),
+        ("Name",           ctypes.c_int32),
+        ("FirstThunk",     ctypes.c_int32),
+    ]
+
+class _IMAGE_THUNK_DATA64(ctypes.Structure):
+    class _u1(ctypes.Union):
+        _fields_ = [
+            ("ForwarderString", ctypes.c_uint64),
+            ("Function",        ctypes.c_uint64),
+            ("Ordinal",         ctypes.c_uint64),
+            ("AddressOfData",   ctypes.c_uint64),
+        ]
+
+    _anonymous = ("u1",)
+
+    _fields_ = [
+        ("u1", _u1),
+    ]    
+
+class _IMAGE_IMPORT_BY_NAME(ctypes.Structure):
+    _fields_ = [
+        ("Hint", ctypes.c_int16),
+        ("Name", ctypes.c_char * 1)
+    ]

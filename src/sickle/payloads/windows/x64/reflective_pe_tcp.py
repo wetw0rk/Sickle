@@ -179,6 +179,7 @@ class Shellcode():
             "IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR" : 0x0E,
         }
 
+        # DONE
         self.struct_def_IMAGE_DOS_HEADER = {
             "e_magic"    : 0x00,
             "e_cblp"     : 0x02,
@@ -201,12 +202,14 @@ class Shellcode():
             "e_lfanew"   : 0x3C,
         }
 
+        # DONE
         self.struct_def_IMAGE_NT_HEADERS = {
             "Signature"      : 0x00,
             "FileHeader"     : 0x04,
             "OptionalHeader" : 0x18,
         }
 
+        # DONE
         self.struct_def_IMAGE_FILE_HEADER = {
             "Machine"              : 0x000,
             "NumberOfSections"     : 0x002,
@@ -217,6 +220,7 @@ class Shellcode():
             "Characteristics"      : 0x012,
         }
 
+        # DONE
         self.struct_def_IMAGE_OPTIONAL_HEADER = {
             "Magic"                       : 0x00,
             "MajorLinkerVersion"          : 0x02,
@@ -251,6 +255,7 @@ class Shellcode():
             "DataDirectory[16]"           : 0x70,
         }
 
+        # DONE
         self.struct_def_IMAGE_SECTION_HEADER = {
             "Name[IMAGE_SIZEOF_SHORT_NAME]" : 0x00,
             "VirtualSize"                   : 0x08,
@@ -264,16 +269,19 @@ class Shellcode():
             "Characteristics"               : 0x24,
         }
 
+        # DONE
         self.struct_def_IMAGE_DATA_DIRECTORY = {
             "VirtualAddress" : 0x00,
             "Size"           : 0x04,
         }
 
+        # DONE
         self.struct_def_IMAGE_BASE_RELOCATION = {
             "VirtualAddress" : 0x00,
             "SizeOfBlock"    : 0x04,
         }
 
+        # DONE
         self.struct_def_IMAGE_IMPORT_DESCRIPTOR = {
             "Characteristics"    : 0x00,
             "OriginalFirstThunk" : 0x00,
@@ -283,6 +291,7 @@ class Shellcode():
             "FirstThunk"         : 0x10,
         }
 
+        # DONE
         self.struct_def_IMAGE_THUNK_DATA = {
             "ForwarderString"  : 0x00,
             "Function"         : 0x00,
@@ -290,6 +299,7 @@ class Shellcode():
             "AddressOfData"    : 0x00,
         }
 
+        # DONE
         self.struct_def_IMAGE_IMPORT_BY_NAME = {
             "Hint" : 0x00,
             "Name" : 0x02,
