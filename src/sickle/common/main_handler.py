@@ -8,6 +8,8 @@ from sickle.common.handlers.format_handler import FormatHandler
 from sickle.common.handlers.module_handler import ModuleHandler
 from sickle.common.handlers.shellcode_handler import ShellcodeHandler
 
+from sickle.common.lib.reversing.smartarch import set_arch # NEWLY ADDED
+
 class Handle():
     """This class should be looked at as the coordinator of the framework. Execution
     flow is generally directed from here.
@@ -26,6 +28,8 @@ class Handle():
         self.module     = args.module     # module to use on binfile
         self.list       = args.list       # list all formats / archs
         self.info       = args.info       # detailed info for module or payload
+
+        set_arch(args.arch) # NEWLY ADDED
 
         self.module_args = {}
         self.module_args["format"] = args.format

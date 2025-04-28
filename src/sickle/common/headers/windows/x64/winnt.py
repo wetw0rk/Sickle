@@ -1,5 +1,19 @@
 import ctypes
 
+class _LARGE_INTEGER(ctypes.Union):
+    class _STRUCT(ctypes.Structure):
+        _fields_ = [
+            ("LowPart", ctypes.c_uint32),  # DWORD
+            ("HighPart", ctypes.c_int32),  # LONG
+        ]
+
+    _anonymous_ = ("DUMMYSTRUCTNAME", "u")
+    _fields_ = [
+        ("DUMMYSTRUCTNAME", _STRUCT),
+        ("u", _STRUCT),
+        ("QuadPart", ctypes.c_int64),     # LONGLONG
+    ]
+
 class _IMAGE_DOS_HEADER(ctypes.Structure):
     _fields_ = [
         ("e_magic",      ctypes.c_int16),
@@ -151,6 +165,23 @@ class _IMAGE_THUNK_DATA64(ctypes.Structure):
         ("u1", _u1),
     ]    
 
+# Export module directory
+class _IMAGE_EXPORT_DIRECTORY(ctypes.Structure):
+    _fields_ = [
+        ("Characteristics",         ctypes.c_uint32), # DWORD
+        ("TimeDateStamp",           ctypes.c_uint32), # DWORD
+        ("MajorVersion",            ctypes.c_uint32), # WORD
+        ("MinorVersion",            ctypes.c_uint16), # WORD
+        ("Name",                    ctypes.c_uint32), # DWORD
+        ("Base",                    ctypes.c_uint32), # DWORD
+        ("NumberOfFunctions",       ctypes.c_uint32), # DWORD
+        ("NumberOfNames",           ctypes.c_uint32), # DWORD
+        ("AddressOfFunctions",      ctypes.c_uint32), # DWORD
+        ("AddressOfNames",          ctypes.c_uint32), # DWORD
+        ("AddressOfNameOrdinals",   ctypes.c_uint32), # DWORD
+    ]
+
+# Import name entry
 class _IMAGE_IMPORT_BY_NAME(ctypes.Structure):
     _fields_ = [
         ("Hint", ctypes.c_int16),

