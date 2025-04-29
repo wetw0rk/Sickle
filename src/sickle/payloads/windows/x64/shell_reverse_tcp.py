@@ -11,26 +11,25 @@ from sickle.common.lib.generic.convert import from_str_to_xwords
 from sickle.common.lib.generic.convert import ip_str_to_inet_addr
 from sickle.common.lib.generic.convert import from_str_to_win_hash
 
-from sickle.common.headers.windows.x64.windows import STARTF_USESTDHANDLES
-from sickle.common.headers.windows.x64.windows import _STARTUPINFOA
+from sickle.common.headers.windows.ntdef import _LIST_ENTRY
+from sickle.common.headers.windows.ntdef import _UNICODE_STRING
 
-from sickle.common.headers.windows.x64.winsock2 import AF_INET
-from sickle.common.headers.windows.x64.winsock2 import SOCK_STREAM
-from sickle.common.headers.windows.x64.winsock2 import IPPROTO_TCP
-from sickle.common.headers.windows.x64.winsock2 import sockaddr
+from sickle.common.headers.windows.winnt import _IMAGE_DOS_HEADER
+from sickle.common.headers.windows.winnt import _IMAGE_NT_HEADERS64
+from sickle.common.headers.windows.winnt import _IMAGE_EXPORT_DIRECTORY
+from sickle.common.headers.windows.winnt import _IMAGE_OPTIONAL_HEADER64
 
-from sickle.common.headers.windows.x64.winternl import _PEB
-from sickle.common.headers.windows.x64.winternl import _PEB_LDR_DATA
-from sickle.common.headers.windows.x64.winternl import _LDR_DATA_TABLE_ENTRY
+from sickle.common.headers.windows.winternl import _PEB
+from sickle.common.headers.windows.winternl import _PEB_LDR_DATA
+from sickle.common.headers.windows.winternl import _LDR_DATA_TABLE_ENTRY
 
-from sickle.common.headers.windows.x64.ntdef import _LIST_ENTRY
-from sickle.common.headers.windows.x64.ntdef import _UNICODE_STRING
+from sickle.common.headers.windows.winsock2 import AF_INET
+from sickle.common.headers.windows.winsock2 import sockaddr
+from sickle.common.headers.windows.winsock2 import SOCK_STREAM
+from sickle.common.headers.windows.winsock2 import IPPROTO_TCP
 
-from sickle.common.headers.windows.x64.winnt import _IMAGE_DOS_HEADER
-from sickle.common.headers.windows.x64.winnt import _IMAGE_NT_HEADERS64
-from sickle.common.headers.windows.x64.winnt import _IMAGE_OPTIONAL_HEADER64
-
-from sickle.common.headers.windows.x64.winnt import _IMAGE_EXPORT_DIRECTORY
+from sickle.common.headers.windows.processthreadsapi import _STARTUPINFOA
+from sickle.common.headers.windows.processthreadsapi import STARTF_USESTDHANDLES
 
 class Shellcode():
 
@@ -51,7 +50,8 @@ class Shellcode():
               "Matteo Memelli",
               "wetw0rk"]
 
-    tested_platforms = ["Windows 10 (10.0.17763 N/A Build 17763)"]
+    tested_platforms = ["Windows 10 (10.0.17763 N/A Build 17763)",
+                        "Windows 11 (10.0.26100 N/A Build 26100)"]
 
     summary = ("TCP-based reverse shell over IPv4 that provides an interactive cmd.exe "
                "session")
