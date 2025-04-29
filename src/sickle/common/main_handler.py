@@ -29,8 +29,6 @@ class Handle():
         self.list       = args.list       # list all formats / archs
         self.info       = args.info       # detailed info for module or payload
 
-        set_arch(args.arch) # NEWLY ADDED
-
         self.module_args = {}
         self.module_args["format"] = args.format
         self.module_args["architecture"] = args.arch
@@ -92,6 +90,7 @@ class Handle():
             read_bytes = read_bytes_from_file(self.binfile)
         elif self.payload:
             generator = ShellcodeHandler(self.payload, self.module_args)
+            set_arch(self.payload) # NEWLY ADDED
             read_bytes = generator.get_shellcode()
         else:
             read_bytes = None
