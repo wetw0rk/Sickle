@@ -263,7 +263,7 @@ error:
             write_index += 2
 
         for i in range(len(lists["BYTE_LIST"])):
-            src += "    mov cl, 0x{}\n".format( hex(lists["BYTE_LIST"][i]) )
+            src += "    mov cl, {}\n".format( hex(lists["BYTE_LIST"][i]) )
             src += "    mov [r15+{}], cl\n".format(hex(write_index))
             write_index += 1
 

@@ -8,10 +8,10 @@ def PTR():
     """
 
     if USE_64BIT == True:
-        print("[*] Returning ctypes.c_uint64")
+        print("[DEBUG] Returning ctypes.c_uint64")
         return ctypes.c_uint64
     else:
-        print("[*] Returning ctypes.c_uint32")
+        print("[DEBUG] Returning ctypes.c_uint32")
         return ctypes.c_uint32
 
 def set_arch(arch):

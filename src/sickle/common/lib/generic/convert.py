@@ -78,7 +78,8 @@ def from_str_to_win_hash(function_name):
 
     return hashed
 
-def from_str_to_xwords(string):
+# TODO: Document changes to this function (newly added regs_limit)
+def from_str_to_xwords(string, regs_limit=0x08):
     """This function will get a string and return the number of qwords, dwords,
     words, and bytes needed to create said string. Each X-WORD will be formatted
     in big endain. This is used by shellcode stubs that need to push the string
@@ -91,19 +92,67 @@ def from_str_to_xwords(string):
     len_of_str = len(string)
     written = len_of_str
 
-    count = {     "QWORDS": 0x00,     "DWORDS": 0x00,     "WORDS": 0x00,     "BYTES": 0x00 }
-    sizes = { "QWORD_SIZE": 0x08, "DWORD_SIZE": 0x04, "WORD_SIZE": 0x02, "BYTE_SIZE": 0x01 }
-    lists = { "QWORD_LIST": [],   "DWORD_LIST": [],   "WORD_LIST": [],   "BYTE_LIST": [] }
+# TODO: Document ---+
+#                   |
+#                   V
+    count = {}
+    sizes = {}
+    lists = {}
+
+    if regs_limit >= 0x08:
+        count["QWORDS"] = 0x00
+        sizes["QWORD_SIZE"] = 0x08
+        lists["QWORD_LIST"] = []
+    if regs_limit >= 0x04:
+        count["DWORDS"] = 0x00
+        sizes["DWORD_SIZE"] = 0x04
+        lists["DWORD_LIST"] = []
+    if regs_limit >= 0x02:
+        count["WORDS"] = 0x00
+        sizes["WORD_SIZE"] = 0x02
+        lists["WORD_LIST"] = []
+    if regs_limit >= 0x01:
+        count["BYTES"] = 0x00
+        sizes["BYTE_SIZE"] = 0x01
+        lists["BYTE_LIST"] = []
+
+# TODO: Document ^
+# TODO: rm ---+
+#             |
+#             V
+#    count = {     "QWORDS": 0x00,     "DWORDS": 0x00,     "WORDS": 0x00,     "BYTES": 0x00 }
+#    sizes = { "QWORD_SIZE": 0x08, "DWORD_SIZE": 0x04, "WORD_SIZE": 0x02, "BYTE_SIZE": 0x01 }
+#    lists = { "QWORD_LIST": [],   "DWORD_LIST": [],   "WORD_LIST": [],   "BYTE_LIST": [] }
 
     for (count_type), (size_type) in zip(count.keys(), sizes.keys()):
         if (written != 0):
             count[count_type] = math.floor(written/sizes[size_type])
             written -= (count[count_type] * sizes[size_type])
 
-    total_written = (count["QWORDS"] * sizes["QWORD_SIZE"]) + \
-        (count["DWORDS"] * sizes["DWORD_SIZE"]) + \
-        (count["WORDS"] * sizes["WORD_SIZE"]) + \
-        (count["BYTES"] * sizes["BYTE_SIZE"])
+# TODO: Document ---+
+#                   |
+#                   V
+
+    total_written = 0x00
+
+    if regs_limit >= 0x08:
+        total_written += (count["QWORDS"] * sizes["QWORD_SIZE"])
+    if regs_limit >= 0x04:
+        total_written += (count["DWORDS"] * sizes["DWORD_SIZE"])
+    if regs_limit >= 0x02:
+        total_written += (count["WORDS"] * sizes["WORD_SIZE"])
+    if regs_limit >= 0x01:
+        total_written += (count["BYTES"] * sizes["BYTE_SIZE"])
+        
+
+# TODO: Document ^
+# TODO: rm ---+
+#             |
+#             V
+#    total_written = (count["QWORDS"] * sizes["QWORD_SIZE"]) + \
+#        (count["DWORDS"] * sizes["DWORD_SIZE"]) + \
+#        (count["WORDS"] * sizes["WORD_SIZE"]) + \
+#        (count["BYTES"] * sizes["BYTE_SIZE"])
 
     if (total_written != len_of_str):
         print(f"Failed to generate xword encoded format for {string}")

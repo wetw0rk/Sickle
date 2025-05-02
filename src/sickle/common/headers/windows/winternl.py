@@ -18,6 +18,7 @@ class _PEB(ctypes.Structure):
         ("Mutant",                          PTR()),             # HANDLE
         ("ImageBaseAddress",                PTR()),             # HMODULE
         ("Ldr",                             PTR()),             # PPEB_LDR_DATA
+        # TODO: Finish this structure properly
     ]
 
 class _PEB_LDR_DATA(ctypes.Structure):

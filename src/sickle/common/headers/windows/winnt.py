@@ -96,6 +96,48 @@ class _IMAGE_NT_HEADERS64(ctypes.Structure):
         ("OptionalHeader", _IMAGE_OPTIONAL_HEADER64),
     ]
 
+class _IMAGE_OPTIONAL_HEADER(ctypes.Structure):
+    _fields_ = [
+        ("Magic",                       ctypes.c_int16),        # WORD
+        ("MajorLinkerVersion",          ctypes.c_byte),         # BYTE
+        ("MinorLinkerVersion",          ctypes.c_byte),         # BYTE
+        ("SizeOfCode",                  ctypes.c_int32),        # DWORD
+        ("SizeOfInitializedData",       ctypes.c_int32),        # DWORD
+        ("SizeOfUninitializedData",     ctypes.c_int32),        # DWORD
+        ("AddressOfEntryPoint",         ctypes.c_int32),        # DWORD
+        ("BaseOfCode",                  ctypes.c_int32),        # DWORD
+        ("BaseOfData",                  ctypes.c_int32),        # DWORD
+        ("ImageBase",                   ctypes.c_int32),        # DWORD
+        ("SectionAlignment",            ctypes.c_int32),        # DWORD
+        ("FileAlignment",               ctypes.c_int32),        # DWORD
+        ("MajorOperatingSystemVersion", ctypes.c_int16),        # WORD
+        ("MinorOperatingSystemVersion", ctypes.c_int16),        # WORD
+        ("MajorImageVersion",           ctypes.c_int16),        # WORD
+        ("MinorImageVersion",           ctypes.c_int16),        # WORD
+        ("MajorSubsystemVersion",       ctypes.c_int16),        # WORD
+        ("MinorSubsystemVersion",       ctypes.c_int16),        # WORD
+        ("Win32VersionValue",           ctypes.c_int32),        # DWORD
+        ("SizeOfImage",                 ctypes.c_int32),        # DWORD
+        ("SizeOfHeaders",               ctypes.c_int32),        # DWORD
+        ("CheckSum",                    ctypes.c_int32),        # DWORD
+        ("Subsystem",                   ctypes.c_int16),        # WORD
+        ("DllCharacteristics",          ctypes.c_int16),        # WORD
+        ("SizeOfStackReserve",          ctypes.c_int32),        # DWORD
+        ("SizeOfStackCommit",           ctypes.c_int32),        # DWORD
+        ("SizeOfHeapReserve",           ctypes.c_int32),        # DWORD
+        ("SizeOfHeapCommit",            ctypes.c_int32),        # DWORD
+        ("LoaderFlags",                 ctypes.c_int32),        # DWORD
+        ("NumberOfRvaAndSizes",         ctypes.c_int32),        # DWORD
+        ("DataDirectory",               _IMAGE_DATA_DIRECTORY), # IMAGE_DATA_DIRECTORY
+    ]
+
+class _IMAGE_NT_HEADERS(ctypes.Structure):
+    _fields_ = [
+        ("Signature",       ctypes.c_int32),        # DWORD
+        ("FileHeader",      _IMAGE_FILE_HEADER),    # IMAGE_FILE_HEADER
+        ("OptionalHeader", _IMAGE_OPTIONAL_HEADER), # IMAGE_OPTIONAL_HEADER32
+    ]
+
 # These are the settings of the Machine field.
 IMAGE_SIZEOF_SHORT_NAME = 8
 
