@@ -139,7 +139,7 @@ found:
         return stub
 
     def lookup_function(self):
-        """TODO
+        """Generates the stub responsible for obtaining the base address of a function
         """
 
         stub = f"""
@@ -198,7 +198,7 @@ error:
         return stub
 
     def load_library(self, lib):
-        """TODO
+        """Generates the stub to load a library not currently loaded into a process
         """
 
         lists = from_str_to_xwords(lib, 0x04)
@@ -231,7 +231,7 @@ error:
         return src
 
     def resolve_functions(self):
-        """TODO
+        """This function is responsible for loading all libraries and resolving respective functions
         """
 
         stub = ""
@@ -407,7 +407,7 @@ call_TerminateProcess:
         return shellcode
 
     def get_shellcode(self):
-        """Generates Windows (x64) generic reverse shell
+        """Generates Windows (x86) generic reverse shell
         """
 
         return self.builder.get_bytes_from_asm(self.generate_source())
