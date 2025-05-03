@@ -111,8 +111,6 @@ class Shellcode():
         """Generates stub for obtaining the base address of Kernel32.dll
         """
 
-        print(f"[DEBUG] _PEB.Ldr.offset: {hex(_PEB.Ldr.offset)}")
-
         stub = f"""
 ; DWORD64 getKernel32()
 ; {{
