@@ -1,4 +1,5 @@
 src/sickle/common/headers/windows/__pycache__
+src/sickle/common/headers/windows/__pycache__
 src/sickle/modules/__pycache__
 src/sickle/__pycache__
 src/sickle/payloads/__pycache__
@@ -8,7 +9,7 @@ src/sickle/payloads/windows/x64/__pycache__
 src/sickle/payloads/linux/__pycache__
 src/sickle/payloads/linux/x64/__pycache__
 src/sickle/payloads/linux/x86/__pycache__
-src/sickle/payloads/linux/aarch64/__pycache__/
+src/sickle/payloads/linux/aarch64/__pycache__
 src/sickle/common/__pycache__
 src/sickle/common/lib/__pycache__
 src/sickle/common/lib/generic/__pycache__
