@@ -3,14 +3,13 @@ from struct import pack
 from ctypes import sizeof
 from ctypes import c_uint32
 
-from sickle.common.lib.generic.mparser import argument_check
-
 from sickle.common.lib.reversing.assembler import Assembler
 
 from sickle.common.lib.programmer.instantiator import gen_offsets
 from sickle.common.lib.programmer.instantiator import init_sc_args
 from sickle.common.lib.programmer.instantiator import calc_stack_space
 
+from sickle.common.lib.generic.mparser import argument_check
 from sickle.common.lib.generic.convert import port_str_to_htons
 from sickle.common.lib.generic.convert import from_str_to_xwords
 from sickle.common.lib.generic.convert import ip_str_to_inet_addr

@@ -12,11 +12,22 @@ def gen_offsets(sc_args, arch):
     """
 
     # Depending on what architecture we're working with it will affect where
-    # offset storage can instantiated. For example on x86 we cannot write to
-    # [EBP + 0x04] as this will contain the return address.
+    # offset storage can instantiated.
+    #
+    # x86
+    #   [EBP+0x00] - Saved EBP
+    #   [EBP+0x04] - Return address
+    # x64
+    #   [RSP+0x00] - Return address
+    #   [RSP+....] - Shadow space
+    #   [RSP+0x20] - ^ 
+    #
     if arch == 'x86':
         arch_ptr_size = ctypes.sizeof(ctypes.c_uint32) # TODO USE PTR
         arg_start = 0x08
+    elif (arch == 'x64'):
+        arch_ptr_size = ctypes.sizeof(ctypes.c_uint64) # TODO USE PTR
+        arg_start = ctypes.sizeof(ctypes.c_uint64) # TODO USE PTR
 
     for var in sc_args:
         alloc_space = sc_args[var]
@@ -60,6 +71,9 @@ def calc_stack_space(sc_args, max_space):
     for var in sc_args:
         if sc_args[var] > 0x00:
             space_needed += sc_args[var]
+
+    while ((space_needed % 16) != 0):
+        space_needed += 0x08
 
     return space_needed
 

