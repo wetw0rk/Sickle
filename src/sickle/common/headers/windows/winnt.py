@@ -1,5 +1,87 @@
 import ctypes
 
+PAGE_NOACCESS                           = 0x00000001
+PAGE_READONLY                           = 0x00000002
+PAGE_READWRITE                          = 0x00000004
+PAGE_WRITECOPY                          = 0x00000008
+PAGE_EXECUTE                            = 0x00000010
+PAGE_EXECUTE_READ                       = 0x00000020
+PAGE_EXECUTE_READWRITE                  = 0x00000040
+PAGE_EXECUTE_WRITECOPY                  = 0x00000080
+PAGE_GUARD                              = 0x00000100
+PAGE_NOCACHE                            = 0x00000200
+PAGE_WRITECOMBINE                       = 0x00000400
+PAGE_GRAPHICS_NOACCESS                  = 0x00000800
+PAGE_GRAPHICS_READONLY                  = 0x00001000
+PAGE_GRAPHICS_READWRITE                 = 0x00002000
+PAGE_GRAPHICS_EXECUTE                   = 0x00004000
+PAGE_GRAPHICS_EXECUTE_READ              = 0x00008000
+PAGE_GRAPHICS_EXECUTE_READWRITE         = 0x00010000
+PAGE_GRAPHICS_COHERENT                  = 0x00020000
+PAGE_GRAPHICS_NOCACHE                   = 0x00040000
+PAGE_ENCLAVE_MASK                       = 0x10000000
+PAGE_ENCLAVE_UNVALIDATED                = 0x20000000
+PAGE_ENCLAVE_NO_CHANGE                  = 0x20000000
+PAGE_TARGETS_NO_UPDATE                  = 0x40000000
+PAGE_TARGETS_INVALID                    = 0x40000000
+PAGE_REVERT_TO_FILE_MAP                 = 0x80000000
+PAGE_ENCLAVE_THREAD_CONTROL             = 0x80000000
+PAGE_ENCLAVE_DECOMMIT                   = (PAGE_ENCLAVE_MASK | 0)
+PAGE_ENCLAVE_SS_FIRST                   = (PAGE_ENCLAVE_MASK | 1)
+PAGE_ENCLAVE_SS_REST                    = (PAGE_ENCLAVE_MASK | 2)
+
+MEM_COMMIT                              = 0x00001000
+MEM_RESERVE                             = 0x00002000
+MEM_REPLACE_PLACEHOLDER                 = 0x00004000
+MEM_RESERVE_PLACEHOLDER                 = 0x00040000
+MEM_RESET                               = 0x00080000
+MEM_TOP_DOWN                            = 0x00100000
+MEM_PHYSICAL                            = 0x00400000
+MEM_RESET_UNDO                          = 0x10000000
+MEM_LARGE_PAGES                         = 0x20000000
+
+
+IMAGE_SCN_MEM_DISCARDABLE               = 0x02000000
+IMAGE_SCN_MEM_NOT_CACHED                = 0x04000000
+IMAGE_SCN_MEM_NOT_PAGED                 = 0x08000000
+IMAGE_SCN_MEM_SHARED                    = 0x10000000
+IMAGE_SCN_MEM_EXECUTE                   = 0x20000000
+IMAGE_SCN_MEM_READ                      = 0x40000000
+IMAGE_SCN_MEM_WRITE                     = 0x80000000
+
+IMAGE_REL_BASED_ABSOLUTE                = 0
+IMAGE_REL_BASED_HIGH                    = 1
+IMAGE_REL_BASED_LOW                     = 2
+IMAGE_REL_BASED_HIGHLOW                 = 3
+IMAGE_REL_BASED_HIGHADJ                 = 4
+IMAGE_REL_BASED_MIPS_JMPADDR            = 5
+IMAGE_REL_BASED_ARM_MOV32A              = 5
+IMAGE_REL_BASED_ARM_MOV32               = 5
+IMAGE_REL_BASED_SECTION                 = 6
+IMAGE_REL_BASED_REL                     = 7
+IMAGE_REL_BASED_ARM_MOV32T              = 7
+IMAGE_REL_BASED_THUMB_MOV32             = 7
+IMAGE_REL_BASED_MIPS_JMPADDR16          = 9
+IMAGE_REL_BASED_IA64_IMM64              = 9
+IMAGE_REL_BASED_DIR64                   = 10
+IMAGE_REL_BASED_HIGH3ADJ                = 11
+
+IMAGE_DIRECTORY_ENTRY_EXPORT            = 0
+IMAGE_DIRECTORY_ENTRY_IMPORT            = 1
+IMAGE_DIRECTORY_ENTRY_RESOURCE          = 2
+IMAGE_DIRECTORY_ENTRY_EXCEPTION         = 3
+IMAGE_DIRECTORY_ENTRY_SECURITY          = 4
+IMAGE_DIRECTORY_ENTRY_BASERELOC         = 5
+IMAGE_DIRECTORY_ENTRY_DEBUG             = 6
+IMAGE_DIRECTORY_ENTRY_COPYRIGHT         = 7
+IMAGE_DIRECTORY_ENTRY_GLOBALPTR         = 8
+IMAGE_DIRECTORY_ENTRY_TLS               = 9
+IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG       = 10
+IMAGE_DIRECTORY_ENTRY_BOUND_IMPORT      = 11
+IMAGE_DIRECTORY_ENTRY_IAT               = 12
+IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT      = 13
+IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR    = 14
+
 class _LARGE_INTEGER(ctypes.Union):
     class _STRUCT(ctypes.Structure):
         _fields_ = [

@@ -1,5 +1,3 @@
-src/sickle/common/headers/windows/__pycache__
-src/sickle/modules/__pycache__
 src/sickle/__pycache__
 src/sickle/payloads/__pycache__
 src/sickle/payloads/windows/__pycache__
@@ -14,5 +12,8 @@ src/sickle/common/__pycache__
 src/sickle/common/lib/__pycache__
 src/sickle/common/lib/generic/__pycache__
 src/sickle/common/lib/reversing/__pycache__
+src/sickle/common/lib/programmer/__pycache__/
+src/sickle/common/headers/windows/__pycache__
 src/sickle/common/handlers/__pycache__
+src/sickle/modules/__pycache__
 src/sickle/formats/__pycache__

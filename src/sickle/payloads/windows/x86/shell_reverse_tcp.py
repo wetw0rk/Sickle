@@ -24,10 +24,10 @@ from sickle.common.headers.windows.winnt import _IMAGE_OPTIONAL_HEADER
 from sickle.common.headers.windows.winternl import _PEB
 from sickle.common.headers.windows.winternl import _PEB_LDR_DATA
 from sickle.common.headers.windows.winternl import _LDR_DATA_TABLE_ENTRY
-from sickle.common.headers.windows.winsock2 import AF_INET
-from sickle.common.headers.windows.winsock2 import sockaddr
+from sickle.common.headers.windows.ws2def import AF_INET
+from sickle.common.headers.windows.ws2def import sockaddr
+from sickle.common.headers.windows.ws2def import IPPROTO_TCP
 from sickle.common.headers.windows.winsock2 import SOCK_STREAM
-from sickle.common.headers.windows.winsock2 import IPPROTO_TCP
 from sickle.common.headers.windows.processthreadsapi import _STARTUPINFOA
 from sickle.common.headers.windows.processthreadsapi import STARTF_USESTDHANDLES
 
@@ -96,8 +96,7 @@ class Shellcode():
         })
 
         self.stack_space = calc_stack_space(sc_args,
-                                            sizeof(c_uint32))
-
+                                            Shellcode.arch)
         self.storage_offsets = gen_offsets(sc_args,
                                            Shellcode.arch)
 
