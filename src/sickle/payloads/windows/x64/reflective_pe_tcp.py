@@ -1,4 +1,5 @@
 import sys
+import ctypes
 import struct
 
 from sickle.common.lib.reversing.assembler import Assembler
@@ -145,7 +146,7 @@ get_lpSectionHeaderArray:
     mov rdx, r11
     mov rcx, [rbp - {self.storage_offsets['pResponse']}]
     add rcx, rdx
-    add rcx, 0x108
+    add rcx, {ctypes.sizeof(winnt._IMAGE_NT_HEADERS64)}
     mov [rbp - {self.storage_offsets['lpSectionHeaderArray']}], rcx ; bu 00000240`19a506de "da rcx ; g"
 
 ; for (DWORD dwSecIndex = 0; dwSecIndex < lpNtHeader->FileHeader.NumberOfSections; dwSecIndex++, lpSectionHeaderArray++)
@@ -338,9 +339,6 @@ page_noaccess:
 ;                         [in]  SIZE_T dwSize,          // R8         => dwSectionMappedSize
 ;                         [in]  DWORD  flNewProtect,    // R9         => dwSectionProtection
 ;                         [out] PDWORD lpflOldProtect); // [RSP+0x20] => &dwOldProtect
-
-
-; TODO: SHADOW STACK REP ON ALL THIS BULLSHIT BRO
 change_perm:
     xor r11, r11
     mov rdx, [rbp - {self.storage_offsets['lpSectionHeaderArray']}]

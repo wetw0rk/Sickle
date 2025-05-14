@@ -167,8 +167,7 @@ class _IMAGE_OPTIONAL_HEADER64(ctypes.Structure):
         ("SizeOfHeapCommit",            ctypes.c_uint64),
         ("LoaderFlags",                 ctypes.c_int32),
         ("NumberOfRvaAndSizes",         ctypes.c_int32),
-        ("DataDirectory",               _IMAGE_DATA_DIRECTORY),
-
+        ("DataDirectory",               _IMAGE_DATA_DIRECTORY * 16),
     ]
 
 class _IMAGE_NT_HEADERS64(ctypes.Structure):
