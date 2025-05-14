@@ -15,20 +15,20 @@ from sickle.common.lib.generic.convert import from_str_to_xwords
 from sickle.common.lib.generic.convert import ip_str_to_inet_addr
 from sickle.common.lib.generic.convert import from_str_to_win_hash
 
-#from sickle.common.headers.windows.ntdef import _UNICODE_STRING
-#from sickle.common.headers.windows.winnt import _IMAGE_DOS_HEADER
-#from sickle.common.headers.windows.winnt import _IMAGE_NT_HEADERS64
-#from sickle.common.headers.windows.winnt import _IMAGE_EXPORT_DIRECTORY
-#from sickle.common.headers.windows.winnt import _IMAGE_OPTIONAL_HEADER64
-#from sickle.common.headers.windows.winternl import _PEB
-#from sickle.common.headers.windows.winternl import _PEB_LDR_DATA
-#from sickle.common.headers.windows.winternl import _LDR_DATA_TABLE_ENTRY
-#from sickle.common.headers.windows.ws2def import AF_INET
-#from sickle.common.headers.windows.ws2def import sockaddr
-#from sickle.common.headers.windows.ws2def import IPPROTO_TCP
-#from sickle.common.headers.windows.winsock2 import SOCK_STREAM
-#from sickle.common.headers.windows.processthreadsapi import _STARTUPINFOA
-#from sickle.common.headers.windows.processthreadsapi import STARTF_USESTDHANDLES
+from sickle.common.headers.windows.ntdef import _UNICODE_STRING
+from sickle.common.headers.windows.winnt import _IMAGE_DOS_HEADER
+from sickle.common.headers.windows.winnt import _IMAGE_NT_HEADERS64
+from sickle.common.headers.windows.winnt import _IMAGE_EXPORT_DIRECTORY
+from sickle.common.headers.windows.winnt import _IMAGE_OPTIONAL_HEADER64
+from sickle.common.headers.windows.winternl import _PEB
+from sickle.common.headers.windows.winternl import _PEB_LDR_DATA
+from sickle.common.headers.windows.winternl import _LDR_DATA_TABLE_ENTRY
+from sickle.common.headers.windows.ws2def import AF_INET
+from sickle.common.headers.windows.ws2def import sockaddr
+from sickle.common.headers.windows.ws2def import IPPROTO_TCP
+from sickle.common.headers.windows.winsock2 import SOCK_STREAM
+from sickle.common.headers.windows.processthreadsapi import _STARTUPINFOA
+from sickle.common.headers.windows.processthreadsapi import STARTF_USESTDHANDLES
 
 class Shellcode():
 
