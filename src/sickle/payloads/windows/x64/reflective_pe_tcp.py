@@ -2,19 +2,22 @@ import sys
 import ctypes
 import struct
 
-from sickle.common.lib.reversing.assembler import Assembler
+import sickle.common.lib.programmer.builder as builder
+
 from sickle.common.lib.generic.mparser import argument_check
 from sickle.common.lib.generic.convert import port_str_to_htons
 from sickle.common.lib.generic.convert import from_str_to_xwords
 from sickle.common.lib.generic.convert import ip_str_to_inet_addr
 from sickle.common.lib.generic.convert import from_str_to_win_hash # consider rename this to str2whash
 
-from sickle.common.headers.windows import winnt
-from sickle.common.headers.windows import ntdef
-from sickle.common.headers.windows import ws2def
-from sickle.common.headers.windows import winternl
+from sickle.common.lib.reversing.assembler import Assembler
 
-from sickle.common.lib.programmer import instantiator
+from sickle.common.headers.windows import (
+    winnt,
+    ntdef,
+    ws2def,
+    winternl
+)
 
 class Shellcode():
 
@@ -67,7 +70,6 @@ class Shellcode():
 
         self.arg_list = arg_object["positional arguments"]
         arg_object["architecture"] = Shellcode.arch
-        self.builder = Assembler(Shellcode.arch)
 
         self.dependencies = {
             "Kernel32.dll": [
@@ -94,7 +96,7 @@ class Shellcode():
             ]
         }
 
-        sc_args = instantiator.init_sc_args(self.dependencies)
+        sc_args = builder.init_sc_args(self.dependencies)
         sc_args.update({"index"                         : 0x00,
                         "wsaData"                       : 0x00,
                         "sockaddr_name"                 : 0x00,
@@ -128,8 +130,8 @@ class Shellcode():
                         "dwSectionProtection"           : 0x00,
                         "dwSecIndex"                    : 0x00})
 
-        self.stack_space = instantiator.calc_stack_space(sc_args, Shellcode.arch)
-        self.storage_offsets = instantiator.gen_offsets(sc_args, Shellcode.arch)
+        self.stack_space = builder.calc_stack_space(sc_args, Shellcode.arch)
+        self.storage_offsets = builder.gen_offsets(sc_args, Shellcode.arch)
 
         return
 
@@ -1097,4 +1099,4 @@ call_WaitForSingleObject:
         """Generates shellcode
         """
 
-        return self.builder.get_bytes_from_asm(self.generate_source())
+        return Assembler(Shellcode.arch).get_bytes_from_asm(self.generate_source())

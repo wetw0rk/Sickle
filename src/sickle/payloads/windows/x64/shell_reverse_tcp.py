@@ -61,7 +61,6 @@ class Shellcode():
 
         self.arg_list = arg_object["positional arguments"]
         arg_object["architecture"] = Shellcode.arch
-        self.builder = Assembler(Shellcode.arch)
 
         self.dependencies = {
             "Kernel32.dll": [
@@ -350,4 +349,8 @@ fin:
         """Generates Windows (x64) generic reverse shell
         """
 
-        return self.builder.get_bytes_from_asm(self.generate_source())
+        generator = Assembler(Shellcode.arch)
+        source_code = self.generate_source()
+        shellcode = generator.get_bytes_from_asm(source_code)
+
+        return shellcode

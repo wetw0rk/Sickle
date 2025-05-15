@@ -5,9 +5,9 @@ from ctypes import c_uint64
 
 from sickle.common.lib.reversing.assembler import Assembler
 
-from sickle.common.lib.programmer.instantiator import gen_offsets
-from sickle.common.lib.programmer.instantiator import init_sc_args
-from sickle.common.lib.programmer.instantiator import calc_stack_space
+from sickle.common.lib.programmer.builder import gen_offsets
+from sickle.common.lib.programmer.builder import init_sc_args
+from sickle.common.lib.programmer.builder import calc_stack_space
 
 from sickle.common.lib.generic.mparser import argument_check
 from sickle.common.lib.generic.convert import port_str_to_htons
