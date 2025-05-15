@@ -9,7 +9,6 @@ from sickle.common.lib.generic.convert import from_str_to_xwords
 from sickle.common.lib.generic.convert import ip_str_to_inet_addr
 from sickle.common.lib.generic.convert import from_str_to_win_hash # consider rename this to str2whash
 
-from sickle.common.headers.windows import winternl
 from sickle.common.headers.windows import winnt
 from sickle.common.headers.windows import ntdef
 from sickle.common.headers.windows import ws2def
