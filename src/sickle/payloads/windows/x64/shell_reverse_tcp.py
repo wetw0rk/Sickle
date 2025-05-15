@@ -4,7 +4,7 @@ import struct
 
 import sickle.common.lib.generic.convert as convert
 import sickle.common.lib.generic.mparser as modparser
-import sickle.common.lib.programmer.instantiator as builder
+import sickle.common.lib.programmer.builder as builder
 
 from sickle.common.lib.reversing.assembler import Assembler
 
