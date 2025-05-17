@@ -3,6 +3,7 @@ import math
 import ctypes
 import struct
 
+import sickle.common.lib.generic.extract as extract
 import sickle.common.lib.generic.convert as convert
 import sickle.common.lib.generic.mparser as modparser
 import sickle.common.lib.programmer.builder as builder
@@ -65,7 +66,7 @@ class Shellcode():
 
     arguments["ACKPK"] = {}
     arguments["ACKPK"]["optional"] = "yes"
-    arguments["ACKPK"]["description"] = "Acknowledgement packet response"
+    arguments["ACKPK"]["description"] = "File containing acknowledgement packet response"
 
     def __init__(self, arg_object):
 
@@ -149,7 +150,7 @@ class Shellcode():
         if ("ACKPK" not in argv_dict.keys()):
             self.ack_packet = "The Only Thing They Fear Is You\r\n"
         else:
-            self.ack_packet = argv_dict["ACKPK"]
+            self.ack_packet = extract.read_bytes_from_file(argv_dict["ACKPK"], 'r')
 
         needed_space = math.ceil(len(self.ack_packet)/8) * 8
 
