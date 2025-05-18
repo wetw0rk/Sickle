@@ -96,6 +96,20 @@ class _LARGE_INTEGER(ctypes.Union):
         ("QuadPart", ctypes.c_int64),     # LONGLONG
     ]
 
+class _ULARGE_INTEGER(ctypes.Union):
+    class _STRUCT(ctypes.Structure):
+        _fields_ = [
+            ("LowPart",     ctypes.c_uint32), # DWORD
+            ("HighPart",    ctypes.c_uint32), # DWORD
+        ]
+
+    _anonymous_ = ("DUMMYSTRUCTNAME", "u")
+    _fields_ = [
+        ("DUMMYSTRUCTNAME", _STRUCT),
+        ("u", _STRUCT),
+        ("QuadPart", ctypes.c_uint64),
+    ]
+
 class _IMAGE_DOS_HEADER(ctypes.Structure):
     _fields_ = [
         ("e_magic",      ctypes.c_int16),
