@@ -39,8 +39,77 @@ class ShellcodeHandler():
         """
 
         payloads = get_module_list("payloads")
-        print(f"\n  {'Shellcode':<80} {'Description'}")
-        print(f"  {'---------':<80} {'-----------'}")
+
+#        print(f"\n  {'Shellcode':<80} {'Description'}")
+#        print(f"  {'---------':<80} {'-----------'}")
+
+        # First we want to get sizes
+
+        shellcode_stubs = {}
+        arch_list = []
+
+        max_payload_len = 0x00
+        max_info_len = 0x00
+
         for i in range(len(payloads)):
             sc_module = check_module_support("payloads", payloads[i]) #, True)
-            print(f"  {payloads[i]:<80} {sc_module.Shellcode.summary}")
+
+            # Obtain the largest payload and description we'll deal with
+            payload_len = len(payloads[i])
+            info_len = len(sc_module.Shellcode.summary)
+
+            if payload_len > max_payload_len:
+                max_payload_len = payload_len
+
+            if info_len > max_info_len:
+                max_info_len = info_len
+
+            # While enumerating payloads capture supported architectures
+            if sc_module.Shellcode.arch not in arch_list:
+                arch_list.append(sc_module.Shellcode.arch)
+
+            # Organize the shellcode stubs
+            platform = sc_module.Shellcode.platform
+            ring = sc_module.Shellcode.ring
+
+            if platform not in shellcode_stubs.keys():
+                shellcode_stubs[platform] = {}
+                shellcode_stubs[platform]["kernel"] = []
+                shellcode_stubs[platform]["userland"] = []
+
+            generic_info = [payloads[i], ring, sc_module.Shellcode.summary]
+
+            if ring == 3:
+                shellcode_stubs[platform]["userland"].append(generic_info)
+            elif ring == 0:
+                shellcode_stubs[platform]["kernel"].append(generic_info)
+            else:
+                pass
+
+
+        print(f"\n  {'Shellcode':^{max_payload_len}} {'Ring'} {'Description':^{max_info_len}}")
+        print(f"  {'-':-<{max_payload_len}} {'----'} {'-':-<{max_info_len}}")
+
+        for platform in shellcode_stubs.keys():
+
+            userland_stubs = shellcode_stubs[platform]["userland"]
+            kernel_stubs = shellcode_stubs[platform]["kernel"]
+
+            for payload in range(len(userland_stubs)):
+                name = userland_stubs[payload][0]
+                ring = userland_stubs[payload][1]
+                info = userland_stubs[payload][2]
+
+                print(f"  {name:<{max_payload_len}} {ring:^4} {info}")
+
+            for payload in range(len(kernel_stubs)):
+                name = kernel_stubs[payload][0]
+                ring = kernel_stubs[payload][1]
+                info = kernel_stubs[payload][2]
+
+                print(f"  {name:<{max_payload_len}} {ring:^4} {info}")
+
+        print("\n  Architectures")
+        print("  -------------")
+        for arch in range(len(arch_list)):
+            print(f"  {arch_list[arch]}")
