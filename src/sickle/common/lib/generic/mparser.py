@@ -87,7 +87,6 @@ def print_module_info(module_class, module_name):
         sys.exit(f"Invalid module class: {module_class}")
 
     # The description of the module overall
-   # print(f"Name:  {m.description}\n".rjust(40))
     try:
         print("{}{}".format("Name: ".rjust(20), m.name))
         print("{}{}".format("Module: ".rjust(20), m.module))
@@ -110,24 +109,54 @@ def print_module_info(module_class, module_name):
     # Information on each argument for a given module and what it does
     mod_args = m.arguments
     if (mod_args != None):
-        print("Argument Information\n")
-        print(f"  {'Argument Name':<20} {'Argument Description':<50} {'Optional'}")
-        print(f"  {'-------------':<20} {'--------------------':<50} {'--------'}")
 
+        # Calculate the largest lines as this will affect how the infromation is presented
+        max_arg_name = 0x0D
+        max_arg_info = 0x00
+       
+        for arg_name in mod_args.keys():
+            arg_name_size = len(arg_name)
+            arg_info_size = len(mod_args[arg_name]['description'])
+            
+            if arg_name_size > max_arg_name:
+                max_arg_name = arg_name_size
+
+            if arg_info_size > max_arg_info:
+                max_arg_info = arg_info_size
+
+        # Print the argument information with the calculation complete
+        print("Argument Information\n")
+        print(f"  {'Name':<{max_arg_name}} {'Description':<{max_arg_info}} {'Optional'}")
+        print(f"  {'-':->{max_arg_name}} {'-':-<{max_arg_info}} {'--------'}")
+        
         for arg_name, _ in mod_args.items():
             optional = mod_args[arg_name]["optional"]
             description = mod_args[arg_name]["description"]
-            print(f"  {arg_name:<20} {description:<50} {optional}")
+            print(f"  {arg_name:<{max_arg_name}} {description:<{max_arg_info}} {optional:>8}")
         print("")
 
         if ("options" in mod_args[arg_name].keys()):
 
+
+            # Once again calc sizes
+            max_option_size = 0x0D
+            max_info_size = 0x00
+            supported_options = mod_args[arg_name]['options']
+            for option, info in supported_options.items():
+                option_len = len(option)
+                info_len = len(info)
+
+                if info_len > max_info_size:
+                    max_info_size = info_len
+                if option_len > max_option_size:
+                    max_option_size = option_len
+
+            # print it
             print(f"Argument Options:\n")
-            print(f"  {arg_name:<20} {'Option Description'}")
-            print(f"  {('-' * (len(arg_name))):<20} {'------------------'}")
-            supported_options = mod_args[arg_name]["options"]
+            print(f"  {arg_name:<{max_option_size}} {'Description':{max_option_size}}")
+            print(f"  {'-':-<{max_option_size}} {'-':-<{max_info_size}}")
             for opt, opt_desc in supported_options.items():
-                print(f"  {opt:<20} {opt_desc}")
+                print(f"  {opt:<{max_option_size}} {opt_desc}")
             print("")
 
     print("Description:")
