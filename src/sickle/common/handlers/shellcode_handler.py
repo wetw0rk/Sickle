@@ -87,7 +87,7 @@ class ShellcodeHandler():
                 pass
 
 
-        print(f"\n  {'Shellcode':^{max_payload_len}} {'Ring'} {'Description':^{max_info_len}}")
+        print(f"\n  {'Shellcode':<{max_payload_len}} {'Ring'} {'Description':<{max_info_len}}")
         print(f"  {'-':-<{max_payload_len}} {'----'} {'-':-<{max_info_len}}")
 
         for platform in shellcode_stubs.keys():
