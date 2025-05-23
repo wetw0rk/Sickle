@@ -1,4 +1,5 @@
 from sickle.common.lib.generic.mparser import get_module_list
+from sickle.common.lib.generic.mparser import get_truncated_list
 from sickle.common.lib.generic.mparser import check_module_support
 
 class ModuleHandler():
@@ -36,30 +37,27 @@ class ModuleHandler():
         """
 
         modules = get_module_list("modules")
-        parsed_modules = []
+        descriptions = [check_module_support("modules", mod).Module.summary
+                        for mod in modules]
 
-        max_mod_len = 0x00
-        max_info_len = 0x00
+        # Obtain
+        max_mod_len = len(max(modules, key=len))
+        if max_mod_len < 0x0D:
+            max_mod_len = 0x0D
 
-        for i in range(len(modules)):
-            dev_module = check_module_support("modules", modules[i])
+        max_info_len = len(max(descriptions, key=len))
 
-            mod_len = len(modules[i])
-            info_len = len(dev_module.Module.summary)
-
-            if mod_len > max_mod_len:
-                max_mod_len = mod_len
-
-            if info_len > max_info_len:
-                max_info_len = info_len
-
-            parsed_modules.append([modules[i], dev_module.Module.summary])
-
+        # Output
         print(f"\n  {'Modules':<{max_mod_len}} {'Description':<{max_info_len}}")
-        print(f"  {'-':-<{max_mod_len}} {'-':-<{max_info_len}}")
-        for i in range(len(parsed_modules)):
-            name = parsed_modules[i][0]
-            summary = parsed_modules[i][1]
-            print(f"  {name:<{max_mod_len}} {summary:<{max_info_len}}")
+        print(f"  {'-------':<{max_mod_len}} {'-----------':<{max_info_len}}")
+
+        for mod, info in zip(modules, descriptions):
+            space_used = max_mod_len + 4
+            out_list = get_truncated_list(f"{info}", space_used)
+            for i in range(len(out_list)):
+                if i != 0:
+                    print(f"  {' ' * max_mod_len} {out_list[i]}")
+                else:
+                    print(f"  {mod:<{max_mod_len}} {out_list[i]}")
 
         return
