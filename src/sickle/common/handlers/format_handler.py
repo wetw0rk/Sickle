@@ -1,4 +1,8 @@
+import os
+import sys
+
 from sickle.common.lib.generic.mparser import get_module_list
+from sickle.common.lib.generic.mparser import get_truncated_list
 from sickle.common.lib.generic.mparser import check_module_support
 
 class FormatHandler():
@@ -72,4 +76,10 @@ class FormatHandler():
         for i in range(len(parsed_formats)):
             name = parsed_formats[i][0]
             info = parsed_formats[i][1]
-            print(f"  {name:<{max_format_len}} {info:<{max_info_len}}")
+
+            info_list = get_truncated_list(f"{info}", len(f"  {name:<{max_format_len}} "))
+            for j in range(len(info_list)):
+                if j != 0:
+                    print(f"  {' ' * max_format_len} {info_list[j]}")
+                else:
+                    print(f"  {name:<{max_format_len}} {info_list[j]}")

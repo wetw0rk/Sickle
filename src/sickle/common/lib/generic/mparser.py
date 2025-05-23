@@ -2,6 +2,37 @@ import os
 import sys
 import importlib
 
+def get_truncated_list(full_string, space_used):
+
+    max_str_len = os.get_terminal_size(0).columns
+    max_str_len -= space_used
+   
+    lines = []
+    current_line = ""
+
+    if (len(full_string) < max_str_len):
+        return [full_string]
+
+    words = full_string.split(" ")
+
+    for word in words:
+        if len(word) > max_str_len:
+            lines += word,
+            continue
+
+        if not current_line:
+            current_line = word
+        elif len(current_line) + 1 + len(word) <= max_str_len:
+            current_line += ' ' + word
+        else:
+            lines.append(current_line)
+            current_line = word
+
+    if current_line:
+        lines.append(current_line)
+
+    return lines
+
 def get_module_list(target_path):
     """Returns a list of modules in a given path. Should the caller request it,
     the sub directories will also be included in each discovered module.
