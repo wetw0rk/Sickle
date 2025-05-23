@@ -40,9 +40,6 @@ class ShellcodeHandler():
 
         payloads = get_module_list("payloads")
 
-#        print(f"\n  {'Shellcode':<80} {'Description'}")
-#        print(f"  {'---------':<80} {'-----------'}")
-
         # First we want to get sizes
 
         shellcode_stubs = {}

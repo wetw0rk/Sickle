@@ -3,6 +3,8 @@ import sys
 import importlib
 
 def get_truncated_list(full_string, space_used):
+    """Genereate
+    """
 
     max_str_len = os.get_terminal_size(0).columns
     max_str_len -= space_used
