@@ -8,6 +8,8 @@ from sickle.common.handlers.format_handler import FormatHandler
 from sickle.common.handlers.module_handler import ModuleHandler
 from sickle.common.handlers.shellcode_handler import ShellcodeHandler
 
+from sickle.common.lib.reversing.smartarch import set_arch # NEWLY ADDED
+
 class Handle():
     """This class should be looked at as the coordinator of the framework. Execution
     flow is generally directed from here.
@@ -88,6 +90,7 @@ class Handle():
             read_bytes = read_bytes_from_file(self.binfile)
         elif self.payload:
             generator = ShellcodeHandler(self.payload, self.module_args)
+            set_arch(self.payload) # NEWLY ADDED
             read_bytes = generator.get_shellcode()
         else:
             read_bytes = None

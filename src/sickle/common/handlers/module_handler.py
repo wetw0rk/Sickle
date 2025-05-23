@@ -36,10 +36,30 @@ class ModuleHandler():
         """
 
         modules = get_module_list("modules")
-        print(f"\n  {'Modules':<20}{'Description'}")
-        print(f"  {'-------':<20}{'-----------'}") 
+        parsed_modules = []
+
+        max_mod_len = 0x00
+        max_info_len = 0x00
+
         for i in range(len(modules)):
             dev_module = check_module_support("modules", modules[i])
-            print(f"  {modules[i]:<20}{dev_module.Module.summary}")
+
+            mod_len = len(modules[i])
+            info_len = len(dev_module.Module.summary)
+
+            if mod_len > max_mod_len:
+                max_mod_len = mod_len
+
+            if info_len > max_info_len:
+                max_info_len = info_len
+
+            parsed_modules.append([modules[i], dev_module.Module.summary])
+
+        print(f"\n  {'Modules':<{max_mod_len}} {'Description':<{max_info_len}}")
+        print(f"  {'-':-<{max_mod_len}} {'-':-<{max_info_len}}")
+        for i in range(len(parsed_modules)):
+            name = parsed_modules[i][0]
+            summary = parsed_modules[i][1]
+            print(f"  {name:<{max_mod_len}} {summary:<{max_info_len}}")
 
         return

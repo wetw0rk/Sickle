@@ -43,10 +43,33 @@ class FormatHandler():
     def print_formats():
         """Prints all currently supported formats along with a short desciption
         """
-        
+       
+        # TODO: Account for terminal size if possible I'll need to look into it but not important for now
+
         formats = get_module_list("formats")
-        print(f"\n  {'Format':<20}{'Description'}")
-        print(f"  {'------':<20}{'-----------'}")
+        parsed_formats = []
+
+        max_format_len = 0x0D
+        max_info_len = 0x00
+        
         for i in range(len(formats)):
             format_module = check_module_support("formats", formats[i])
-            print(f"  {formats[i]:<20}{format_module.FormatModule.description}")
+            format_len = len(formats[i])
+            info_len = len(format_module.FormatModule.description)
+
+            if format_len > max_format_len:
+                max_format_len = format_len
+
+            if info_len > max_info_len:
+                max_info_len = info_len
+
+            parsed_formats.append([formats[i], format_module.FormatModule.description])
+
+            #print(f"  {formats[i]:<20}{format_module.FormatModule.description}")
+
+        print(f"\n  {'Format':<{max_format_len}} {'Description'}")
+        print(f"  {'-':-<{max_format_len}} {'-':-<{max_info_len}}")
+        for i in range(len(parsed_formats)):
+            name = parsed_formats[i][0]
+            info = parsed_formats[i][1]
+            print(f"  {name:<{max_format_len}} {info:<{max_info_len}}")
