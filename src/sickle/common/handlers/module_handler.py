@@ -3,13 +3,14 @@ from sickle.common.lib.generic.mparser import get_truncated_list
 from sickle.common.lib.generic.mparser import check_module_support
 
 class ModuleHandler():
-    """This class is responsible for calling the appropriate development module. All modules
-    should pass through this class
+    """This class is responsible for calling the appropriate development
+    module. All modules should pass through this class
 
     :param module: Development module to be called
     :type module: str
 
-    :param arg_object: Dictionary object containing arguments that may be required by the module
+    :param arg_object: Dictionary object containing arguments that may be required by the
+        module
     :type arg_object: dict
     """
 
@@ -22,7 +23,6 @@ class ModuleHandler():
         """Executes development module
         """
 
-        # Check and ensure that the module is supported by sickle
         dev_module = check_module_support("modules", self.module)
         if (dev_module == None):
             return -1
@@ -36,20 +36,21 @@ class ModuleHandler():
         """Prints all currently supported modules along with a short description
         """
 
+        # Get the list objects of data we'll be parsing
         modules = get_module_list("modules")
         descriptions = [check_module_support("modules", mod).Module.summary
                         for mod in modules]
 
-        # Obtain
+        # Get the sizes needed to calculate output strings
         max_mod_len = len(max(modules, key=len))
         if max_mod_len < 0x0D:
             max_mod_len = 0x0D
 
         max_info_len = len(max(descriptions, key=len))
 
-        # Output
-        print(f"\n  {'Modules':<{max_mod_len}} {'Description':<{max_info_len}}")
-        print(f"  {'-------':<{max_mod_len}} {'-----------':<{max_info_len}}")
+        # Output the results
+        print(f"\n  {'Modules':<{max_mod_len}} {'Description'}")
+        print(f"  {'-------':<{max_mod_len}} {'-----------'}")
 
         for mod, info in zip(modules, descriptions):
             space_used = max_mod_len + 4
