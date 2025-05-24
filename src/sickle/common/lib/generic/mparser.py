@@ -266,6 +266,7 @@ def print_module_info(module_class, module_name):
             print(f"{' ' * 2}{clean_line}")
     print("")
 
+    # Here we preserve the string since we want users to easily copy/paste
     print("Example:\n")
     print(f"{''.rjust(2)}{m.example_run}\n")
 
