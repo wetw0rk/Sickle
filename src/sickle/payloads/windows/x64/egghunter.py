@@ -25,13 +25,11 @@ class Shellcode():
 
     summary = ("Egghunter based on Hell's Gate and NtProtectVirtualMemory")
 
-    description = """
-    This egghunter iterates virtual memory addresses and before searching
-    for the egg, it performs a NtProtectVirtualMemory system call. This
-    system call is similar to VirtualProtect, and is parameterized to set
-    the memory to be scanned to READ, WRITE, EXECUTE. This way, when the
-    egg is found, the shellcode after it is guaranteed to be executable.
-    """
+    description = ("This egghunter iterates virtual memory addresses and before searching"
+                   " for the egg, it performs a NtProtectVirtualMemory system call. This"
+                   " system call is similar to VirtualProtect, and is parameterized to set"
+                   " the memory to be scanned to READ, WRITE, EXECUTE. This way, when the"
+                   " egg is found, the shellcode after it is guaranteed to be executable.")
 
     arguments = {}
     arguments["TAG"] = {}
