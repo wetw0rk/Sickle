@@ -35,8 +35,8 @@ class ShellcodeHandler():
         return bytecode
 
     def print_stubs():
-        """Prints all currently supported shellcode stubs along with a short description
-        for each.
+        """Prints all currently supported shellcode stubs along with a short
+        description for each.
         """
 
         # Obtain the list objects of data we'll be parsing
@@ -50,7 +50,7 @@ class ShellcodeHandler():
         arch_list = set([sc.arch for sc in sc_objects])
 
 
-        # First we want to get sizes
+        # Get the size of the largest payload string and description string
         max_name_len = len(max(payloads, key=len))
         if max_name_len <  0x0D:
             max_name_len = 0x0D
@@ -82,10 +82,9 @@ class ShellcodeHandler():
             else:
                 pass
 
-        # Print
-
-        print(f"\n  {'Shellcode':<{max_name_len}} {'Ring'} {'Description':<{max_info_len}}")
-        print(f"  {'---------':<{max_name_len}} {'----'} {'-----------':<{max_info_len}}")
+        # Output the results
+        print(f"\n  {'Shellcode':<{max_name_len}} {'Ring'} {'Description'}")
+        print(f"  {'---------':<{max_name_len}} {'----'} {'-----------'}")
 
         for platform in stubs.keys():
             userland_stubs = stubs[platform]["userland"]
