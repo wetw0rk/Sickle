@@ -1,12 +1,10 @@
-import os
-
 from sickle.common.lib.generic.mparser import get_module_list
 from sickle.common.lib.generic.mparser import get_truncated_list
 from sickle.common.lib.generic.mparser import check_module_support
 
 class FormatHandler():
-    """This class is responsible for calling the appropriate format module. All formatting
-    should pass through this class
+    """This class is responsible for calling the appropriate format module. All
+    formatting should pass through this class
 
     :param fmt: The language format to use for bytecode returned
     :type fmt: str
@@ -52,7 +50,8 @@ class FormatHandler():
         descriptions = [check_module_support("formats", fmt).FormatModule.description
                         for fmt in formats]
 
-        # Obtain the largest format and format description string then calculate its length
+        # Obtain the largest format and format description string then calculate its
+        # length.
         max_format_len = len(max(formats, key=len))
         if (max_format_len < 0x0D):
             max_format_len = 0x0D
