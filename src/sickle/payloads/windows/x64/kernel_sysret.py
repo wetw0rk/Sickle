@@ -25,11 +25,9 @@ class Shellcode():
 
     summary = "Generic method of returning from kernel space to user space"
 
-    description = """
-    This shellcode stub will restore a threads execution context, ultimately
-    transitioning from kernel-mode to user-mode. This helps avoid manually having
-    to restore execution flow from an exploit development perspective.
-    """
+    description = ("This shellcode stub will restore a threads execution context, ultimately"
+    " transitioning from kernel-mode to user-mode. This helps avoid manually having"
+    " to restore execution flow from an exploit development perspective.")
 
     arguments = None
 
