@@ -2,8 +2,19 @@ import os
 import sys
 import importlib
 
-def get_truncated_list(full_string, space_used):
-    """Genereate
+def get_truncated_list(full_string, space_used=0x00):
+    """Generate a list of strings that will fit to the users current terminal
+    session.
+
+    :param full_string: One large string that will be truncated into a list
+    :type full_string: str
+
+    :param space_used: If the every string from the returned list is meant to be appended, we
+        need to account for the string it will be appended to.
+    :type space_used: int
+
+    :return: list of strings that fit the users current terminal session
+    :rtype: list
     """
 
     max_str_len = os.get_terminal_size(0).columns
