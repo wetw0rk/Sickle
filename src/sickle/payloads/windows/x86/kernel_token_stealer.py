@@ -25,12 +25,9 @@ class Shellcode():
 
     summary = "Kernel token stealing shellcode"
 
-    description = """
-    Hijacks a security token of another process (specifically NT/AUTHORITY SYSTEM),
-    allowing for elevation of privileges.    
-
-    WARNING: ASSUME KERNEL SHELLCODE DOES NOT HANDLE RETURN TO USERLAND!!
-    """
+    description = ("Hijacks a security token of another process (specifically NT/AUTHORITY SYSTEM),"
+                   "allowing for elevation of privileges.\n\n"
+                   "WARNING: ASSUME KERNEL SHELLCODE DOES NOT HANDLE RETURN TO USERLAND!!")
 
     arguments = None
 
