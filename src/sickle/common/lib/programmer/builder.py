@@ -9,6 +9,15 @@ def gen_offsets(sc_args, arch):
     """This function generates the offsets to be used within the shellcode. If
     the argument IS NOT 0x00 this function will assume the argument is dynamic
     and uses up space (aka will affect the offset).
+
+    :param sc_args: Shellcode arguments used by a shellcode module
+    :type sc_args: dict
+
+    :param arch: Target architecture
+    :type arch: str
+
+    :return: Updated sc_args object containing offsets for storage
+    :rtype: dict
     """
 
     # Depending on what architecture we're working with it will affect where
@@ -46,8 +55,8 @@ def gen_offsets(sc_args, arch):
             arg_start += arch_ptr_size
 
     return sc_args
-        
-# TODO: Ensure works with x64
+
+# TODO: rm additional_space        
 def calc_stack_space(sc_args, arch, additional_space=0x00):
     """This function will get the number of arguments being used by a shellcode
     stub. Since sickle supports multiple architectures, the maximum register
@@ -56,8 +65,8 @@ def calc_stack_space(sc_args, arch, additional_space=0x00):
     :param sc_args: Shellcode arguments used by a shellcode module
     :type sc_args: dict
 
-    :param max_space: The most amount of bytes a register can hold in the architecture
-    :type max_space: int
+    :param arch: Target architecture
+    :type arch: str
 
     :return: Stack space needed for argument storage
     :rtype: int
@@ -94,7 +103,6 @@ def calc_stack_space(sc_args, arch, additional_space=0x00):
 
     return space_needed
 
-# TODO: Test on x64
 def init_sc_args(dependencies):
     """Initializes the arguments that are going to be used by the shellcode.
 
