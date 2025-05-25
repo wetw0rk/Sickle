@@ -12,7 +12,7 @@ def get_truncated_max(space_used=0x00):
     :rtype: int
     """
 
-    max_str_len = os.get_terminal_size(0).columns
+    max_str_len = os.get_terminal_size().columns
     max_str_len -= space_used
 
     return max_str_len
