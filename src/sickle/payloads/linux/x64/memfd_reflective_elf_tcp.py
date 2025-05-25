@@ -25,7 +25,8 @@ class Shellcode():
 
     author = ["wetw0rk"]
 
-    tested_platforms = ["Debian 13.2.0-25"]
+    tested_platforms = ["Debian 13.2.0-25",
+                        "Ubuntu 18.04.6 LTS"]
 
     summary = ("TCP-based reflective ELF loader over IPV4 which executes an ELF from"
                " a remote server")
