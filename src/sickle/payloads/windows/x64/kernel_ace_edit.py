@@ -28,30 +28,28 @@ class Shellcode():
 
     summary = "Kernel shellcode to modify the _SECURITY_DESCRIPTOR of a process"
 
-    description = f"""
-    This stub modifies the Ace[0] entry of a given processes _SECURITY_DESCRIPTOR,
-    specifically the SID entry. Upon completion it will modify the MandatoryPolicy
-    to allow us to later inject into a target process when returning to userland.
+    description = ("This stub modifies the Ace[0] entry of a given processes _SECURITY_DESCRIPTOR,"
+                   " specifically the SID entry. Upon completion it will modify the MandatoryPolicy"
+                   " to allow us to later inject into a target process when returning to userland.\n\n"
 
-    To use this shellcode properly you will need to handle injection from userland,
-    first generate the shellcode:
+                   "To use this shellcode properly you will need to handle injection from userland,"
+                   " first generate the shellcode:\n\n"
 
-        {example_run}
+                   f"    {example_run}\n\n"
 
-    Once shellcode is inserted into exploit, ensure that you have code similar to
-    the following pseudo code:
+                   "Once shellcode is inserted into exploit, ensure that you have code similar to"
+                   " the following pseudo code:\n\n"
 
-        shellcode = <code to be injected>
+                   "    shellcode = <code to be injected>\n\n"
 
-        OpenProcess()
-          VirtualAllocEx()
-            WriteProcessMemory()
-              CreateRemoteThread()
+                   "    OpenProcess()\n"
+                   "      VirtualAllocEx()\n"
+                   "        WriteProcessMemory()\n"
+                   "          CreateRemoteThread()\n\n"
 
-    If everything went well, you should have successfully obtained code execution.
+                   "If everything went well, you should have successfully obtained code execution.\n\n"
 
-    WARNING: ASSUME KERNEL SHELLCODE DOES NOT HANDLE RETURN TO USERLAND!!
-    """
+                   "WARNING: ASSUME KERNEL SHELLCODE DOES NOT HANDLE RETURN TO USERLAND!!")
 
     arguments = {}
 

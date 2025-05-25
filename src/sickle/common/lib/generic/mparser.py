@@ -2,6 +2,79 @@ import os
 import sys
 import importlib
 
+def get_truncated_max(space_used=0x00):
+    """Obtain the max string the terminal session can support
+
+    :param space_used: Space already taken up by a string the user expects to append to
+    :type space_used: int
+
+    :return: The max string length supported by the current terminal session
+    :rtype: int
+    """
+
+    max_str_len = os.get_terminal_size(0).columns
+    max_str_len -= space_used
+
+    return max_str_len
+
+def get_truncated_list(full_string, space_used=0x00, override=0x00):
+    """Generate a list of strings that will fit to the users current terminal
+    session.
+
+    :param full_string: One large string that will be truncated into a list
+    :type full_string: str
+
+    :param space_used: If the every string from the returned list is meant to be appended, we
+        need to account for the string it will be appended to.
+    :type space_used: int
+
+    :param override: Override the max string size (sometimes all terminal room is not needed)
+    :type override: int
+
+    :return: list of strings that fit the users current terminal session
+    :rtype: list
+    """
+
+    # If the terminal supports the override when defined, do it
+    max_str_len = get_truncated_max(space_used)  
+    if override != 0:
+        if override < max_str_len:
+            max_str_len = override 
+
+    lines = []
+    current_line = ""
+
+    # Some strings expect to have leading spaces so account for them
+    leading_spaces = len(full_string) - len(full_string.lstrip(' '))
+
+    # If no split is needed just return the full string unmodified
+    if (len(full_string) < max_str_len):
+        return [full_string]
+
+    # Remove any "strings" that are empty
+    dirty_words = full_string.split(" ")
+    words = [item for item in dirty_words if item != '']
+
+    words[0] = (' ' * leading_spaces) + words[0]
+
+    for word in words:
+        if len(word) > max_str_len:
+            lines += word,
+            continue
+
+        if not current_line:
+            current_line = word
+        elif len(current_line) + 1 + len(word) <= max_str_len:
+            current_line += ' ' + word
+        else:
+            lines.append(current_line)
+            current_line = (' ' * leading_spaces) + word
+
+    if current_line:
+        lines.append(current_line)
+
+    return lines
+
 def get_module_list(target_path):
     """Returns a list of modules in a given path. Should the caller request it,
     the sub directories will also be included in each discovered module.
@@ -74,7 +147,7 @@ def print_module_info(module_class, module_name):
     :rtype: None
     """
 
-    module_object = check_module_support(module_class, module_name) #include_subdirs)
+    module_object = check_module_support(module_class, module_name)
     if (module_object == None):
         exit(-1)
 
@@ -110,60 +183,92 @@ def print_module_info(module_class, module_name):
     mod_args = m.arguments
     if (mod_args != None):
 
-        # Calculate the largest lines as this will affect how the infromation is presented
-        max_arg_name = 0x0D
-        max_arg_info = 0x00
-       
-        for arg_name in mod_args.keys():
-            arg_name_size = len(arg_name)
-            arg_info_size = len(mod_args[arg_name]['description'])
-            
-            if arg_name_size > max_arg_name:
-                max_arg_name = arg_name_size
+        # Get the lists of information we need to parse
+        arg_names = [arg_name for arg_name in mod_args.keys()]
+      
+        descriptions = [mod_args[arg_name]["description"]
+                        for arg_name in mod_args.keys()]
 
-            if arg_info_size > max_arg_info:
-                max_arg_info = arg_info_size
+        
+        # Obtain the sizes needed to properly output information
+        max_arg_name = len(max(arg_names, key=len))
+        if max_arg_name < 0x0D:
+            max_arg_name = 0x0D
+
+        max_arg_info = len(max(descriptions, key=len))
+
+        # Account for everything used in the output string aside from the description
+        space_used = max_arg_name # Longest argument name
+        space_used += 8           # Length of the "Optional" string
+        space_used += 4           # Spaces used in the out string proir to modification
+
+        # Save space and used whatever is smaller the truncated space or terminal space
+        info_field_max = get_truncated_max(space_used)
+        if max_arg_info < info_field_max:
+            info_field_max = max_arg_info
 
         # Print the argument information with the calculation complete
         print("Argument Information\n")
-        print(f"  {'Name':<{max_arg_name}} {'Description':<{max_arg_info}} {'Optional'}")
-        print(f"  {'-':->{max_arg_name}} {'-':-<{max_arg_info}} {'--------'}")
+        print(f"  {'Name':<{max_arg_name}} {'Description':<{info_field_max}} {'Optional'}")
+        print(f"  {'----':<{max_arg_name}} {'-----------':<{info_field_max}} {'--------'}")
         
         for arg_name, _ in mod_args.items():
-            optional = mod_args[arg_name]["optional"]
             description = mod_args[arg_name]["description"]
-            print(f"  {arg_name:<{max_arg_name}} {description:<{max_arg_info}} {optional:>8}")
+            optional = mod_args[arg_name]["optional"]
+
+            out_list = get_truncated_list(f"{description}", space_used)
+
+            for i in range(len(out_list)):
+                if i != 0:
+                    print(f"  {' ' * max_arg_name} {out_list[i]}")
+                else:
+                    print(f"  {arg_name:<{max_arg_name}} {out_list[i]:<{info_field_max}} {optional:>8}")
+
         print("")
 
         if ("options" in mod_args[arg_name].keys()):
 
-
-            # Once again calc sizes
-            max_option_size = 0x0D
-            max_info_size = 0x00
             supported_options = mod_args[arg_name]['options']
-            for option, info in supported_options.items():
-                option_len = len(option)
-                info_len = len(info)
 
-                if info_len > max_info_size:
-                    max_info_size = info_len
-                if option_len > max_option_size:
-                    max_option_size = option_len
+            # Obtain list objects of options and information
+            options, infos = zip(*supported_options.items())
 
-            # print it
+            # Calculate sizes
+            max_option_size = len(max(options, key=len))
+            if max_option_size < 0x0D:
+                max_option_size = 0x0D
+
+            max_info_size = len(max(infos, key=len))
+
+            space_used = max_option_size
+            space_used += 4
+
+            # Output the final results
             print(f"Argument Options:\n")
-            print(f"  {arg_name:<{max_option_size}} {'Description':{max_option_size}}")
-            print(f"  {'-':-<{max_option_size}} {'-':-<{max_info_size}}")
+            print(f"  {arg_name:<{max_option_size}} {'Description'}")
+            print(f"  {'----':<{max_option_size}} {'-----------'}")
             for opt, opt_desc in supported_options.items():
-                print(f"  {opt:<{max_option_size}} {opt_desc}")
+                out_list = get_truncated_list(f"{opt_desc}", space_used)
+                
+                for i in range(len(out_list)):
+                    if i != 0:
+                        print(f"  {' ' * max_option_size} {out_list[i]}")
+                    else:
+                        print(f"  {opt:<{max_option_size}} {out_list[i]}")
+
             print("")
 
-    print("Description:")
-    print(f"{''.rjust(4)}{m.description}")
+    print("Module Description:\n")
+    all_info = m.description.split('\n')
+    for line in all_info:
+        out_list = get_truncated_list(line, 2, 85)
+        for clean_line in out_list:
+            print(f"{' ' * 2}{clean_line}")
+    print("")
 
+    # Here we preserve the string since we want users to easily copy/paste
     print("Example:\n")
-    print(f"{''.rjust(4)}{m.example_run}\n")
+    print(f"{''.rjust(2)}{m.example_run}\n")
 
     exit(0)
 

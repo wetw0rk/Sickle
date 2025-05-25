@@ -1,9 +1,10 @@
 from sickle.common.lib.generic.mparser import get_module_list
+from sickle.common.lib.generic.mparser import get_truncated_list
 from sickle.common.lib.generic.mparser import check_module_support
 
 class FormatHandler():
-    """This class is responsible for calling the appropriate format module. All formatting
-    should pass through this class
+    """This class is responsible for calling the appropriate format module. All
+    formatting should pass through this class
 
     :param fmt: The language format to use for bytecode returned
     :type fmt: str
@@ -43,33 +44,28 @@ class FormatHandler():
     def print_formats():
         """Prints all currently supported formats along with a short desciption
         """
-       
-        # TODO: Account for terminal size if possible I'll need to look into it but not important for now
-
-        formats = get_module_list("formats")
-        parsed_formats = []
-
-        max_format_len = 0x0D
-        max_info_len = 0x00
         
-        for i in range(len(formats)):
-            format_module = check_module_support("formats", formats[i])
-            format_len = len(formats[i])
-            info_len = len(format_module.FormatModule.description)
+        # Obtain the list of formats and their respective desciptions
+        formats = get_module_list("formats")
+        descriptions = [check_module_support("formats", fmt).FormatModule.description
+                        for fmt in formats]
 
-            if format_len > max_format_len:
-                max_format_len = format_len
+        # Obtain the largest format and format description string then calculate its
+        # length.
+        max_format_len = len(max(formats, key=len))
+        if (max_format_len < 0x0D):
+            max_format_len = 0x0D
 
-            if info_len > max_info_len:
-                max_info_len = info_len
+        max_info_len = len(max(descriptions, key=len))
 
-            parsed_formats.append([formats[i], format_module.FormatModule.description])
-
-            #print(f"  {formats[i]:<20}{format_module.FormatModule.description}")
-
+        # Output the results        
         print(f"\n  {'Format':<{max_format_len}} {'Description'}")
-        print(f"  {'-':-<{max_format_len}} {'-':-<{max_info_len}}")
-        for i in range(len(parsed_formats)):
-            name = parsed_formats[i][0]
-            info = parsed_formats[i][1]
-            print(f"  {name:<{max_format_len}} {info:<{max_info_len}}")
+        print(f"  {'------':<{max_format_len}} {'-----------'}")
+        for fmt, info in zip(formats, descriptions):
+            space_used = max_format_len + 4
+            out_list = get_truncated_list(f"{info}", space_used)
+            for i in range(len(out_list)):
+                if i != 0:
+                    print(f"  {' ' * max_format_len} {out_list[i]}")
+                else:
+                    print(f"  {fmt:<{max_format_len}} {out_list[i]}")

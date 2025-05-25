@@ -26,22 +26,20 @@ class Shellcode():
     summary = ("TCP-based reflective ELF loader over IPV4 which executes an ELF from"
               " a remote server")
 
-    description = f"""
-    TCP based reflective ELF loader over IPV4 that will connect to a remote C2 server
-    and download an ELF. Once downloaded, an anonymous file will be created to store
-    the ELF file. Upon completion, it will execute in memory without touching disk.
+    description = ("TCP based reflective ELF loader over IPV4 that will connect to a remote C2 server"
+                   " and download an ELF. Once downloaded, an anonymous file will be created to store"
+                   " the ELF file. Upon completion, it will execute in memory without touching disk.\n\n"
 
-    As an example, your \"C2 Server\" can be as simple as Netcat:
+                   " As an example, your \"C2 Server\" can be as simple as Netcat:\n\n"
 
-        nc -w 15 -lvp 42 < payload
+                   "    nc -w 15 -lvp 42 < payload\n\n"
 
-    Then you can you generate the shellcode accordingly:
+                   "Then you can you generate the shellcode accordingly:\n\n"
 
-        {example_run}
+                   f"    {example_run}\n\n"
 
-    Upon execution of the shellcode, you should get a connection from the target and
-    your ELF should execute in memory.
-    """
+                   "Upon execution of the shellcode, you should get a connection from the target and"
+                   " your ELF should execute in memory.")
 
     arguments = {}
 

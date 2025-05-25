@@ -1,4 +1,5 @@
 from sickle.common.lib.generic.mparser import get_module_list
+from sickle.common.lib.generic.mparser import get_truncated_list
 from sickle.common.lib.generic.mparser import check_module_support
 
 class ShellcodeHandler():
@@ -34,82 +35,79 @@ class ShellcodeHandler():
         return bytecode
 
     def print_stubs():
-        """Prints all currently supported shellcode stubs along with a short description
-        for each.
+        """Prints all currently supported shellcode stubs along with a short
+        description for each.
         """
 
+        # Obtain the list objects of data we'll be parsing
         payloads = get_module_list("payloads")
 
-#        print(f"\n  {'Shellcode':<80} {'Description'}")
-#        print(f"  {'---------':<80} {'-----------'}")
+        sc_objects = [check_module_support("payloads", sc).Shellcode
+                      for sc in payloads]
 
-        # First we want to get sizes
+        descriptions = [sc.summary for sc in sc_objects]
 
-        shellcode_stubs = {}
-        arch_list = []
+        arch_list = set([sc.arch for sc in sc_objects])
 
-        max_payload_len = 0x00
-        max_info_len = 0x00
 
-        for i in range(len(payloads)):
-            sc_module = check_module_support("payloads", payloads[i]) #, True)
+        # Get the size of the largest payload string and description string
+        max_name_len = len(max(payloads, key=len))
+        if max_name_len <  0x0D:
+            max_name_len = 0x0D
+        
+        max_info_len = len(max(descriptions, key=len))
 
-            # Obtain the largest payload and description we'll deal with
-            payload_len = len(payloads[i])
-            info_len = len(sc_module.Shellcode.summary)
+        # Generate an object we can later parse for printing 
+        stubs = {}
 
-            if payload_len > max_payload_len:
-                max_payload_len = payload_len
+        for sc in sc_objects:
+            
+            platform = sc.platform
+            summary = sc.summary
+            name = sc.module
+            arch = sc.arch
+            ring = sc.ring
 
-            if info_len > max_info_len:
-                max_info_len = info_len
+            if platform not in stubs.keys():
+                stubs[platform] = {}
+                stubs[platform]["kernel"] = []
+                stubs[platform]["userland"] = []
 
-            # While enumerating payloads capture supported architectures
-            if sc_module.Shellcode.arch not in arch_list:
-                arch_list.append(sc_module.Shellcode.arch)
-
-            # Organize the shellcode stubs
-            platform = sc_module.Shellcode.platform
-            ring = sc_module.Shellcode.ring
-
-            if platform not in shellcode_stubs.keys():
-                shellcode_stubs[platform] = {}
-                shellcode_stubs[platform]["kernel"] = []
-                shellcode_stubs[platform]["userland"] = []
-
-            generic_info = [payloads[i], ring, sc_module.Shellcode.summary]
+            sc_info = [name, arch, ring, summary]
 
             if ring == 3:
-                shellcode_stubs[platform]["userland"].append(generic_info)
+                stubs[platform]["userland"].append(sc_info)
             elif ring == 0:
-                shellcode_stubs[platform]["kernel"].append(generic_info)
+                stubs[platform]["kernel"].append(sc_info)
             else:
                 pass
 
+        # Output the results
+        print(f"\n  {'Shellcode':<{max_name_len}} {'Ring'} {'Description'}")
+        print(f"  {'---------':<{max_name_len}} {'----'} {'-----------'}")
 
-        print(f"\n  {'Shellcode':<{max_payload_len}} {'Ring'} {'Description':<{max_info_len}}")
-        print(f"  {'-':-<{max_payload_len}} {'----'} {'-':-<{max_info_len}}")
+        for platform in stubs.keys():
+            userland_stubs = stubs[platform]["userland"]
+            kernel_stubs = stubs[platform]["kernel"]
+            space_used = max_name_len + 8
+           
+            for user in userland_stubs:
+                out_list = get_truncated_list(f"{user[3]}", space_used)
+                for i in range(len(out_list)):
+                    if i != 0:
+                        print(f"  {' ' * max_name_len} {' ':^4} {out_list[i]}")
+                    else:
+                        print(f"  {user[0]:<{max_name_len}} {user[2]:^4} {out_list[i]}")
 
-        for platform in shellcode_stubs.keys():
-
-            userland_stubs = shellcode_stubs[platform]["userland"]
-            kernel_stubs = shellcode_stubs[platform]["kernel"]
-
-            for payload in range(len(userland_stubs)):
-                name = userland_stubs[payload][0]
-                ring = userland_stubs[payload][1]
-                info = userland_stubs[payload][2]
-
-                print(f"  {name:<{max_payload_len}} {ring:^4} {info}")
-
-            for payload in range(len(kernel_stubs)):
-                name = kernel_stubs[payload][0]
-                ring = kernel_stubs[payload][1]
-                info = kernel_stubs[payload][2]
-
-                print(f"  {name:<{max_payload_len}} {ring:^4} {info}")
+            for kernel in kernel_stubs:
+                out_list = get_truncated_list(f"{kernel[3]}", space_used)
+                for i in range(len(out_list)):
+                    if i != 0:
+                        print(f"  {' ' * max_name_len} {' ':^4} {out_list[i]}")
+                    else:
+                        print(f"  {kernel[0]:<{max_name_len}} {kernel[2]:^4} {out_list[i]}")
 
         print("\n  Architectures")
         print("  -------------")
-        for arch in range(len(arch_list)):
-            print(f"  {arch_list[arch]}")
+        for arch in arch_list:
+            print(f"  {arch}")
