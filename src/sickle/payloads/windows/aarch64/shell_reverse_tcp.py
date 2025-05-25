@@ -78,12 +78,9 @@ class Shellcode():
             "lpProcessInformation"          : 0x00,
         })
 
-        self.stack_space = builder.calc_stack_space(sc_args,
-                                                    Shellcode.arch)
+        self.stack_space = builder.calc_stack_space(sc_args)
 
-        self.storage_offsets = builder.gen_offsets(sc_args,
-                                                   Shellcode.arch)
-
+        self.storage_offsets = builder.gen_offsets(sc_args)
         return
 
     def get_kernel32(self):

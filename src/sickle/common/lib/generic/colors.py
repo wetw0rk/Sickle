@@ -67,7 +67,8 @@ def ansi_center(string, width, fillchar=' '):
     total_fill = int(width - string_len)
     rstring = ""
 
-    # Since we are centering we want to add and prepend the same amount of bytes
+    # Since we are centering we want to add and prepend the same amount of
+    # bytes
     filler_padding = int(total_fill / 2)
 
     # If we are dealing with an odd number prepend an additional space

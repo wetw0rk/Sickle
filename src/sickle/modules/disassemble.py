@@ -25,9 +25,7 @@ class Module():
 
     summary = "Simple linear disassembler for multiple architectures"
 
-    description = """
-    Simple linear disassembler for multiple architectures
-    """
+    description = ("Simple linear disassembler for multiple architectures")
 
     arguments = None
 

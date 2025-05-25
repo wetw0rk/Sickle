@@ -47,8 +47,7 @@ class ShellcodeHandler():
 
         descriptions = [sc.summary for sc in sc_objects]
 
-        arch_list = set([sc.arch for sc in sc_objects])
-
+        arch_list = sorted(set([sc.arch for sc in sc_objects]))
 
         # Get the size of the largest payload string and description string
         max_name_len = len(max(payloads, key=len))

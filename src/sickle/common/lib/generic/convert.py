@@ -53,9 +53,28 @@ def from_raw_to_escaped(raw_bytes):
     return escaped_bytes
 
 def ip_str_to_inet_addr(ip):
+    """This function converts an IP address to fit the requirements needed
+    by sockaddr.
+
+    :param ip: IP address to be converted
+    :type ip: str
+
+    :return: inet_aton() formatted string
+    :rtype: str
+    """
+
     return struct.unpack('<L', (socket.inet_aton(ip)))[0]
 
 def port_str_to_htons(port):
+    """This function converts a port to the C htons() equivalent.
+
+    :param port: Port number to be converted
+    :type port: int
+
+    :return: htons() representation of a port number (e.g 42 -> 10752)
+    :rtype: int
+    """
+
     return socket.htons(int(port))
 
 def from_str_to_win_hash(function_name):
@@ -64,6 +83,9 @@ def from_str_to_win_hash(function_name):
 
     :param function_name: The name of the function to convert into a hash
     :type function_name: str
+
+    :return: A hexstring representitive of a Windows function
+    :rtype: str
     """
     
     bits = 32
