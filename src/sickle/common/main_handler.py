@@ -1,14 +1,14 @@
 import os
 import sys
 
-from sickle.common.lib.generic.mparser import print_module_info
-from sickle.common.lib.generic.extract import read_bytes_from_file
+from sickle.common.lib.reversing.smartarch import set_arch
 
 from sickle.common.handlers.format_handler import FormatHandler
 from sickle.common.handlers.module_handler import ModuleHandler
 from sickle.common.handlers.shellcode_handler import ShellcodeHandler
 
-from sickle.common.lib.reversing.smartarch import set_arch
+from sickle.common.lib.generic.mparser import print_module_info
+from sickle.common.lib.generic.extract import read_bytes_from_file
 
 class Handle():
     """This class should be looked at as the coordinator of the framework.
