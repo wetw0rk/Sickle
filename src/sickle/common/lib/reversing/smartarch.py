@@ -3,7 +3,6 @@ import ctypes
 using_64bit = True
 arch_used   = None
 
-
 def get_ptr():
     """Returns a ctypes pointer object depending on the architecture being used by
     the current shellcode stub.
