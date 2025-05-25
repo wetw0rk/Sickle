@@ -28,10 +28,8 @@ class Module():
 
     summary = "Interactive assembler and disassembler"
 
-    description = """
-    ASM Shell is, as the name suggests, an "Assembly Shell". It currently can be used
-    to convert assembler code to opcode and vice versa.
-    """
+    description = ("ASM Shell is, as the name suggests, an \"Assembly Shell\". It currently can be used"
+                   " to convert assembler code to opcode and vice versa.")
 
     arguments = None
 

@@ -22,9 +22,7 @@ class Module():
 
     summary = "Converts bytecode into a respective format (activated anytime '-f' is used)"
 
-    description = """
-    Formats bytecode into a format for a target language
-    """
+    description = ("Formats bytecode into a format for a target language")
 
     arguments = None
 

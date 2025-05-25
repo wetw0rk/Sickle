@@ -42,12 +42,10 @@ class Module():
     summary = ("Highlights opcodes within a disassembly to identify instructions responsible"
                " for bad characters")
 
-    description = """
-    Often when crafting shellcode for the x86 architecture your shellcode may
-    contain bad characters. Often looking at a bunch of bytes can be difficult, so
-    this module will highlight where in the assembly your bad character is being
-    generated.
-    """
+    description = (" Often when crafting shellcode for the x86 architecture your shellcode may"
+                   " contain bad characters. Often looking at a bunch of bytes can be difficult, so"
+                   " this module will highlight where in the assembly your bad character is being"
+                   " generated.")
 
     arguments = None
 

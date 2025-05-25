@@ -31,10 +31,8 @@ class Module():
 
     summary = "Bytecode diffing module for comparing two binaries (or shellcode)"
 
-    description = """
-    This module performs a diff on two binary blobs. Since this was designed for
-    shellcode it currently supports hexdump, byte, raw, and asm modes.
-    """
+    description = ("This module performs a diff on two binary blobs. Since this was designed for"
+                   " shellcode it currently supports hexdump, byte, raw, and asm modes.")
 
     arguments = {}
 
