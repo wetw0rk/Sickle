@@ -316,6 +316,7 @@ execute_elf:
     syscall
 exit:
     xor rax, rax
+    leave
     ret
         """
 
