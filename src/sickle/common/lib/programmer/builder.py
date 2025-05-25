@@ -1,20 +1,14 @@
 import ctypes
 
-# TODO: use PTR to initialize functions 
-from sickle.common.lib.reversing.smartarch import PTR
+import sickle.common.lib.reversing.smartarch as smartarch
 
-
-# TODO: Try to use PTR
-def gen_offsets(sc_args, arch):
+def gen_offsets(sc_args):
     """This function generates the offsets to be used within the shellcode. If
     the argument IS NOT 0x00 this function will assume the argument is dynamic
     and uses up space (aka will affect the offset).
 
     :param sc_args: Shellcode arguments used by a shellcode module
     :type sc_args: dict
-
-    :param arch: Target architecture
-    :type arch: str
 
     :return: Updated sc_args object containing offsets for storage
     :rtype: dict
@@ -31,18 +25,12 @@ def gen_offsets(sc_args, arch):
     #   [RSP+....] - Shadow space
     #   [RSP+0x20] - ^ 
     #
-    if arch == 'x86':
-        arch_ptr_size = ctypes.sizeof(ctypes.c_uint32) # TODO USE PTR
-        arg_start = 0x08
-    elif (arch == 'x64'):
-        arch_ptr_size = ctypes.sizeof(ctypes.c_uint64) # TODO USE PTR
-        arg_start = ctypes.sizeof(ctypes.c_uint64) # TODO USE PTR
-    elif (arch == 'aarch64'):
-        arch_ptr_size = ctypes.sizeof(ctypes.c_uint64)
-        arg_start = ctypes.sizeof(ctypes.c_uint64)
-    else:
-        print(f"{arch} is currently not supported by instantiator.py")
-        exit(0)
+    # It's important to note a big assumption is made below. For windows
+    # and Linux this should be fine. However other OS's may need less or
+    # more in terms of where arguments should be stored in memory from
+    # the base pointer.
+    arch_ptr_size = ctypes.sizeof(smartarch.get_ptr())
+    arg_start = 0x08
 
     for var in sc_args:
         alloc_space = sc_args[var]
@@ -56,8 +44,7 @@ def gen_offsets(sc_args, arch):
 
     return sc_args
 
-# TODO: rm additional_space        
-def calc_stack_space(sc_args, arch, additional_space=0x00):
+def calc_stack_space(sc_args):
     """This function will get the number of arguments being used by a shellcode
     stub. Since sickle supports multiple architectures, the maximum register
     size must be provided by the caller.
@@ -65,22 +52,19 @@ def calc_stack_space(sc_args, arch, additional_space=0x00):
     :param sc_args: Shellcode arguments used by a shellcode module
     :type sc_args: dict
 
-    :param arch: Target architecture
-    :type arch: str
-
     :return: Stack space needed for argument storage
     :rtype: int
     """
 
     # Obtain the architecture and allocate the stack space based on the particular
     # architectures needs.
-    if arch == 'x64':
-        max_space = ctypes.sizeof(ctypes.c_uint64)
-        additional_space += 0x20 # Shadow Space
-    elif arch == 'x86':
-        max_space = ctypes.sizeof(ctypes.c_uint32)
-    elif arch == 'aarch64':
-        max_space = ctypes.sizeof(ctypes.c_uint64)
+    max_space = ctypes.sizeof(smartarch.get_ptr())
+    
+    # If using x64 account for shadow space
+    if smartarch.arch_used == 'x64':
+        additional_space = 0x20
+    else:
+        additional_space = 0x00
 
     # Initialize the space needed by the shellcode
     space_needed = 0x08

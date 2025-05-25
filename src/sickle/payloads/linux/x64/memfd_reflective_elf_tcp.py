@@ -79,8 +79,8 @@ class Shellcode():
             "pathname"   : 0x00,
         }
 
-        self.stack_space = builder.calc_stack_space(sc_args, Shellcode.arch)
-        self.storage_offsets = builder.gen_offsets(sc_args, Shellcode.arch)
+        self.stack_space = builder.calc_stack_space(sc_args)
+        self.storage_offsets = builder.gen_offsets(sc_args)
 
     def get_ackpk_len(self):
         """Generates the size needed by the ACK packet sent to the C2 server.

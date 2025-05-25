@@ -1,6 +1,6 @@
 import ctypes
 
-from sickle.common.lib.reversing.smartarch import PTR
+from sickle.common.lib.reversing.smartarch import get_ptr
 
 class _RTL_BALANCED_NODE(ctypes.Structure):
     class _CHILDREN_UNION(ctypes.Union):
@@ -28,13 +28,13 @@ class _RTL_BALANCED_NODE(ctypes.Structure):
 
 class _LIST_ENTRY(ctypes.Structure):
     _fields_ = [
-        ("Flink", PTR()),
-        ("Blink", PTR()),
+        ("Flink", get_ptr()),
+        ("Blink", get_ptr()),
     ]
 
 class _UNICODE_STRING(ctypes.Structure):
     _fields_ = [
         ("Length",          ctypes.c_uint16),   # USHORT
         ("MaximumLength",   ctypes.c_uint16),   # USHORT
-        ("Buffer",          PTR()),             # PWSTR
+        ("Buffer",          get_ptr()),             # PWSTR
     ]
