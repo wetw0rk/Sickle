@@ -1,7 +1,7 @@
 import sys
 
 from sickle.common.lib.reversing.assembler import Assembler
-from sickle.common.lib.generic.mparser import argument_check
+from sickle.common.lib.generic.modparser import argument_check
 
 class Shellcode():
 

@@ -3,7 +3,7 @@ import ctypes
 import struct
 
 import sickle.common.lib.generic.convert as convert
-import sickle.common.lib.generic.mparser as modparser
+import sickle.common.lib.generic.modparser as modparser
 import sickle.common.lib.programmer.builder as builder
 
 from sickle.common.lib.reversing.assembler import Assembler
@@ -288,9 +288,9 @@ call_WSASocketA:
     call rax
     mov rsi, rax
 
-; RAX => connect([in] SOCKET s,
-;                [in] const sockaddr *name,
-;                [in] int namelen);
+; RAX => connect([in] SOCKET s,             // RCX
+;                [in] const sockaddr *name, // RDX
+;                [in] int namelen);         // R8
 call_connect:
     mov rcx, rax
     mov r8, {ctypes.sizeof(ws2def.sockaddr)}

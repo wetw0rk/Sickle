@@ -2,7 +2,7 @@ import sys
 import struct
 
 from sickle.common.lib.reversing.assembler import Assembler
-from sickle.common.lib.generic.mparser import argument_check
+from sickle.common.lib.generic.modparser import argument_check
 from sickle.common.lib.generic.convert import from_str_to_xwords
 
 class Shellcode():

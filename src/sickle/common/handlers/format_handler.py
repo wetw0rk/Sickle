@@ -1,6 +1,6 @@
-from sickle.common.lib.generic.mparser import get_module_list
-from sickle.common.lib.generic.mparser import get_truncated_list
-from sickle.common.lib.generic.mparser import check_module_support
+from sickle.common.lib.generic.modparser import get_module_list
+from sickle.common.lib.generic.modparser import get_truncated_list
+from sickle.common.lib.generic.modparser import check_module_support
 
 class FormatHandler():
     """This class is responsible for calling the appropriate format module. All

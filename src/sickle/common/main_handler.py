@@ -7,7 +7,7 @@ from sickle.common.handlers.format_handler import FormatHandler
 from sickle.common.handlers.module_handler import ModuleHandler
 from sickle.common.handlers.shellcode_handler import ShellcodeHandler
 
-from sickle.common.lib.generic.mparser import print_module_info
+from sickle.common.lib.generic.modparser import print_module_info
 from sickle.common.lib.generic.extract import read_bytes_from_file
 
 class Handle():
