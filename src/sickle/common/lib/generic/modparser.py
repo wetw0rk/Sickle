@@ -12,7 +12,13 @@ def get_truncated_max(space_used=0x00):
     :rtype: int
     """
 
-    max_str_len = os.get_terminal_size().columns
+    try:
+        max_str_len = os.get_terminal_size().columns
+    except OSError:
+        max_str_len = 85
+    except Exception as e:
+        sys.exit(f"Error setting max string length, error: {e}")
+
     max_str_len -= space_used
 
     return max_str_len
@@ -75,6 +81,48 @@ def get_truncated_list(full_string, space_used=0x00, override=0x00):
 
     return lines
 
+def get_module_paths(target_path):
+    """This function will return all module paths available. When the program
+    is first ran it will check to see if the external modules directory
+    exists, if not it will create it along with respective subdirectories
+    expected by sickle.
+
+    :param target_path: Target path used by sickle (e.g payloads, modules,
+        formats)
+    :type target_path: str
+
+    :return: A list of base paths to modules
+    :rtype: list
+    """
+
+    module_paths = []
+
+    # First we need to enumerate the module structure used by sickle. This
+    # will be used when creating the directories used by external modules
+    sickle_modules = f"{os.path.dirname(__file__)}/../../../{target_path}"
+    module_paths.append(sickle_modules)
+
+    mod_structure = []
+    for root, dirs, files in os.walk(sickle_modules):
+        for file in files:
+            if file.endswith('.py') and "__" not in file:
+                subdirectory = root.split('../')[-1]
+                if subdirectory not in mod_structure:
+                    mod_structure.append(subdirectory)
+
+    # Create the external directory structure
+    if os.name == 'posix':
+        external_modules = f"/home/{os.getlogin()}/.local/share/sickle/"
+        module_paths.append(f"{external_modules}{target_path}")
+
+        if os.path.isdir(f"{external_modules}{target_path}") != True:
+            for path in mod_structure:
+                os.makedirs(f"{external_modules}{path}")
+    else:
+        print("External modules currently not supported by your distribution")
+
+    return module_paths
+
 def get_module_list(target_path):
     """Returns a list of modules in a given path. Should the caller request it,
     the sub directories will also be included in each discovered module.
@@ -88,20 +136,21 @@ def get_module_list(target_path):
     """
 
     module_list = []
-    modules_path = f"{os.path.dirname(__file__)}/../../../{target_path}"
+    modules_path = get_module_paths(target_path)
 
     # Here we traverse into the target module directory. If we are including the
     # sub directories, we have to remove the target path and traversal path. In
     # order to work under Windows we convert '\\' to '/'
-    for root, dirs, files in os.walk(modules_path):
-        for file in files:
-            if (file.endswith(".py") and ("__" not in file)):
-                module_name = f"{file[:-3]}"
-                module_name = f"{root}/{module_name}"
-                module_name = module_name[module_name.find(target_path):]
-                module_name = module_name.lstrip(f"{target_path}")
-                module_name = module_name.replace('\\', '/')
-                module_list.append(module_name[1:])
+    for i in range(len(modules_path)):
+        for root, dirs, files in os.walk(modules_path[i]):
+            for file in files:
+                if (file.endswith(".py") and ("__" not in file)):
+                    module_name = f"{file[:-3]}"
+                    module_name = f"{root}/{module_name}"
+                    module_name = module_name[module_name.find(target_path):]
+                    module_name = module_name.lstrip(f"{target_path}")
+                    module_name = module_name.replace('\\', '/')
+                    module_list.append(module_name[1:])
 
     return module_list
 
@@ -125,8 +174,16 @@ def check_module_support(module_class, module_name):
         sys.exit(f"Currently {module_name} {module_class[:-1]} is not supported")
         return None
 
+    # First we attempt to load the module from the known directory structure used by sickle,
+    # if it fails we then check the external payloads directory under .local.
     try:
         imported_module = importlib.import_module(f"sickle.{module_class}.{module_name.replace('/', '.')}")
+    except ModuleNotFoundError:
+        external_path = os.path.expanduser(f"/home/{os.getlogin()}/.local/share/sickle")
+        if external_path not in sys.path:
+            sys.path.insert(0, external_path)
+
+        imported_module = importlib.import_module(f"{module_class}.{module_name.replace('/', '.')}")
     except Exception as e:
         sys.exit(f"Failed to import {module_name}, error: {e}")
 
