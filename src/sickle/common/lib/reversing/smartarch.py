@@ -24,8 +24,8 @@ def set_arch(payload):
     :param payload: The name of the payload (contains arch in name)
     :type payload: str
 
-    :return: Nothing it sets the global variable
-    :rtype: None
+    :return: Architecture set as the global variable
+    :rtype: str
     """
 
     global arch_used
@@ -42,4 +42,4 @@ def set_arch(payload):
     else:
         using_64bit = False
 
-    return
+    return arch_used

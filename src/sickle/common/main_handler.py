@@ -94,7 +94,7 @@ class Handle():
             # in order for structures to use the right pointer sizes. For example,
             # x86 (4), x64 (8), and so on...
             generator = ShellcodeHandler(self.payload, self.module_args)
-            set_arch(self.payload)
+            self.module_args["architecture"] = set_arch(self.payload)
             read_bytes = generator.get_shellcode()
         else:
             read_bytes = None
