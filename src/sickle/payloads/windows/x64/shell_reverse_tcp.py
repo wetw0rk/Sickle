@@ -254,6 +254,7 @@ _start:
     push rbp
     mov rbp, rsp
     sub rsp, {self.stack_space}
+    and rsp, 0xfffffffffffffff0
 
     call getKernel32
     mov rdi, rax
