@@ -513,6 +513,7 @@ change_ImageBase:
     mov [rbp - {self.storage_offsets["lpvPreferableBase"]}], rdx
     mov [r8 + {winnt._IMAGE_OPTIONAL_HEADER64.ImageBase.offset}], rcx
 
+
 get_dwOffsetToBaseRelocationTable:
     xor rdx, rdx
     mov rdx, [rbp - {self.storage_offsets['pNtHeader']}]
@@ -535,9 +536,9 @@ get_dwTableSize:
     mov rax, {winnt.IMAGE_DIRECTORY_ENTRY_BASERELOC}
     imul rax, {ctypes.sizeof(winnt._IMAGE_DATA_DIRECTORY)}
     add rdx, rax
-    xor rcx, rcx
-    mov ecx, [rdx + {winnt._IMAGE_DATA_DIRECTORY.Size.offset}]
-    mov [rbp - {self.storage_offsets['dwTableSize']}], rcx
+    xor rcx, rcx                                                   ; ^
+    mov ecx, [rdx + {winnt._IMAGE_DATA_DIRECTORY.Size.offset}]     ; |
+    mov [rbp - {self.storage_offsets['dwTableSize']}], rcx         ; Looks good
 
 get_pBaseRelocationTable:
     mov rcx, [rbp - {self.storage_offsets['dwOffsetToBaseRelocationTable']}]
@@ -588,7 +589,7 @@ get_dwAddressOffset:
     xor rax, rax
     mov rcx, [rbp - {self.storage_offsets['pNtHeader']}]
     mov r11, [rbp - {self.storage_offsets['pBaseRelocationTable']}]
-    mov ax, [r11]
+    mov eax, [r11]
     add rax, rbx
     mov r11, rax
     call rva2offset
