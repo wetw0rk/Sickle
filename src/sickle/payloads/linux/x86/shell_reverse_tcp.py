@@ -23,7 +23,7 @@ class Shellcode():
 
     tested_platforms = ["Ubuntu 5.4.0-6ubuntu1~16.04.12"]
 
-    summary = ("TCP-based reverse shell over IPV4 that provides an interactive /bin/sh"
+    summary = ("Reverse shell via TCP over IPV4 that provides an interactive /bin/sh"
                " session")
 
     description = ("A TCP-based reverse shell over IPv4 that provides an interactive /bin/sh"

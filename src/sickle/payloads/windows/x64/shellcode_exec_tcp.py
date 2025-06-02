@@ -35,7 +35,7 @@ class Shellcode():
 
     tested_platforms = ["Windows 10 (10.0.19045 N/A Build 19045)"]
 
-    summary = ("A lightweight stager that connects via TCP over IPv4 to receive and execute shellcode")
+    summary = ("A lightweight stager that connects to a C2 server via TCP over IPv4 to receive and execute shellcode")
 
     description = ("This shellcode stub connects to a remote C2 server over TCP, downloads a second-stage"
                    " payload, and executes it.\n\n"

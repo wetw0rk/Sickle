@@ -23,7 +23,7 @@ class Shellcode():
 
     tested_platforms = ["Debian 14.2.0-6"]
 
-    summary = "TCP-based reverse shell over IPV4 that provides an interactive /bin/sh"
+    summary = "Reverse Shell via TCP over IPV4 that provides an interactive /bin/sh"
     summary += " session"
 
     description = ("TCP-based reverse shell over IPV4 that provides an interactive /bin/sh"

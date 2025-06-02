@@ -26,7 +26,7 @@ class Shellcode():
     tested_platforms = ["Windows 10 (10.0.19045 N/A Build 19045)",
                         "Windows 10 (10.0.17763 N/A Build 17763)"]
 
-    summary = "Kernel shellcode to modify the _SECURITY_DESCRIPTOR of a process"
+    summary = "SID entry modifier for process injection"
 
     description = ("This stub modifies the Ace[0] entry of a given processes _SECURITY_DESCRIPTOR,"
                    " specifically the SID entry. Upon completion it will modify the MandatoryPolicy"

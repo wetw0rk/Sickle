@@ -23,7 +23,7 @@ class Shellcode():
 
     tested_platforms = ["Debian 14.2.0-6"]
 
-    summary = ("TCP-based reflective ELF loader over IPV4 which executes an ELF from"
+    summary = ("Staged Reflective ELF Loader via TCP over IPV4 which executes an ELF from"
               " a remote server")
 
     description = ("TCP based reflective ELF loader over IPV4 that will connect to a remote C2 server"

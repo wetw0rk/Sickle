@@ -23,7 +23,7 @@ class Shellcode():
     
     tested_platforms = ["Windows 10 (10.0.19045 N/A Build 19045)"]
 
-    summary = "Kernel token stealing shellcode"
+    summary = "Token stealing shellcode for privilege escalation"
 
     description = ("Hijacks a security token of another process (specifically NT/AUTHORITY SYSTEM),"
                    " allowing for elevation of privileges.\n\n"

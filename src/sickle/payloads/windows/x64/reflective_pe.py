@@ -35,7 +35,7 @@ class Shellcode():
 
     tested_platforms = ["Windows 10 (10.0.19045 N/A Build 19045)"]
 
-    summary = ("Stageless reflective PE loader")
+    summary = ("Stageless Reflective PE Loader that takes an x64 binary and executes it in memory")
 
     description = ("This shellcode stub operates as an x64 Reflective PE Loader, taking a buffer"
                    " containing the contents of a PE file and loading it in memory, ultimately"

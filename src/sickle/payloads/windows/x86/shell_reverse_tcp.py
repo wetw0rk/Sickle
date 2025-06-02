@@ -35,7 +35,7 @@ class Shellcode():
 
     tested_platforms = []
 
-    summary = ("TCP-based reverse shell over IPv4 that provides an interactive cmd.exe "
+    summary = ("Reverse shell via TCP over IPv4 that provides an interactive cmd.exe "
                "session")
 
     description = ("A TCP-based reverse shell over IPv4 that provides an interactive cmd.exe"    
