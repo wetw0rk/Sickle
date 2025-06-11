@@ -111,15 +111,21 @@ class Module():
             pre_diff = self.get_byte_diff()
 
         self.print_legend()
-        if (diff_mode in supported_diff_modes):
-            if diff_mode == "hexdump":
-                self.print_hexdump(pre_diff)
-            elif diff_mode == "byte":
-                self.print_bytedump(pre_diff)
-            elif diff_mode == "raw":
-                self.print_raw_repr(pre_diff)
-            else:
-                self.print_asm_diff()
+        try:
+            if (diff_mode in supported_diff_modes):
+                if diff_mode == "hexdump":
+                    self.print_hexdump(pre_diff)
+                elif diff_mode == "byte":
+                    self.print_bytedump(pre_diff)
+                elif diff_mode == "raw":
+                    self.print_raw_repr(pre_diff)
+                else:
+                    self.print_asm_diff()
+        except BrokenPipeError:
+            exit(-1)
+        except Exception as e:
+            print(f"Error occured printing diff, error: {e}")
+            exit(-1)
 
         exit(0)
 
