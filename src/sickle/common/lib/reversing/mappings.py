@@ -1,4 +1,4 @@
-import sickle.common.lib.reversing.smartarch as smartarch
+from sickle.common.lib.reversing import smartarch
 
 def get_linux_syscalls(syscall_list):
 

@@ -3,10 +3,10 @@ import math
 import ctypes
 import struct
 
-import sickle.common.lib.generic.extract as extract
-import sickle.common.lib.generic.convert as convert
-import sickle.common.lib.generic.modparser as modparser
-import sickle.common.lib.programmer.builder as builder
+from sickle.common.lib.generic import extract
+from sickle.common.lib.generic import convert
+from sickle.common.lib.generic import modparser
+from sickle.common.lib.programmer import builder
 
 from sickle.common.lib.reversing.assembler import Assembler
 
