@@ -25,7 +25,7 @@ class Shellcode():
 
     name = f"Windows ({arch}) VirtualAlloc Shellcode Loader"
 
-    module = f"{platform}/{arch}/virtualalloc_exec_tcp.py"
+    module = f"{platform}/{arch}/virtualalloc_exec_tcp"
 
     example_run = f"{sys.argv[0]} -p {module} LHOST=192.168.81.144 LPORT=1337 -f c"
 
