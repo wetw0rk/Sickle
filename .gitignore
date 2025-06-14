@@ -1,3 +1,6 @@
+src/sickle.egg-info
+src/files.txt
+src/build
 src/sickle/__pycache__
 src/sickle/payloads/__pycache__
 src/sickle/payloads/windows/__pycache__
