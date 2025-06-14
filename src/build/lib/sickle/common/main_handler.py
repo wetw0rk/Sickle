@@ -41,12 +41,9 @@ class Handle():
         supported by sickle.
         """
 
-        if self.list == 'payloads' or self.list == 'shellcode' or self.list == 'all':
-            ShellcodeHandler.print_stubs(self.list)
-        if self.list == 'modules' or self.list == 'all':
-            ModuleHandler.print_modules()
-        if self.list == 'formats' or self.list == 'all':
-            FormatHandler.print_formats()
+        ShellcodeHandler.print_stubs()
+        ModuleHandler.print_modules()
+        FormatHandler.print_formats()
         
         exit(0)
 
@@ -54,7 +51,7 @@ class Handle():
         """Parse the user arguments and overall direct execution for sickle.
         """
 
-        if self.list:
+        if self.list == True:
             self.print_supported()
 
         # Display more information on either shellcode or a given module. Since

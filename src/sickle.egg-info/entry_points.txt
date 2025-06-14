@@ -1,0 +1,2 @@
+[console_scripts]
+sickle = sickle.__main__:entry

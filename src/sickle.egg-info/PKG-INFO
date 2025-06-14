@@ -1,0 +1,15 @@
+Metadata-Version: 2.4
+Name: sickle
+Version: 3.1.0
+Summary: Payload development framework
+Home-page: https://github.com/wetw0rk/Sickle
+Author: Milton Valencia (wetw0rk)
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.6
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Operating System :: OS Independent
+Dynamic: author
+Dynamic: classifier
+Dynamic: home-page
+Dynamic: summary
