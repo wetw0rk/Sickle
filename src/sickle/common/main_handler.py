@@ -41,7 +41,7 @@ class Handle():
         supported by sickle.
         """
 
-        if self.list == 'payloads' or self.list == 'shellcode' or self.list == 'all':
+        if self.list in ("all", "payloads", "shellcode", "archs", "architectures"):
             ShellcodeHandler.print_stubs(self.list)
         if self.list == 'modules' or self.list == 'all':
             ModuleHandler.print_modules()

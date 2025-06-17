@@ -39,17 +39,17 @@ class ShellcodeHandler():
         description for each.
         """
 
-        # Obtain the list objects of data we'll be parsing
-        payloads = get_module_list("payloads")
-
-        sc_objects = [check_module_support("payloads", sc).Shellcode
-                     for sc in payloads]
-
-        descriptions = [sc.summary for sc in sc_objects]
-
-        arch_list = sorted(set([sc.arch for sc in sc_objects]))
-
         if print_info == 'all' or print_info == 'shellcode' or print_info == 'payloads':
+
+            # Obtain the list objects of data we'll be parsing
+            payloads = get_module_list("payloads")
+
+            sc_objects = [check_module_support("payloads", sc).Shellcode
+                          for sc in payloads]
+
+            descriptions = [sc.summary for sc in sc_objects]
+
+            arch_list = sorted(set([sc.arch for sc in sc_objects]))
 
             # Get the size of the largest payload string and description string
             max_name_len = len(max(payloads, key=len))
