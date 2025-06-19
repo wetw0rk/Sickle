@@ -1,5 +1,6 @@
 import os
 import sys
+import getpass
 import importlib
 
 def get_truncated_max(space_used=0x00):
@@ -112,7 +113,7 @@ def get_module_paths(target_path):
 
     # Create the external directory structure
     if os.name == 'posix':
-        external_modules = f"/home/{os.getlogin()}/.local/share/sickle/"
+        external_modules = f"/home/{getpass.getuser()}/.local/share/sickle/"
         module_paths.append(f"{external_modules}{target_path}")
 
         if os.path.isdir(f"{external_modules}{target_path}") != True:
