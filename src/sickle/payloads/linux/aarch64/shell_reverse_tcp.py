@@ -109,13 +109,14 @@ connect:
 start_loop:
     // while (i != 0) {{
     //     i--;
-    //     dup3(int oldfd,  // x0 => sockfd
-    //          int newfd,  // x1 => (STDIN | STDOUT | STDERR)
-    //          int flags); // x2 => 0x00
+    //     dup3(int oldfd,  // x0
+    //          int newfd,  // x1
+    //          int flags); // x2
     // }}
     mov x21, #0
     mov x21, #3
 
+    // STDIN, STDOUT, STDERR
 change_fd:
     sub x21, x21, #1
 
