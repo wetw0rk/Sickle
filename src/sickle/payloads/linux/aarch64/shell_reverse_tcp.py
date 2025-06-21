@@ -18,7 +18,7 @@ class Shellcode():
 
     platform = "linux"
 
-    name = "Linux (AARCH64 or ARM64) SH Reverse Shell"
+    name = "Linux (AARCH64) SH Reverse Shell"
 
     module = f"{platform}/{arch}/shell_reverse_tcp"
 
