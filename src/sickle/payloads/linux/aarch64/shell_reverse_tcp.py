@@ -118,7 +118,7 @@ start_loop:
 change_fd:
     sub x21, x21, #1
 
-dup2:
+dup3:
     mov x0, x19
     mov x1, x21
     mov x2, #0
