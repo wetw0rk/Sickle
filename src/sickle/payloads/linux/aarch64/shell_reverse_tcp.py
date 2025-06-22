@@ -33,7 +33,7 @@ class Shellcode():
     summary = "Reverse Shell via TCP over IPv4 that provides an interactive /bin/sh"
     summary += " session"
 
-    description = ("TCP-based reverse shell over IPv4 that provides an interactive /bin/sh"
+    description = ("TCP based reverse shell over IPv4 that provides an interactive /bin/sh"
                    " session. Since this payload is not staged, there is no need for anything"
                    " more than a Netcat listener.")
 

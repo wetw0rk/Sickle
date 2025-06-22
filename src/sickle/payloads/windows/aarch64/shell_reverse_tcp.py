@@ -38,7 +38,7 @@ class Shellcode():
     summary = ("Reverse Shell via TCP over IPv4 that provides an interactive cmd.exe "
                "session")
 
-    description = ("A TCP-based reverse shell over IPv4 that provides an interactive cmd.exe"
+    description = ("TCP based reverse shell over IPv4 that provides an interactive cmd.exe"
                    " session. Since this payload is not staged, there is no need for anything"
                    " more than a Netcat listener.")
 
