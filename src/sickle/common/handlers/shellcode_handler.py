@@ -1,6 +1,6 @@
-from sickle.common.lib.generic.mparser import get_module_list
-from sickle.common.lib.generic.mparser import get_truncated_list
-from sickle.common.lib.generic.mparser import check_module_support
+from sickle.common.lib.generic.modparser import get_module_list
+from sickle.common.lib.generic.modparser import get_truncated_list
+from sickle.common.lib.generic.modparser import check_module_support
 
 class ShellcodeHandler():
     """This class is responsible for calling the appropriate shellcode module.
@@ -34,7 +34,7 @@ class ShellcodeHandler():
         
         return bytecode
 
-    def print_stubs():
+    def print_stubs(print_info):
         """Prints all currently supported shellcode stubs along with a short
         description for each.
         """
@@ -43,70 +43,73 @@ class ShellcodeHandler():
         payloads = get_module_list("payloads")
 
         sc_objects = [check_module_support("payloads", sc).Shellcode
-                      for sc in payloads]
+                     for sc in payloads]
 
         descriptions = [sc.summary for sc in sc_objects]
 
         arch_list = sorted(set([sc.arch for sc in sc_objects]))
 
-        # Get the size of the largest payload string and description string
-        max_name_len = len(max(payloads, key=len))
-        if max_name_len <  0x0D:
-            max_name_len = 0x0D
-        
-        max_info_len = len(max(descriptions, key=len))
+        if print_info == 'all' or print_info == 'shellcode' or print_info == 'payloads':
 
-        # Generate an object we can later parse for printing 
-        stubs = {}
-
-        for sc in sc_objects:
+            # Get the size of the largest payload string and description string
+            max_name_len = len(max(payloads, key=len))
+            if max_name_len <  0x0D:
+                max_name_len = 0x0D
             
-            platform = sc.platform
-            summary = sc.summary
-            name = sc.module
-            arch = sc.arch
-            ring = sc.ring
+            max_info_len = len(max(descriptions, key=len))
 
-            if platform not in stubs.keys():
-                stubs[platform] = {}
-                stubs[platform]["kernel"] = []
-                stubs[platform]["userland"] = []
+            # Generate an object we can later parse for printing 
+            stubs = {}
 
-            sc_info = [name, arch, ring, summary]
+            for sc in sc_objects:
+                
+                platform = sc.platform
+                summary = sc.summary
+                name = sc.module
+                arch = sc.arch
+                ring = sc.ring
 
-            if ring == 3:
-                stubs[platform]["userland"].append(sc_info)
-            elif ring == 0:
-                stubs[platform]["kernel"].append(sc_info)
-            else:
-                pass
+                if platform not in stubs.keys():
+                    stubs[platform] = {}
+                    stubs[platform]["kernel"] = []
+                    stubs[platform]["userland"] = []
 
-        # Output the results
-        print(f"\n  {'Shellcode':<{max_name_len}} {'Ring'} {'Description'}")
-        print(f"  {'---------':<{max_name_len}} {'----'} {'-----------'}")
+                sc_info = [name, arch, ring, summary]
 
-        for platform in stubs.keys():
-            userland_stubs = stubs[platform]["userland"]
-            kernel_stubs = stubs[platform]["kernel"]
-            space_used = max_name_len + 8
-           
-            for user in userland_stubs:
-                out_list = get_truncated_list(f"{user[3]}", space_used)
-                for i in range(len(out_list)):
-                    if i != 0:
-                        print(f"  {' ' * max_name_len} {' ':^4} {out_list[i]}")
-                    else:
-                        print(f"  {user[0]:<{max_name_len}} {user[2]:^4} {out_list[i]}")
+                if ring == 3:
+                    stubs[platform]["userland"].append(sc_info)
+                elif ring == 0:
+                    stubs[platform]["kernel"].append(sc_info)
+                else:
+                    pass
 
-            for kernel in kernel_stubs:
-                out_list = get_truncated_list(f"{kernel[3]}", space_used)
-                for i in range(len(out_list)):
-                    if i != 0:
-                        print(f"  {' ' * max_name_len} {' ':^4} {out_list[i]}")
-                    else:
-                        print(f"  {kernel[0]:<{max_name_len}} {kernel[2]:^4} {out_list[i]}")
+            # Output the results
+            print(f"\n  {'Shellcode':<{max_name_len}} {'Ring'} {'Description'}")
+            print(f"  {'---------':<{max_name_len}} {'----'} {'-----------'}")
 
-        print("\n  Architectures")
-        print("  -------------")
-        for arch in arch_list:
-            print(f"  {arch}")
+            for platform in stubs.keys():
+                userland_stubs = stubs[platform]["userland"]
+                kernel_stubs = stubs[platform]["kernel"]
+                space_used = max_name_len + 8
+               
+                for user in userland_stubs:
+                    out_list = get_truncated_list(f"{user[3]}", space_used)
+                    for i in range(len(out_list)):
+                        if i != 0:
+                            print(f"  {' ' * max_name_len} {' ':^4} {out_list[i]}")
+                        else:
+                            print(f"  {user[0]:<{max_name_len}} {user[2]:^4} {out_list[i]}")
+
+                for kernel in kernel_stubs:
+                    out_list = get_truncated_list(f"{kernel[3]}", space_used)
+                    for i in range(len(out_list)):
+                        if i != 0:
+                            print(f"  {' ' * max_name_len} {' ':^4} {out_list[i]}")
+                        else:
+                            print(f"  {kernel[0]:<{max_name_len}} {kernel[2]:^4} {out_list[i]}")
+
+        if (print_info == 'all' or print_info == 'archs' or print_info == 'architectures'):
+            print("\n  Architectures")
+            print("  -------------")
+            for arch in arch_list:
+                print(f"  {arch}")

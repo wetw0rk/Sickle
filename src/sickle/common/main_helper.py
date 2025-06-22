@@ -23,6 +23,6 @@ def parser():
     parser.add_argument("-b", "--badchars", help="Bad characters to avoid in shellcode")
     parser.add_argument("-v", "--varname",  default='buf', type=str, help="Alternative variable name")
     parser.add_argument("-i", "--info", help="Print detailed info for module or payload", action="store_true")
-    parser.add_argument("-l", "--list", help="List available formats, payloads, or modules",  action="store_true")
+    parser.add_argument("-l", "--list", help="List available formats, payloads, or modules", nargs='?', const='all', default=None)
 
     return parser

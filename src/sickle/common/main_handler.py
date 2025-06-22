@@ -7,7 +7,7 @@ from sickle.common.handlers.format_handler import FormatHandler
 from sickle.common.handlers.module_handler import ModuleHandler
 from sickle.common.handlers.shellcode_handler import ShellcodeHandler
 
-from sickle.common.lib.generic.mparser import print_module_info
+from sickle.common.lib.generic.modparser import print_module_info
 from sickle.common.lib.generic.extract import read_bytes_from_file
 
 class Handle():
@@ -41,9 +41,12 @@ class Handle():
         supported by sickle.
         """
 
-        ShellcodeHandler.print_stubs()
-        ModuleHandler.print_modules()
-        FormatHandler.print_formats()
+        if self.list in ("all", "payloads", "shellcode", "archs", "architectures"):
+            ShellcodeHandler.print_stubs(self.list)
+        if self.list == 'modules' or self.list == 'all':
+            ModuleHandler.print_modules()
+        if self.list == 'formats' or self.list == 'all':
+            FormatHandler.print_formats()
         
         exit(0)
 
@@ -51,7 +54,7 @@ class Handle():
         """Parse the user arguments and overall direct execution for sickle.
         """
 
-        if self.list == True:
+        if self.list:
             self.print_supported()
 
         # Display more information on either shellcode or a given module. Since
@@ -94,7 +97,7 @@ class Handle():
             # in order for structures to use the right pointer sizes. For example,
             # x86 (4), x64 (8), and so on...
             generator = ShellcodeHandler(self.payload, self.module_args)
-            set_arch(self.payload)
+            self.module_args["architecture"] = set_arch(self.payload)
             read_bytes = generator.get_shellcode()
         else:
             read_bytes = None

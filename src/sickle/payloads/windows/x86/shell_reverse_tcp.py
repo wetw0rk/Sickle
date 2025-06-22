@@ -2,9 +2,9 @@ import sys
 import ctypes
 import struct
 
-import sickle.common.lib.generic.convert as convert
-import sickle.common.lib.generic.mparser as modparser
-import sickle.common.lib.programmer.builder as builder
+from sickle.common.lib.generic import convert
+from sickle.common.lib.generic import modparser
+from sickle.common.lib.programmer import builder
 
 from sickle.common.lib.reversing.assembler import Assembler
 
@@ -35,7 +35,7 @@ class Shellcode():
 
     tested_platforms = []
 
-    summary = ("TCP-based reverse shell over IPv4 that provides an interactive cmd.exe "
+    summary = ("Reverse shell via TCP over IPv4 that provides an interactive cmd.exe "
                "session")
 
     description = ("A TCP-based reverse shell over IPv4 that provides an interactive cmd.exe"    
@@ -54,7 +54,6 @@ class Shellcode():
     def __init__(self, arg_object):
 
         self.arg_list = arg_object["positional arguments"]
-        arg_object["architecture"] = Shellcode.arch
 
         self.dependencies = {
             "Kernel32.dll": [

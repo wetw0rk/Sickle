@@ -1,6 +1,6 @@
 import ctypes
 
-import sickle.common.lib.reversing.smartarch as smartarch
+from sickle.common.lib.reversing import smartarch
 
 def gen_offsets(sc_args):
     """This function generates the offsets to be used within the shellcode. If
