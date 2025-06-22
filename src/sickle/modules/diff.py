@@ -1,7 +1,7 @@
 import os
 import sys
 
-from sickle.common.lib.generic.mparser import argument_check
+from sickle.common.lib.generic.modparser import argument_check
 from sickle.common.lib.generic.extract import read_bytes_from_file
 
 from sickle.common.lib.generic.colors import Colors
@@ -31,10 +31,8 @@ class Module():
 
     summary = "Bytecode diffing module for comparing two binaries (or shellcode)"
 
-    description = """
-    This module performs a diff on two binary blobs. Since this was designed for
-    shellcode it currently supports hexdump, byte, raw, and asm modes.
-    """
+    description = ("This module performs a diff on two binary blobs. Since this was designed for"
+                   " shellcode it currently supports hexdump, byte, raw, and asm modes.")
 
     arguments = {}
 
@@ -113,15 +111,21 @@ class Module():
             pre_diff = self.get_byte_diff()
 
         self.print_legend()
-        if (diff_mode in supported_diff_modes):
-            if diff_mode == "hexdump":
-                self.print_hexdump(pre_diff)
-            elif diff_mode == "byte":
-                self.print_bytedump(pre_diff)
-            elif diff_mode == "raw":
-                self.print_raw_repr(pre_diff)
-            else:
-                self.print_asm_diff()
+        try:
+            if (diff_mode in supported_diff_modes):
+                if diff_mode == "hexdump":
+                    self.print_hexdump(pre_diff)
+                elif diff_mode == "byte":
+                    self.print_bytedump(pre_diff)
+                elif diff_mode == "raw":
+                    self.print_raw_repr(pre_diff)
+                else:
+                    self.print_asm_diff()
+        except BrokenPipeError:
+            exit(-1)
+        except Exception as e:
+            print(f"Error occured printing diff, error: {e}")
+            exit(-1)
 
         exit(0)
 

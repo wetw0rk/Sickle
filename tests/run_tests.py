@@ -19,7 +19,7 @@ SICKLE_PATH = f"{os.path.dirname(__file__)}/../src"
 
 IGNORE = ['__init__.py', "__pycache__", "raw"]
 
-SLEEP_TIME = 5
+SLEEP_TIME = 2
 
 MODULE_TESTS = \
 {

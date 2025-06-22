@@ -9,7 +9,8 @@ class Assembler():
     """This class is responsible for all assembling operations such as converting instructions
     to their respective opcodes.
 
-    :param architecture: Optional, This is the architecture in which the assembly language will be provided
+    :param architecture: Optional, This is the architecture in which the assembly language will
+        be provided
     :type architecture: str
     """
 

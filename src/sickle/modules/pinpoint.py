@@ -1,16 +1,18 @@
 import sys
 import binascii
 
-import sickle.formats.c as c
-import sickle.formats.cs as cs
-import sickle.formats.bash as bash
-import sickle.formats.java as java
-import sickle.formats.nasm as nasm
-import sickle.formats.perl as perl
-import sickle.formats.ruby as ruby
-import sickle.formats.python as python
-import sickle.formats.python3 as python3
-import sickle.formats.powershell as powershell
+from sickle.formats import (
+    c,
+    cs,
+    bash,
+    java,
+    nasm,
+    perl,
+    ruby,
+    python,
+    python3,
+    powershell,
+)
 
 from sickle.common.handlers.format_handler import FormatHandler
 
@@ -42,12 +44,10 @@ class Module():
     summary = ("Highlights opcodes within a disassembly to identify instructions responsible"
                " for bad characters")
 
-    description = """
-    Often when crafting shellcode for the x86 architecture your shellcode may
-    contain bad characters. Often looking at a bunch of bytes can be difficult, so
-    this module will highlight where in the assembly your bad character is being
-    generated.
-    """
+    description = (" Often when crafting shellcode for the x86 architecture your shellcode may"
+                   " contain bad characters. Often looking at a bunch of bytes can be difficult, so"
+                   " this module will highlight where in the assembly your bad character is being"
+                   " generated.")
 
     arguments = None
 

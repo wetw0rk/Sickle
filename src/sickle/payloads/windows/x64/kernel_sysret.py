@@ -1,7 +1,7 @@
 import sys
 
 from sickle.common.lib.reversing.assembler import Assembler
-from sickle.common.lib.generic.mparser import argument_check
+from sickle.common.lib.generic.modparser import argument_check
 
 class Shellcode():
 
@@ -25,18 +25,15 @@ class Shellcode():
 
     summary = "Generic method of returning from kernel space to user space"
 
-    description = """
-    This shellcode stub will restore a threads execution context, ultimately
-    transitioning from kernel-mode to user-mode. This helps avoid manually having
-    to restore execution flow from an exploit development perspective.
-    """
+    description = ("This shellcode stub will restore a threads execution context, ultimately"
+    " transitioning from kernel-mode to user-mode. This helps avoid manually having"
+    " to restore execution flow from an exploit development perspective.")
 
     arguments = None
 
     def __init__(self, arg_object):
 
         self.arg_list = arg_object["positional arguments"]
-        arg_object["architecture"] = Shellcode.arch
         self.builder = Assembler(Shellcode.arch)
 
         return
