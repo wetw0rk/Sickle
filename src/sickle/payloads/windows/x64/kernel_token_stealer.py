@@ -10,17 +10,17 @@ class Shellcode():
     platform = "windows"
 
     name = f"Windows ({arch}) Kernel Token Stealing Shellcode"
-    
+
     module = f"{platform}/{arch}/kernel_token_stealer"
-    
+
     example_run = f"{sys.argv[0]} -p {module} -f c"
-    
+
     ring = 0
-    
+
     author = ["Mark Dowd",
               "Barnaby Jack",
               "wetw0rk"]
-    
+
     tested_platforms = ["Windows 10 (10.0.19045 N/A Build 19045)"]
 
     summary = "Token stealing shellcode for privilege escalation"
