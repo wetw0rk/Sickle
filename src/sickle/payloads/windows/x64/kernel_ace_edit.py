@@ -163,7 +163,7 @@ traverseLinkedList:
 
         shellcode += self.generate_check_stub()
         shellcode += self.generate_ace_read_stub()
-        
+
         shellcode += """
 modifyCallerMandatoryPolicy:
     mov r9, [rbx+0x4b8]              ; Extract the _EX_FAST_REF pointer from the _EPROCESS structure (calling process)
