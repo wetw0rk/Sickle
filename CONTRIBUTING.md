@@ -18,12 +18,14 @@ Ultimately, the fact that you’re here means you’re already a contributor, an
 
 - [Framework Layout](#framework-layout)
   - [Your Workspace](#your-workspace)
-- [Adding a Format](#adding-a-format)
-  - [Creating the Format](#creating-the-format)
-  - [Testing the Format](#testing-the-format)
+- [Examples](#examples)
+  - [Adding a Format](#adding-a-format)
+    - [Creating the Format](#creating-the-format)
+    - [Testing the Format](#testing-the-format)
 - [Creating a Pull Request (Generic Rules)](#creating-a-pull-request-generic-rules)
-  - [New Formats](#new-formats)
   - [New Payloads](#new-payloads)
+  - [New Modules](#new-modules)
+  - [New Formats](#new-formats)
 
 # Framework Layout
 
@@ -75,6 +77,10 @@ $ tree ~/.local/share/sickle
         ├── x64
         └── x86
 ```
+
+# Examples
+
+I plan to add more examples in the future but for now any examples on extending Sickle's functionality can be found in this section.
 
 # Adding a Format
 
@@ -407,6 +413,8 @@ C:\Users\admin\Desktop>
 
 Depending on what the reason is for your pull request I ask you follow the guidlines below:
 
+- If you are extended the core framework (say a header file) ensure that you match the structure layout to that of C code. I will be manually checking this so be patient when you submit a PR.
+
 - Make sure that your module is documented appropriately. No need for a comment each line but it needs to be verbose enough for me to ensure no backdoors are added to the framework. Regardless, I will be testing your code!
 
 - Try your best to stick to [PEP8](https://peps.python.org/pep-0008/), however I will not be super strict on this.
@@ -414,14 +422,6 @@ Depending on what the reason is for your pull request I ask you follow the guidl
 - Check your spelling and grammar. You don't need to have perfect comments but make sure that any information within a module is understable by a general audience.
 
 - Minimize imports. If a module or function is not in use, please remove it!
-
-## New Formats
-
-If you want to add a new formwat it needs to fit the following criteria:
-
-- The format must be a widely deployed language or format. For example `Golang` would be a great addition. Some formats do not need to be a language and can be a way multiple languages accept input. A great example of this is `dword`.
-
-- Please provide a testing environment since I need to ensure the language accepts that format. A good example of this can be found in this tutorial. I don't need it to be this verbose but I need to be able to follow the steps provided to test the new format.
 
 ## New Payloads
 
@@ -440,3 +440,20 @@ If you want to add a new payload it needs to fit the following criteria:
     - The stub has been tested using the following wrapper (https[:]//link[.]com/shellcodeexec.c)
     - To compile the wrapper run *x shellcodeexec.c -o test.exe* and run the executable with no arguments
     - Upon execution you should get a callback on Netcat, hit [CTRL] + [C] and you should see a MessageBox on the target machine
+
+## New Modules
+
+If you want to add a new module ensure it fits the following criteria:
+
+- Currently modules are aimed at reverse engineering, if your module is platform specific e.g generates a backdoored binary, contact me at wetw0rk on discord and I will implement a structure similiar to payloads to support this. I plan to add this in later releases.
+- Ensure the module works with multiple archetectures if it does not implement checks.
+- Ensure that payloads within Sickle are compatible with the module in addition to external payloads `-r`
+- Please provide a testing environment I can recreate to test your module.
+
+## New Formats
+
+If you want to add a new formwat it needs to fit the following criteria:
+
+- The format must be a widely deployed language or format. For example `Golang` would be a great addition. Some formats do not need to be a language and can be a way multiple languages accept input. A great example of this is `dword`.
+
+- Please provide a testing environment since I need to ensure the language accepts that format. A good example of this can be found in this tutorial. I don't need it to be this verbose but I need to be able to follow the steps provided to test the new format.
