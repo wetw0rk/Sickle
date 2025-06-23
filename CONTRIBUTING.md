@@ -8,7 +8,7 @@ Even if you don’t have time to contribute directly, simply using the project i
 
 If you’d like to show your support in other ways, you can:
 
-- Star the project
+- Give the project a star
 - X about it
 - Become a sponsor :)
 
@@ -46,13 +46,13 @@ drwxrwxr-x 4 wetw0rk wetw0rk 4096 Mar 28 09:54 payloads
 
 Let's break this down:
 
-- **common**: This directory contains "handlers" for Sickle's default operations and "standard libraries" used by payload and development modules. Very rarely will you be modifying contents within this directory since majority of updates to these files will be new features that affect the whole framework or simply bug fixes.
+- **common**: This directory contains "handlers" for Sickle's default operations and "standard libraries" used by payload and development modules. Very rarely will you be modifying content within this directory since majority of updates to these files will be new features that affect the whole framework or simply bug fixes.
 
 - **formats**: This is where all formats supported by Sickle are stored (e.g *c, java, python*). Should you be using a custom wrapper in a new language not supported by Sickle this is where you would add it.
 
 - **modules**: This is where all development modules are stored, not to be confused with payload modules. Here is where new capabilities that assist in development should be added (e.g *diff, run*).
 
-- **payloads**: This is where actual shellcode stubs should be stored. Depending what platform you're developing for is what subdirectories you will use. Sickle is organized by platform, architecture, and name. For example if you wanted to add a Windows x86 Reverse Shell, you would place it under ***windows/x86/shell_reverse_tcp.py***.
+- **payloads**: This is where actual shellcode stubs should be stored. Depending on what platform you're developing for is what subdirectories you will use. Sickle is organized by platform, architecture, and name. For example, if you wanted to add a Windows x86 Reverse Shell, you would place it under windows/x86/shell_reverse_tcp.py.
 
 Often the best way to begin module development, is by copying an existing file and going from there.
 
@@ -84,7 +84,7 @@ I plan to add more examples in the future but for now any examples on extending 
 
 # Adding a Format
 
-Sickles current format support can be checked easily by running `sickle -l formats`.
+Sickle's current format support can be checked easily by running `sickle -l formats`.
 
 ```
 $ sickle -l formats
@@ -181,7 +181,7 @@ As previously mentioned, the best way to begin is by copying the format to that 
 $ cp sickle/formats/c.py ~/.local/share/sickle/formats/rust.py
 ```
 
-We can now begin modification of *rust.py*. The first lines we want to modify are ***6-8*** these lines contain information that will be presented to the user when running ***sickle -l***.
+We can now begin modification of *rust.py*. The first lines we want to modify are ***6-8***. These lines contain information that will be presented to the user when running ***sickle -l***.
 
 ```python
   6     author           = "wetw0rk"
@@ -189,7 +189,7 @@ We can now begin modification of *rust.py*. The first lines we want to modify ar
   8     description      = "Format bytecode for a Rust application"
 ```
 
-Next, we want to modify `self.language_info`. This variable contain information respective to the language. It's important to modify it since modules such as *pinpoint* depend on this information when parsing the language.
+Next, we want to modify `self.language_info`. This variable contains information respective to the language. It's important to modify it since modules such as *pinpoint* depend on this information when parsing the language.
 
 ```python
  16         self.language_info = \
@@ -201,13 +201,13 @@ Next, we want to modify `self.language_info`. This variable contain information 
  22         }
 ```
 
-Since this language is unique we won't need the `from_raw_to_escaped()` function. Let's comment it out for now to practice "good programming habits". However, we will delete it later.
+Since this language is unique, we won't need the `from_raw_to_escaped()` function. Let's comment it out for now to practice "good programming habits". However, we will delete it later.
 
 ```python
   2 #from sickle.common.lib.generic.convert import from_raw_to_escaped
 ```
 
-Next, we'll want to create an `op_str` variable. This will be the string that gets parsed by the `analyze_bytes()` function. Lucky for us *cs.py* (C# format) uses a very similiar format to rust so we can just copy and paste it into our new module.
+Next, we'll want to create an `op_str` variable. This will be the string that gets parsed by the `analyze_bytes()` function. Lucky for us *cs.py* (C# format) uses a very similar format to rust so we can just copy and paste it into our new module.
 
 ```python
 def get_generated_lines(self, pinpoint=False, single_line=False):
@@ -238,7 +238,7 @@ Next, we'll want to modify the if condition checking the `single_line` variable,
  57             lines = []
 ```
 
-Next, comment out the `escaped_bytes` variable. As prevously mentioned since this language is more complex than C/Python we will be using an `op_str` variable similiar to the C# format.
+Next, comment out the `escaped_bytes` variable. As previously mentioned since this language is more complex than C/Python we will be using an `op_str` variable similar to the C# format.
 
 ```python
  59 #        escaped_bytes = from_raw_to_escaped(self.raw_bytes)
@@ -252,7 +252,7 @@ I've found that this is something you play with depending on how each byte is fo
  60         results = analyze_bytes(self.language_info, op_str, self.badchars, 15)
 ```
 
-Finally, we'll want to modify how the `results` variable is output. This will also vary depending on the target language.
+Finally, we want to modify how the `results` variable is output. This will also vary depending on the target language.
 
 ```python
  61         for i in range(len(results)):
@@ -390,13 +390,13 @@ warning: static variable `buffer` should have an upper case name
 warning: 1 warning emitted
 ```
 
-Once compiled, I setup a handler and ran it like so:
+Once compiled, I setup a handler using Netcat and ran it like so:
 
 ```
 C:\Users\admin\Desktop>sc_exec.exe
 ```
 
-Once ran, I recieved a reverse shell :)
+Once ran, I received a reverse shell :)
 
 ```
 $ nc -lvp 4242
@@ -411,7 +411,7 @@ C:\Users\admin\Desktop>
 
 # Creating a Pull Request (Generic Rules)
 
-Depending on what the reason is for your pull request I ask you follow the guidlines below:
+Depending on what the reason is for your pull request I ask you follow the guidelines below:
 
 - If you are extended the core framework (say a header file) ensure that you match the structure layout to that of C code. I will be manually checking this so be patient when you submit a PR.
 
@@ -419,7 +419,7 @@ Depending on what the reason is for your pull request I ask you follow the guidl
 
 - Try your best to stick to [PEP8](https://peps.python.org/pep-0008/), however I will not be super strict on this.
 
-- Check your spelling and grammar. You don't need to have perfect comments but make sure that any information within a module is understable by a general audience.
+- Check your spelling and grammar. You don't need to have perfect comments but make sure that any information within a module is understandable by a general audience.
 
 - Minimize imports. If a module or function is not in use, please remove it!
 
@@ -427,7 +427,7 @@ Depending on what the reason is for your pull request I ask you follow the guidl
 
 If you want to add a new payload it needs to fit the following criteria:
 
-- The payload must be useful during exploitation and have a decently large attack surface / broad application. For example, an egghunter is a solid addition since it is a technique that can be inserted into many exploits, whereas a payload that connects to a TFTP server and downloads and executes a file may not be the best fit for the framework simply due to its size and application. However, if you want to add a new loader, say DLL injection, this is welcomed since users can then create a DLL that will perform the afforementioned TFTP technique or anything else they program (broad application).
+- The payload must be useful during exploitation and have a decently large attack surface / broad application. For example, an egghunter is a solid addition since it is a technique that can be inserted into many exploits, whereas a payload that connects to a TFTP server and downloads and executes a file may not be the best fit for the framework simply due to its size and application. However, if you want to add a new loader, say DLL injection, this is welcomed since users can then create a DLL that will perform the aforementioned TFTP technique or anything else they program (broad application).
 
 - Ensure you are using proper API, strings for example should use the function `from_str_to_xwords()`
 
@@ -445,15 +445,15 @@ If you want to add a new payload it needs to fit the following criteria:
 
 If you want to add a new module ensure it fits the following criteria:
 
-- Currently modules are aimed at reverse engineering, if your module is platform specific e.g generates a backdoored binary, contact me at wetw0rk on discord and I will implement a structure similiar to payloads to support this. I plan to add this in later releases.
-- Ensure the module works with multiple archetectures if it does not implement checks.
+- Currently modules are aimed at reverse engineering, if your module is platform specific e.g generates a backdoored binary, contact me at wetw0rk on discord and I will implement a structure similar to payloads to support this. I plan to add this in later releases.
+- Ensure the module works with multiple architectures if it does not implement checks.
 - Ensure that payloads within Sickle are compatible with the module in addition to external payloads `-r`
 - Please provide a testing environment I can recreate to test your module.
 
 ## New Formats
 
-If you want to add a new formwat it needs to fit the following criteria:
+If you want to add a new format it needs to fit the following criteria:
 
-- The format must be a widely deployed language or format. For example `Golang` would be a great addition. Some formats do not need to be a language and can be a way multiple languages accept input. A great example of this is `dword`.
+- The format must be a widely deployed language or format. For example, `Golang` would be a great addition. Some formats do not need to be a language and can be a way multiple languages accept input. A great example of this is `dword`.
 
 - Please provide a testing environment since I need to ensure the language accepts that format. A good example of this can be found in this tutorial. I don't need it to be this verbose but I need to be able to follow the steps provided to test the new format.
