@@ -413,9 +413,9 @@ C:\Users\admin\Desktop>
 
 Depending on what the reason is for your pull request I ask you follow the guidelines below:
 
-- If you are extended the core framework (say a header file) ensure that you match the structure layout to that of C code. I will be manually checking this so be patient when you submit a PR.
+- If you are extending the core framework (say a header file) ensure that you match the structure layout to that of C code. I will be manually checking this so be patient when you submit a PR.
 
-- Make sure that your module is documented appropriately. No need for a comment each line but it needs to be verbose enough for me to ensure no backdoors are added to the framework. Regardless, I will be testing your code!
+- Make sure that any module submitted is documented appropriately. No need for a comment on each line but it needs to be verbose enough for me to ensure no backdoors are added to the framework. Regardless, I will be testing your code!
 
 - Try your best to stick to [PEP8](https://peps.python.org/pep-0008/), however I will not be super strict on this.
 
