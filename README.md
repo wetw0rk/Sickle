@@ -71,49 +71,60 @@ Originally, this tool started as a single large script. However, as it evolved, 
 ```
 $ sickle -l
 
-  Shellcode                                                                        Description
-  ---------                                                                        -----------
-  windows/x64/kernel_token_stealer                                                 Kernel token stealing shellcode
-  windows/x64/kernel_sysret                                                        Generic method of returning from kernel space to user space
-  windows/x64/kernel_ace_edit                                                      Kernel shellcode to modify the _SECURITY_DESCRIPTOR of a process
-  windows/x64/reflective_pe_tcp                                                    TCP-based reflective PE loader over IPV4 which executes a PE from a remote server
-  windows/x64/shell_reverse_tcp                                                    TCP-based reverse shell over IPv4 that provides an interactive cmd.exe session
-  windows/x86/kernel_token_stealer                                                 Kernel token stealing shellcode
-  linux/aarch64/memfd_reflective_elf_tcp                                           TCP-based reflective ELF loader over IPV4 which executes an ELF from a remote server
-  linux/aarch64/shell_reverse_tcp                                                  TCP-based reverse shell over IPV4 that provides an interactive /bin/sh session
-  linux/x64/memfd_reflective_elf_tcp                                               TCP-based reflective ELF loader over IPV4 which executes an ELF from a remote server
-  linux/x86/shell_reverse_tcp                                                      TCP-based reverse shell over IPV4 that provides an interactive /bin/sh session
+  Shellcode                              Ring Description
+  ---------                              ---- -----------
+  windows/aarch64/shell_reverse_tcp       3   Reverse Shell via TCP over IPv4 that provides an interactive cmd.exe session
+  windows/x86/shell_reverse_tcp           3   Reverse shell via TCP over IPv4 that provides an interactive cmd.exe session
+  windows/x64/reflective_pe               3   Stageless Reflective PE Loader that takes an x64 binary and executes it in memory
+  windows/x64/egghunter                   3   Egghunter based on Hell's Gate and NtProtectVirtualMemory
+  windows/x64/virtualalloc_exec_tcp       3   A lightweight stager that connects to a handler via TCP over IPv4 to receive and execute shellcode
+  windows/x64/shell_reverse_tcp           3   Reverse Shell via TCP over IPv4 that provides an interactive cmd.exe session
+  windows/x86/kernel_token_stealer        0   Token stealing shellcode for privilege escalation
+  windows/x64/kernel_ace_edit             0   SID entry modifier for process injection
+  windows/x64/kernel_sysret               0   Generic method of returning from kernel space to user space
+  windows/x64/kernel_token_stealer        0   Token stealing shellcode for privilege escalation
+  linux/aarch64/shell_reverse_tcp         3   Reverse Shell via TCP over IPV4 that provides an interactive /bin/sh session
+  linux/aarch64/memfd_reflective_elf_tcp  3   Staged Reflective ELF Loader via TCP over IPV4 which executes an ELF from a remote server
+  linux/x86/shell_reverse_tcp             3   Reverse shell via TCP over IPV4 that provides an interactive /bin/sh session
+  linux/x64/memfd_reflective_elf_tcp      3   Staged Reflective ELF Loader via TCP over IPV4 which executes an ELF from a remote server
 
-  Modules             Description
-  -------             -----------
-  asm_shell           Interactive assembler and disassembler
-  disassemble         Simple linear disassembler for multiple architectures
-  diff                Bytecode diffing module for comparing two binaries (or shellcode)
-  format              Converts bytecode into a respective format (activated anytime '-f' is used)
-  run                 Wrapper used for executing bytecode (shellcode)
-  badchar             Produces a set of all potential invalid characters for validation purposes
-  pinpoint            Highlights opcodes within a disassembly to identify instructions responsible for bad characters
+  Architectures
+  -------------
+  aarch64
+  x64
+  x86
 
-  Format              Description
-  ------              -----------
-  c                   Format bytecode for a C application
-  java                Format bytecode for Java
-  hex                 Format bytecode in hex
-  num                 Format bytecode in num format
-  powershell          Format bytecode for Powershell
-  bash                Format bytecode for bash script (UNIX)
-  nasm                Format bytecode for NASM
-  raw                 Format bytecode to be written to stdout in raw form
-  python3             Format bytecode for Python3
-  cs                  Format bytecode for C#
-  python              Format bytecode for Python
-  uint8array          Format bytecode for Javascript as a Uint8Array directly
-  hex_space           Format bytecode in hex, seperated by a space
-  dword               Format bytecode in dword
-  escaped             Format bytecode for one-liner hex escape paste
-  javascript          Format bytecode for Javascript (Blob to send via XHR)
-  perl                Format bytecode for Perl
-  ruby                Format bytecode for Ruby
+  Modules       Description
+  -------       -----------
+  asm_shell     Interactive assembler and disassembler
+  diff          Bytecode diffing module for comparing two binaries (or shellcode)
+  format        Converts bytecode into a respective format (activated anytime '-f' is used)
+  pinpoint      Highlights opcodes within a disassembly to identify instructions responsible for bad characters
+  badchar       Produces a set of all potential invalid characters for validation purposes
+  disassemble   Simple linear disassembler for multiple architectures
+  run           Wrapper used for executing bytecode (shellcode)
+
+  Format        Description
+  ------        -----------
+  python        Format bytecode for Python
+  bash          Format bytecode for bash script (UNIX)
+  javascript    Format bytecode for Javascript (Blob to send via XHR)
+  powershell    Format bytecode for Powershell
+  java          Format bytecode for Java
+  uint8array    Format bytecode for Javascript as a Uint8Array directly
+  num           Format bytecode in num format
+  raw           Format bytecode to be written to stdout in raw form
+  nasm          Format bytecode for NASM
+  c             Format bytecode for a C application
+  ruby          Format bytecode for Ruby
+  escaped       Format bytecode for one-liner hex escape paste
+  dword         Format bytecode in dword
+  hex_space     Format bytecode in hex, seperated by a space
+  cs            Format bytecode for C#
+  python3       Format bytecode for Python3
+  hex           Format bytecode in hex
+  perl          Format bytecode for Perl
+  rust          Format bytecode for a Rust application
 ```
 
 This approach allows each module the ability to generate detailed documentation for its functionality.
@@ -136,51 +147,52 @@ Tested against:
     Linux
     Windows
 
-Description:
-    
-    Executes bytecode from a binary file (-r) or a payload module (-p) under the
-    context of the currently running operating system and architecture. Meaning if
-    you are running on AARCH64 bytecode will be interpreted as such and if you're
-    on x64 it will interpret it as x64 respectively.
-    
+Module Description:
+
+  Executes bytecode from a binary file (-r) or a payload module (-p) under the context
+  of the currently running operating system and architecture. Meaning if you are
+  running on AARCH64 bytecode will be interpreted as such and if you're on x64 it will
+  interpret it as x64 respectively.
+
 Example:
 
-    /usr/local/bin/sickle -m run -r shellcode
+  /usr/local/bin/sickle -m run -r shellcode
 ```
 
 This approach also includes documentation for shellcode stubs.
 
 ```
-$ sickle -i -p linux/aarch64/shell_reverse_tcp
+$ sickle -p windows/x64/egghunter -i
 
-Usage information for linux/aarch64/shell_reverse_tcp
+Usage information for windows/x64/egghunter
 
-              Name: Linux (AARCH64 or ARM64) SH Reverse Shell
-            Module: linux/aarch64/shell_reverse_tcp
-      Architecture: aarch64
-          Platform: linux
+              Name: Windows (x64) Hell's Gate based Egghunter
+            Module: windows/x64/egghunter
+      Architecture: x64
+          Platform: windows
               Ring: 3
 
 Author(s):
-    wetw0rk
+    hvictor
 
 Tested against:
-    Debian 14.2.0-6
+    Windows 11 (10.0.26100 N/A Build 26100)
 
 Argument Information
 
-  Argument Name        Argument Description                               Optional
-  -------------        --------------------                               --------
-  LHOST                Listener host to receive the callback              no
-  LPORT                Listening port on listener host                    yes
+  Name          Description           Optional
+  ----          -----------           --------
+  TAG           Egg (provide 4 bytes)      yes
 
-Description:
-    
-    TCP-based reverse shell over IPV4 that provides an interactive /bin/sh
-    session. Since this payload is not staged, there is no need for anything
-    more than a Netcat listener.
-    
+Module Description:
+
+  This egghunter iterates virtual memory addresses and before searching for the egg, it
+  performs a NtProtectVirtualMemory system call. This system call is similar to
+  VirtualProtect, and is parameterized to set the memory to be scanned to READ, WRITE,
+  EXECUTE. This way, when the egg is found, the shellcode after it is guaranteed to be
+  executable.
+
 Example:
 
-    /usr/local/bin/sickle -p linux/aarch64/shell_reverse_tcp LHOST=127.0.0.1 LPORT=1337 -f c
+  /usr/local/bin/sickle -p windows/x64/egghunter TAG=w00t
 ```
