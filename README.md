@@ -73,20 +73,20 @@ $ sickle -l
 
   Shellcode                              Ring Description
   ---------                              ---- -----------
-  windows/aarch64/shell_reverse_tcp       3   Reverse Shell via TCP over IPv4 that provides an interactive cmd.exe session
-  windows/x86/shell_reverse_tcp           3   Reverse shell via TCP over IPv4 that provides an interactive cmd.exe session
-  windows/x64/reflective_pe               3   Stageless Reflective PE Loader that takes an x64 binary and executes it in memory
-  windows/x64/egghunter                   3   Egghunter based on Hell's Gate and NtProtectVirtualMemory
-  windows/x64/virtualalloc_exec_tcp       3   A lightweight stager that connects to a handler via TCP over IPv4 to receive and execute shellcode
-  windows/x64/shell_reverse_tcp           3   Reverse Shell via TCP over IPv4 that provides an interactive cmd.exe session
-  windows/x86/kernel_token_stealer        0   Token stealing shellcode for privilege escalation
-  windows/x64/kernel_ace_edit             0   SID entry modifier for process injection
-  windows/x64/kernel_sysret               0   Generic method of returning from kernel space to user space
-  windows/x64/kernel_token_stealer        0   Token stealing shellcode for privilege escalation
-  linux/aarch64/shell_reverse_tcp         3   Reverse Shell via TCP over IPV4 that provides an interactive /bin/sh session
-  linux/aarch64/memfd_reflective_elf_tcp  3   Staged Reflective ELF Loader via TCP over IPV4 which executes an ELF from a remote server
   linux/x86/shell_reverse_tcp             3   Reverse shell via TCP over IPV4 that provides an interactive /bin/sh session
   linux/x64/memfd_reflective_elf_tcp      3   Staged Reflective ELF Loader via TCP over IPV4 which executes an ELF from a remote server
+  linux/aarch64/memfd_reflective_elf_tcp  3   Staged Reflective ELF Loader via TCP over IPv4 which executes an ELF from a remote server handler
+  linux/aarch64/shell_reverse_tcp         3   Reverse Shell via TCP over IPv4 that provides an interactive /bin/sh session
+  windows/x86/shell_reverse_tcp           3   Reverse shell via TCP over IPv4 that provides an interactive cmd.exe session
+  windows/x64/egghunter                   3   Egghunter based on Hell's Gate and NtProtectVirtualMemory
+  windows/x64/reflective_pe_loader        3   Stageless Reflective PE Loader that takes an x64 binary and executes it in memory
+  windows/x64/shell_reverse_tcp           3   Reverse Shell via TCP over IPv4 that provides an interactive cmd.exe session
+  windows/x64/virtualalloc_exec_tcp       3   A lightweight stager that connects to a handler via TCP over IPv4 to receive and execute shellcode
+  windows/aarch64/shell_reverse_tcp       3   Reverse Shell via TCP over IPv4 that provides an interactive cmd.exe session
+  windows/x86/kernel_token_stealer        0   Token stealing shellcode for privilege escalation
+  windows/x64/kernel_sysret               0   Generic method of returning from kernel space to user space
+  windows/x64/kernel_ace_edit             0   SID entry modifier for process injection
+  windows/x64/kernel_token_stealer        0   Token stealing shellcode for privilege escalation
 
   Architectures
   -------------
@@ -97,34 +97,34 @@ $ sickle -l
   Modules       Description
   -------       -----------
   asm_shell     Interactive assembler and disassembler
-  diff          Bytecode diffing module for comparing two binaries (or shellcode)
-  format        Converts bytecode into a respective format (activated anytime '-f' is used)
-  pinpoint      Highlights opcodes within a disassembly to identify instructions responsible for bad characters
   badchar       Produces a set of all potential invalid characters for validation purposes
+  format        Converts bytecode into a respective format (activated anytime '-f' is used)
   disassemble   Simple linear disassembler for multiple architectures
+  pinpoint      Highlights opcodes within a disassembly to identify instructions responsible for bad characters
+  diff          Bytecode diffing module for comparing two binaries (or shellcode)
   run           Wrapper used for executing bytecode (shellcode)
 
   Format        Description
   ------        -----------
-  python        Format bytecode for Python
   bash          Format bytecode for bash script (UNIX)
-  javascript    Format bytecode for Javascript (Blob to send via XHR)
-  powershell    Format bytecode for Powershell
-  java          Format bytecode for Java
-  uint8array    Format bytecode for Javascript as a Uint8Array directly
-  num           Format bytecode in num format
-  raw           Format bytecode to be written to stdout in raw form
-  nasm          Format bytecode for NASM
-  c             Format bytecode for a C application
-  ruby          Format bytecode for Ruby
-  escaped       Format bytecode for one-liner hex escape paste
-  dword         Format bytecode in dword
-  hex_space     Format bytecode in hex, seperated by a space
-  cs            Format bytecode for C#
-  python3       Format bytecode for Python3
   hex           Format bytecode in hex
   perl          Format bytecode for Perl
+  java          Format bytecode for Java
+  python3       Format bytecode for Python3
+  uint8array    Format bytecode for Javascript as a Uint8Array directly
+  dword         Format bytecode in dword
+  ruby          Format bytecode for Ruby
+  javascript    Format bytecode for Javascript (Blob to send via XHR)
+  nasm          Format bytecode for NASM
+  num           Format bytecode in num format
+  cs            Format bytecode for C#
+  raw           Format bytecode to be written to stdout in raw form
   rust          Format bytecode for a Rust application
+  python        Format bytecode for Python
+  escaped       Format bytecode for one-liner hex escape paste
+  c             Format bytecode for a C application
+  powershell    Format bytecode for Powershell
+  hex_space     Format bytecode in hex, seperated by a space
 ```
 
 This approach allows each module the ability to generate detailed documentation for its functionality.
