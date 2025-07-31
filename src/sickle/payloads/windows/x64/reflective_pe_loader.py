@@ -25,7 +25,7 @@ class Shellcode():
 
     name = f"Windows ({arch}) Reflective PE Loader"
 
-    module = f"{platform}/{arch}/reflective_pe"
+    module = f"{platform}/{arch}/reflective_pe_loader"
 
     example_run = f"{sys.argv[0]} -p {module} EXE=/path/doom.exe -f c"
 
