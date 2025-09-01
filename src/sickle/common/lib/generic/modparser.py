@@ -266,7 +266,7 @@ def print_module_info(module_class, module_name):
             info_field_max = max_arg_info
 
         # Print the argument information with the calculation complete
-        print("Argument Information\n")
+        print("Argument Information:\n")
         print(f"  {'Name':<{max_arg_name}} {'Description':<{info_field_max}} {'Optional'}")
         print(f"  {'----':<{max_arg_name}} {'-----------':<{info_field_max}} {'--------'}")
         
@@ -308,6 +308,88 @@ def print_module_info(module_class, module_name):
             for opt, opt_desc in supported_options.items():
                 out_list = get_truncated_list(f"{opt_desc}", space_used)
                 
+                for i in range(len(out_list)):
+                    if i != 0:
+                        print(f"  {' ' * max_option_size} {out_list[i]}")
+                    else:
+                        print(f"  {opt:<{max_option_size}} {out_list[i]}")
+
+            print("")
+
+    # Information on each advanced argument for a given module (TODO: make a function since we do this 2 times)
+    try:
+        advanced_mod_args = m.advanced
+    except AttributeError:
+        advanced_mod_args = None
+
+    if (advanced_mod_args != None):
+
+        # Get the list of information we need to parse
+        arg_names = [arg_name for arg_name in advanced_mod_args.keys()]
+
+        descriptions = [advanced_mod_args[arg_name]["description"]
+                        for arg_name in advanced_mod_args.keys()]
+
+        # Obtain the sizes needed to properly output information
+        max_arg_name = len(max(arg_names, key=len))
+        if max_arg_name < 0x0D:
+            max_arg_name = 0x0D
+
+        max_arg_info = len(max(descriptions, key=len))
+
+        # Account for everything used in the output string aside from the description
+        space_used = max_arg_name # Longest argument name
+        space_used += 8           # Length of the "Optional" string
+        space_used += 4           # Spaces used in the out string proir to modification
+
+        # Save space and used whatever is smaller the truncated space or terminal space
+        info_field_max = get_truncated_max(space_used)
+        if max_arg_info < info_field_max:
+            info_field_max = max_arg_info
+
+        # Print the argument information with the calculation complete
+        print("Advanced Argument Information:\n")
+        print(f"  {'Name':<{max_arg_name}} {'Description':<{info_field_max}} {'Optional'}")
+        print(f"  {'----':<{max_arg_name}} {'-----------':<{info_field_max}} {'--------'}")
+
+        for arg_name, _ in advanced_mod_args.items():
+            description = advanced_mod_args[arg_name]["description"]
+            optional = advanced_mod_args[arg_name]["optional"]
+
+            out_list = get_truncated_list(f"{description}", space_used)
+
+            for i in range(len(out_list)):
+                if i != 0:
+                    print(f"  {' ' * max_arg_name} {out_list[i]}")
+                else:
+                    print(f"  {arg_name:<{max_arg_name}} {out_list[i]:<{info_field_max}} {optional:>8}")
+        
+        print("")
+
+        if ("options" in advanced_mod_args[arg_name].keys()):
+
+            supported_options = advanced_mod_args[arg_name]['options']
+
+            # Obtain list objects of options and information
+            options, infos = zip(*supported_options.items())
+
+            # Calculate sizes
+            max_option_size = len(max(options, key=len))
+            if max_option_size < 0x0D:
+                max_option_size = 0x0D
+
+            max_info_size = len(max(infos, key=len))
+
+            space_used = max_option_size
+            space_used += 4
+
+            # Output the final results
+            print(f"Advanced Argument Options:\n")
+            print(f"  {arg_name:<{max_option_size}} {'Description'}")
+            print(f"  {'-'*len(arg_name):<{max_option_size}} {'-----------'}")
+            for opt, opt_desc in supported_options.items():
+                out_list = get_truncated_list(f"{opt_desc}", space_used)
+
                 for i in range(len(out_list)):
                     if i != 0:
                         print(f"  {' ' * max_option_size} {out_list[i]}")
