@@ -23,6 +23,9 @@ def get_win_prologue(op_as_func, stack_space):
     if op_as_func == False:
         stub += "    and rsp, 0xfffffffffffffff0\n"
 
+    stub += """    call getKernel32
+    mov rdi, rax\n"""
+
     return stub
 
 def get_win_epilogue(op_as_func, exit_technique, storage_offsets):
@@ -34,18 +37,14 @@ def get_win_epilogue(op_as_func, exit_technique, storage_offsets):
 call_RtlExitUserThread:
     xor rcx, rcx
     mov rax, [rbp - {storage_offsets['RtlExitUserThread']}]
-    call rax
-
-"""
+    call rax\n"""
 
     elif exit_technique == "process":
         stub += f"""; RAX => ExitProcess([in] UINT uExitCode); // RCX => 0
 call_ExitProcess:
     xor rcx, rcx
     mov rax, [rbp - {storage_offsets['ExitProcess']}]
-    call rax
-
-"""
+    call rax\n"""
 
     elif exit_technique == "terminate":
         stub += f"""; RAX => TerminateProcess([in] HANDLE hProcess,   // RCX => -1 (Current Process)
@@ -55,7 +54,7 @@ call_TerminateProcess:
     dec rcx
     xor rdx, rdx
     mov rax, [rbp - {storage_offsets['TerminateProcess']}]
-    call rax"""
+    call rax\n"""
     
     if op_as_func == True:
         stub += """fin:

