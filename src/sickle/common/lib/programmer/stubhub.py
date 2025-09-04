@@ -172,12 +172,6 @@ get_{imports[func]}:
     def get_prologue(self):
         """This function will generate a generic function prologue based on the flags provided
         by the user.
-    
-        :param op_as_func: Determines if the prologue will operate as a normal function
-        :type op_as_func: bool
-    
-        :param stack_space: The stack space to be used by the shellcode
-        :type stack_space: int
         """
 
         if smartarch.arch_used == "x64":
@@ -192,22 +186,15 @@ get_{imports[func]}:
     
             if self.op_as_func == False:
                 stub += "    and rsp, 0xfffffffffffffff0\n"
-    
+   
+            stub += """    call getKernel32
+    mov rdi, rax\n"""
+
         return stub
     
     def get_epilogue(self):
         """This function will generate a generic function epilogue based on the flags provided
         by the user.
-    
-        :param op_as_func: Determines if the prologue will operate as a normal function
-        :type op_as_func: bool
-    
-        :param exit_technique: The technique to use when exiting the shellcode
-        :type exit_technique: str
-    
-        :param storage_offsets: Dictionary object containing the storage offsets for
-            a given target function.
-        :type storage_offsets: dict
         """
 
         if smartarch.arch_used == "x64":

