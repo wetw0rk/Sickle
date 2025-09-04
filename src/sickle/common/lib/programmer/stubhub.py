@@ -137,8 +137,7 @@ error:
                 stub += "    mov [rbp-{}], cl\n".format(hex(write_index))
                 write_index -= 1
 
-            stub += f"""
-    xor rcx, rcx
+            stub += f"""    xor rcx, rcx
     mov [rbp-{write_index}], cl
     lea rcx, [rbp - {self.storage_offsets['functionName']}]
     mov rax, [rbp - {self.storage_offsets['LoadLibraryA']}]
@@ -201,21 +200,24 @@ get_{imports[func]}:
             stub = ""
     
             if self.exit_technique == "thread":
-                stub += f"""; RAX => RtlExitUserThread([in] DWORD dwExitCode); // RCX => 0
+                stub += f"""
+; RAX => RtlExitUserThread([in] DWORD dwExitCode); // RCX => 0
 call_RtlExitUserThread:
     xor rcx, rcx
     mov rax, [rbp - {self.storage_offsets['RtlExitUserThread']}]
     call rax\n"""
     
             elif self.exit_technique == "process":
-                stub += f"""; RAX => ExitProcess([in] UINT uExitCode); // RCX => 0
+                stub += f"""
+; RAX => ExitProcess([in] UINT uExitCode); // RCX => 0
 call_ExitProcess:
     xor rcx, rcx
     mov rax, [rbp - {self.storage_offsets['ExitProcess']}]
     call rax\n"""
     
             elif self.exit_technique == "terminate":
-                stub += f"""; RAX => TerminateProcess([in] HANDLE hProcess,   // RCX => -1 (Current Process)
+                stub += f"""
+; RAX => TerminateProcess([in] HANDLE hProcess,   // RCX => -1 (Current Process)
 ;                         [in] UINT   uExitCode); // RDX => 0x00 (Clean Exit)
 call_TerminateProcess:
     xor rcx, rcx

