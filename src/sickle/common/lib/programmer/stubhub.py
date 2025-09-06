@@ -384,10 +384,15 @@ call_TerminateProcess:
 
             stub = ""
 
+            # TODO: Test
             if self.exit_technique == "thread":
                 stub += f"""
-                """
-
+; EAX => RtlExitUserThread([in] DWORD dwExitCode);
+call_RtlExitUserThread:
+    xor ecx, ecx
+    push ecx
+    mov eax, [ebp - {self.storage_offsets['RtlExitUserThread']}]
+    call eax\n"""
 
             elif self.exit_technique == "terminate":
                 stub += f"""
