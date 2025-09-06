@@ -191,7 +191,7 @@ download_complete:
                                     None)
 
         main_src = self.gen_main()
-        src = win_stubs.gen_shellcode(main_src)
-        bytecode = generator.get_bytes_from_asm(src)
+        src = win_stubs.gen_source(main_src)
+        shellcode = generator.get_bytes_from_asm(src)
 
-        return bytecode
+        return shellcode

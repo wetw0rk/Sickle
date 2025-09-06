@@ -22,7 +22,7 @@ class WinRawr():
         self.stack_space = stack_space
         self.exit_technique = exitfunc
 
-    def gen_shellcode(self, main_func):
+    def gen_source(self, main_func):
        
         if smartarch.arch_used == "x64":
 
