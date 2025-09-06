@@ -22,6 +22,23 @@ class WinRawr():
         self.stack_space = stack_space
         self.exit_technique = exitfunc
 
+    def gen_shellcode(self, main_func):
+       
+        if smartarch.arch_used == "x64":
+
+            src  = self.get_prologue()
+            src += self.get_resolver()
+
+            src += main_func
+
+            if self.exit_technique != None:
+                src += self.get_epilogue()
+
+            src += self.get_kernel32_stub()
+            src += self.get_lookup_stub()
+
+        return src
+
     def get_kernel32_stub(self):
         """Generates stub for obtaining the base address of Kernel32.dll
         """
@@ -368,7 +385,7 @@ call_ExitProcess:
     mov rax, [rbp - {self.storage_offsets['ExitProcess']}]
     call rax\n"""
     
-            else:
+            elif self.exit_technique == "terminate":
                 stub += f"""
 ; RAX => TerminateProcess([in] HANDLE hProcess,   // RCX => -1 (Current Process)
 ;                         [in] UINT   uExitCode); // RDX => 0x00 (Clean Exit)
@@ -405,7 +422,7 @@ call_ExitProcess:
     mov eax, [ebp - {self.storage_offsets['ExitProcess']}]
     call eax\n"""
 
-            else:
+            elif self.exit_technique == "terminate":
                 stub += f"""
 ; EAX => TerminateProcess([in] HANDLE hProcess,
 ;                         [in] UINT   uExitCode);
