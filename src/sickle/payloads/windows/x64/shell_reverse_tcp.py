@@ -58,15 +58,12 @@ class Shellcode():
     arguments["SHELL"]["description"] = "Shell environment (powershell.exe, cmd.exe, etc)"
 
     advanced = {}
-    advanced["OP_AS_FUNC"] = {}
-    advanced["OP_AS_FUNC"]["optional"] = "yes"
-    advanced["OP_AS_FUNC"]["description"] = "Generate shellcode that operates as function"
 
     advanced["EXITFUNC"] = {}
     advanced["EXITFUNC"]["optional"] = "yes"
     advanced["EXITFUNC"]["description"] = "Exit technique"
-
     advanced["EXITFUNC"]["options"] = { "terminate": "Terminates the process and all of its threads",
+                                        "func": "Have the shellcode operate as function",
                                         "thread": "Exit as a thread",
                                         "process": "Exit as a process" }
 
@@ -131,20 +128,10 @@ class Shellcode():
 
         self.lhost = argv_dict['LHOST']
 
-        # Change the shellcode operation based on how execution will be performed
-        if "OP_AS_FUNC" not in argv_dict.keys():
-            self.op_as_func = False
-        else:
-            if argv_dict["OP_AS_FUNC"].lower() == "false":
-                self.op_as_func = False
-            else:
-                self.op_as_func = True
-
         # Set the EXITFUNC and update the necessary dependencies
         self.exit_func = ""
         if "EXITFUNC" not in argv_dict.keys():
-            if self.op_as_func == False:
-                self.exit_func = "terminate"
+            self.exit_func = "terminate"
         else:
             self.exit_func = argv_dict["EXITFUNC"] 
 
@@ -165,7 +152,6 @@ class Shellcode():
         win_stubs = stubhub.WinRawr(self.storage_offsets,
                                     self.dependencies,
                                     self.stack_space,
-                                    self.op_as_func,
                                     self.exit_func)
         
         shellcode = win_stubs.get_prologue()

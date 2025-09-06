@@ -460,7 +460,7 @@ def argument_check(required_arguments, user_arguments):
 
     if (fail_check == 1):
         print(f"Missing arguments: {missing_args.rstrip(', ')}")
-        return None
+        exit()
 
     for fd_arg, fd_var in final_dict.items():
         if (len(fd_var) < 1):

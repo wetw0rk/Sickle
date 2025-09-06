@@ -15,12 +15,11 @@ class WinRawr():
     what you see :P
     """
 
-    def __init__(self, storage_offsets, dependencies, stack_space, op_as_func, exitfunc):
-        
+    def __init__(self, storage_offsets, dependencies, stack_space, exitfunc):
+
         self.storage_offsets = storage_offsets
         self.dependencies = dependencies
         self.stack_space = stack_space
-        self.op_as_func = op_as_func
         self.exit_technique = exitfunc
 
     def get_kernel32_stub(self):
@@ -309,13 +308,13 @@ get_{imports[func]}:
 
             stub = "_start:\n"
     
-            if self.op_as_func == True:
+            if self.exit_technique == "func":
                 stub += """    push rbp
         mov rbp, rsp\n"""
     
             stub += f"    sub rsp, {self.stack_space}\n"
     
-            if self.op_as_func == False:
+            if self.exit_technique != "func":
                 stub += "    and rsp, 0xfffffffffffffff0\n"
    
             stub += """    call getKernel32
@@ -325,7 +324,7 @@ get_{imports[func]}:
 
             stub = "_start:\n"
 
-            if self.op_as_func == True:
+            if self.exit_technique == "func":
                 stub += f"""    push ebp
     mov ebp, esp\n"""
 
@@ -334,7 +333,7 @@ get_{imports[func]}:
     mov al, {self.stack_space}
     sub esp, eax\n"""
 
-            if self.op_as_func == False:
+            if self.exit_technique != "func":
                 stub += "    and esp, 0xFFFFFFF0\n"
 
         return stub
@@ -347,8 +346,13 @@ get_{imports[func]}:
         if smartarch.arch_used == "x64":
 
             stub = ""
-    
-            if self.exit_technique == "thread":
+   
+            if self.exit_technique == "func":
+                stub += f"""fin:
+    leave
+    ret\n"""
+
+            elif self.exit_technique == "thread":
                 stub += f"""
 ; RAX => RtlExitUserThread([in] DWORD dwExitCode); // RCX => 0
 call_RtlExitUserThread:
@@ -364,7 +368,7 @@ call_ExitProcess:
     mov rax, [rbp - {self.storage_offsets['ExitProcess']}]
     call rax\n"""
     
-            elif self.exit_technique == "terminate":
+            else:
                 stub += f"""
 ; RAX => TerminateProcess([in] HANDLE hProcess,   // RCX => -1 (Current Process)
 ;                         [in] UINT   uExitCode); // RDX => 0x00 (Clean Exit)
@@ -375,17 +379,16 @@ call_TerminateProcess:
     mov rax, [rbp - {self.storage_offsets['TerminateProcess']}]
     call rax\n"""
         
-            if self.op_as_func == True:
-                stub += """fin:
-        leave
-        ret\n"""
-
         if smartarch.arch_used == "x86":
 
             stub = ""
 
-            # TODO: Test
-            if self.exit_technique == "thread":
+            if self.exit_technique == "func":
+                stub += """fin:
+    leave
+    ret\n"""
+
+            elif self.exit_technique == "thread":
                 stub += f"""
 ; EAX => RtlExitUserThread([in] DWORD dwExitCode);
 call_RtlExitUserThread:
@@ -394,7 +397,7 @@ call_RtlExitUserThread:
     mov eax, [ebp - {self.storage_offsets['RtlExitUserThread']}]
     call eax\n"""
 
-            elif self.exit_technique == "terminate":
+            else:
                 stub += f"""
 ; EAX => TerminateProcess([in] HANDLE hProcess,
 ;                         [in] UINT   uExitCode);
@@ -406,11 +409,4 @@ call_TerminateProcess:
     mov eax, [ebp - {self.storage_offsets['TerminateProcess']}]
     call eax\n"""
 
-            if self.op_as_func == True:
-                stub += """fin:
-        leave
-        ret\n"""
-
-
-    
         return stub
