@@ -23,7 +23,7 @@ class WinRawr():
         self.exit_technique = exitfunc
 
     def gen_source(self, main_func):
-       
+
         if smartarch.arch_used == "x64":
 
             src  = self.get_prologue()
