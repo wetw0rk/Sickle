@@ -397,6 +397,14 @@ call_RtlExitUserThread:
     mov eax, [ebp - {self.storage_offsets['RtlExitUserThread']}]
     call eax\n"""
 
+            elif self.exit_technique == "process":
+                stub += f"""
+; EAX => ExitProcess([in] UINT uExitCode); // RCX => 0
+call_ExitProcess:
+    xor ecx, ecx
+    mov eax, [ebp - {self.storage_offsets['ExitProcess']}]
+    call eax\n"""
+
             else:
                 stub += f"""
 ; EAX => TerminateProcess([in] HANDLE hProcess,
