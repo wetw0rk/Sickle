@@ -51,9 +51,6 @@ class Shellcode():
     arguments["EXE"]["description"] = "Executable to be loaded into memory and executed"
 
     advanced = {}
-    advanced["OP_AS_FUNC"] = {}
-    advanced["OP_AS_FUNC"]["optional"] = "yes"
-    advanced["OP_AS_FUNC"]["description"] = "Generate shellcode that operates as function"
 
     advanced["EXITFUNC"] = {}
     advanced["EXITFUNC"]["optional"] = "yes"
@@ -67,31 +64,20 @@ class Shellcode():
     advanced["PROCESS"]["optional"] = "yes"
     advanced["PROCESS"]["description"] = "Process name to inject PE into"
 
-    # TODO: Add advanced option to inject into a remote process
-
     def __init__(self, arg_object):
 
         self.arg_list = arg_object["positional arguments"]
 
         self.dependencies = {
             "Kernel32.dll": [
-                "GetCurrentProcess",        # Remove if using process injection
-                "CreateToolhelp32Snapshot", # Make Optional
-                "Process32First",           # Make Optional
-                "Process32Next",            # Make Optional
-                "CloseHandle",              # Make Optional
-                "OpenProcess",              # Make Optional
-                "WriteProcessMemory",       # Make Optional
                 "LoadLibraryA",
                 "VirtualAllocEx",
                 "GetProcAddress",
                 "VirtualProtectEx",
                 "CreateRemoteThread",
-                "WaitForSingleObject",
             ],
             "msvcrt.dll" : [
                 "memset",
-                "memcpy",
             ]
         }
 
@@ -129,11 +115,14 @@ class Shellcode():
             "dwSectionMappedSize"           : 0x00,
             "dwSectionProtection"           : 0x00,
             "dwSecIndex"                    : 0x00,
-
-            "ProcessEntry"             : ctypes.sizeof(tlhelp32._PROCESSENTRY32), # get_pid_of()
-            "hSnapshot"                : 0x00, # get_pid_of()
-            "pid"                      : 0x00, # get_pid_of()
         })
+
+        if self.process != None:
+            sc_args.update({
+                "ProcessEntry": ctypes.sizeof(tlhelp32._PROCESSENTRY32), 
+                "hSnapshot"   : 0x00,
+                "pid"         : 0x00,
+            })
 
         self.stack_space = builder.calc_stack_space(sc_args)
         self.storage_offsets = builder.gen_offsets(sc_args)
@@ -154,8 +143,17 @@ class Shellcode():
         # If we are injecting into a remote process
         if "PROCESS" not in argv_dict.keys():
             self.process = None
+            self.dependencies["Kernel32.dll"] += "WaitForSingleObject",
+            self.dependencies["Kernel32.dll"] += "GetCurrentProcess",
+            self.dependencies["msvcrt.dll"] += "memcpy",
         else:
             self.process = argv_dict["PROCESS"]
+            self.dependencies["Kernel32.dll"] += "CreateToolhelp32Snapshot",
+            self.dependencies["Kernel32.dll"] += "WriteProcessMemory",
+            self.dependencies["Kernel32.dll"] += "Process32First",
+            self.dependencies["Kernel32.dll"] += "Process32Next",
+            self.dependencies["Kernel32.dll"] += "CloseHandle",
+            self.dependencies["Kernel32.dll"] += "OpenProcess",
 
         # Change the shellcode operation based on how execution will be performed
         if "OP_AS_FUNC" not in argv_dict.keys():
