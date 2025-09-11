@@ -37,6 +37,18 @@ class WinRawr():
             src += self.get_kernel32_stub()
             src += self.get_lookup_stub()
 
+        elif smartarch.arch_used == "x86":
+
+            src = self.get_prologue()
+            src += self.get_kernel32_stub()
+            src += self.get_lookup_stub()
+            src += self.get_resolver()
+
+            src += main_func
+
+            if self.exit_technique != None:
+                src += self.get_epilogue()
+
         return src
 
     def get_kernel32_stub(self):
