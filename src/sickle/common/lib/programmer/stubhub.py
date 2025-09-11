@@ -333,7 +333,7 @@ get_{imports[func]}:
     
             if self.exit_technique != "func":
                 stub += "    and rsp, 0xfffffffffffffff0\n"
-   
+  
             stub += """    call getKernel32
     mov rdi, rax\n"""
 
