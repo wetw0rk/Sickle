@@ -58,7 +58,6 @@ class Shellcode():
     arguments["SHELL"]["description"] = "Shell environment (powershell.exe, cmd.exe, etc)"
 
     advanced = {}
-
     advanced["EXITFUNC"] = {}
     advanced["EXITFUNC"]["optional"] = "yes"
     advanced["EXITFUNC"]["description"] = "Exit technique"
