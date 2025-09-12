@@ -92,6 +92,8 @@ class Shellcode():
         return
 
     def set_args(self):
+        """Configure the arguments that may be used by the shellcode stub
+        """
 
         argv_dict = modparser.argument_check(Shellcode.arguments, self.arg_list)
         if (argv_dict == None):
