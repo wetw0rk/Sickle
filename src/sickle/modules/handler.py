@@ -10,7 +10,7 @@ from sickle.common.lib.generic import modparser
 
 time_start = time.time()
 
-class TCPStageHandler(socketserver.StreamRequestHandler):
+class TCPStagerHandler(socketserver.StreamRequestHandler):
 
     def handle(self):
 
@@ -105,9 +105,6 @@ class Module():
         else:
             self.srvport = int(argv_dict["SRVPORT"])
 
-        if "STGPORT" in argv_dict.keys():
-            self.stgport = int(argv_dict["STGPORT"])
-
     def do_thing(self):
 
         if self.handler == "tty":
@@ -119,22 +116,13 @@ class Module():
             exit(-1)
 
     def start_tcp_handler(self):
-        stage_server = socketserver.TCPServer((self.srvhost, self.srvport), TCPStageHandler)
-        log_print(f"TCPStageHandler started on port {self.srvhost}:{self.srvport}")
+
+        stage_server = socketserver.TCPServer((self.srvhost, self.srvport), TCPStagerHandler)
+        log_print(f"TCPStagerHandler started, serving payloads @{{{self.srvhost}:{self.srvport}}}")
         stage_server.stage = self.stage
         stage_server.serve_forever()
 
     def start_tty_handler(self):
-
-#        if self.stage != None:
-#            stage_server = socketserver.TCPServer((self.srvhost, self.stgport), TCPStageHandler)
-#            stage_server.stage = self.stage
-#
-#            server_thread = threading.Thread(target=stage_server.serve_forever)
-#            server_thread.daemon = True
-#            server_thread.start()
-#
-#            log_print(f"TCPStageHandler started on port {self.srvhost}:{self.stgport}")
 
         log_print(f"SimpleTTYHandler started on {self.srvhost}:{self.srvport}")
         server = socketserver.TCPServer((self.srvhost, self.srvport), SimpleTTYHandler)
