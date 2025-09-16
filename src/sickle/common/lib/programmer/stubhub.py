@@ -328,7 +328,7 @@ get_{imports[func]}:
         return stub
 
 
-    def get_prologue(self):
+    def get_prologue(self, append_code=None):
         """This function will generate a generic function prologue based on the flags provided
         by the user.
         """
@@ -345,6 +345,10 @@ get_{imports[func]}:
     
             if self.exit_technique != "func":
                 stub += "    and rsp, 0xfffffffffffffff0\n"
+
+            if append_code != None:
+                for i in range(len(append_code)):
+                    stub += append_code[i]
   
             stub += """    call getKernel32
     mov rdi, rax\n"""
