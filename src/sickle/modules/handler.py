@@ -144,6 +144,6 @@ class Module():
 def log_print(msg):
         
     elapsed = time.time() - time_start
-    print(f"[{elapsed:8.6f}] {msg}")
+    print(f"[{elapsed:12.6f}] {msg}")
     
     return
