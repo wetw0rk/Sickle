@@ -144,7 +144,7 @@ call_WinExec:\n"""
         return src
 
     def get_shellcode(self):
-        """Generates Windows (x64) generic reverse shell
+        """Generates Shellcode
         """
 
         generator = Assembler(Shellcode.arch)
