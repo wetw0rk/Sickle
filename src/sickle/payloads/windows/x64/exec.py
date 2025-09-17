@@ -58,9 +58,7 @@ class Shellcode():
         self.set_args()
 
         sc_args = builder.init_sc_args(self.dependencies)
-        sc_args.update({
-            "lpCommandLine"        : self.cmd_len,
-        })
+        sc_args.update({"lpCommandLine" : self.cmd_len })
 
         self.stack_space = builder.calc_stack_space(sc_args)
         self.storage_offsets = builder.gen_offsets(sc_args)
