@@ -102,8 +102,9 @@ class Shellcode():
         """Configure the arguments that may be used by the shellcode stub
         """
 
-        argv_dict = modparser.argument_check(Shellcode.arguments, self.arg_list)
-        argv_dict.update(modparser.argument_check(Shellcode.advanced, self.arg_list))
+        all_args = Shellcode.arguments
+        all_args.update(Shellcode.advanced)
+        argv_dict = (modparser.argument_check(all_args, self.arg_list))
         if (argv_dict == None):
             exit(-1)
 
