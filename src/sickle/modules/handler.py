@@ -109,7 +109,7 @@ class Module():
 
         if self.handler == "tty":
             self.start_tty_handler()
-        elif self.handler == "tcp_stager":
+        elif self.handler == "tcp":
             self.start_tcp_handler()
         else:
             print(f"{self.handler} is not a valid handler")

