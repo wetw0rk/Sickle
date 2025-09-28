@@ -23,7 +23,7 @@ class Shellcode():
 
     platform = "windows"
 
-    name = f"Windows ({arch}) VirtualAlloc Shellcode Loader"
+    name = f"Windows ({arch}) VirtualAlloc Shellcode Loader (TCP)"
 
     module = f"{platform}/{arch}/virtualalloc_exec_tcp"
 
