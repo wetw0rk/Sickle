@@ -66,14 +66,14 @@ class Shellcode():
     advanced["USER_AGENT"]["optional"] = "yes"
     advanced["USER_AGENT"]["description"] = "User agent to use for HTTPS communication"
 
-    advanced["PATH"] = {}
-    advanced["PATH"]["optional"] = "yes"
-    advanced["PATH"]["description"] = "The HTTP path where the payload is hosted on the target server"
-
     advanced["REQUEST"] = {}
     advanced["REQUEST"]["optional"] = "yes"
     advanced["REQUEST"]["description"] = "The HTTP request to use when fetching the second stage"
     advanced["REQUEST"]["options"] = { "GET": "Standard GET request" }
+
+    advanced["PATH"] = {}
+    advanced["PATH"]["optional"] = "yes"
+    advanced["PATH"]["description"] = "The HTTP path where the payload is hosted on the target server"
 
     def __init__(self, arg_object):
 
@@ -143,8 +143,16 @@ class Shellcode():
         self.user_agent_size = len(self.user_agent)
 
         # Set the request type
+        req_type = "GET"
         if "REQUEST" not in argv_dict.keys():
-            self.request = hex( struct.unpack('>Q', b"GET\x00\x00\x00\x00\x00"[::-1])[0] )
+            req_type = b"GET"
+        else:
+            req_type = bytes(argv_dict["REQUEST"], 'latin-1')
+
+        # Ensure that the request can be packed
+        req_type += b"\x00" * (8 - len(req_type))
+        self.request = hex( struct.unpack('>Q', req_type[::-1])[0] )
+
 
         # Set the SSL flags
         self.dwSSLFlags = (0x00800000 | 0x00001000)
