@@ -1,10 +1,7 @@
 import sys
-import math
 import ctypes
-import struct
 
 from sickle.common.lib.generic import extract
-from sickle.common.lib.generic import convert
 from sickle.common.lib.generic import modparser
 from sickle.common.lib.programmer import builder
 from sickle.common.lib.programmer import stubhub
@@ -13,10 +10,7 @@ from sickle.common.lib.reversing.assembler import Assembler
 
 from sickle.common.headers.windows import (
     winnt,
-    ntdef,
-    ws2def,
     tlhelp32,
-    winternl,
 )
 
 class Shellcode():

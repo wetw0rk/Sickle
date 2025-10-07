@@ -1,5 +1,4 @@
 import sys
-import ctypes
 import struct
 
 from sickle.common.lib.generic import convert

