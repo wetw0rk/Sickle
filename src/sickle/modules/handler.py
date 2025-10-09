@@ -76,7 +76,7 @@ class Module():
 
     module = "handler"
 
-    example_run = f"{sys.argv[0]} -m {module}"
+    example_run = f"{sys.argv[0]} -m {module} -p windows/x64/reflective_pe_loader EXE=/tmp/payload.exe HANDLER=https SRVHOST=192.168.50.210 SRVPORT=443"
 
     platform = "Multi"
 
@@ -88,9 +88,10 @@ class Module():
 
     tested_platforms = ["Linux", "Windows"]
 
-    summary = ""
+    summary = "Module for handling payload distribution and session management"
 
-    description = ("")
+    description = ("Starts a \"handler\" object to manage payload distribution. This module also"
+                   " supports handling TTY sessions for standard reverse shells.")
 
     arguments = {}
     arguments["HANDLER"] = {}
