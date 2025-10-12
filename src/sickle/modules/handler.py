@@ -4,6 +4,7 @@ import ssl
 import time
 import struct
 import socket
+import getpass
 import threading
 import http.server
 import socketserver
@@ -94,11 +95,6 @@ class Module():
                    " supports handling TTY sessions for standard reverse shells.")
 
     arguments = {}
-    arguments["HANDLER"] = {}
-    arguments["HANDLER"]["optional"] = "no"
-    arguments["HANDLER"]["description"] = "Handler for incoming connections"
-    arguments["HANDLER"]["options"] = { "tty": "Simple TTY handler similiar to netcat for capturing a shell" }
-
     arguments["SRVHOST"] = {}
     arguments["SRVHOST"]["optional"] = "yes"
     arguments["SRVHOST"]["description"] = "IP to bind handler to"
@@ -106,6 +102,13 @@ class Module():
     arguments["SRVPORT"] = {}
     arguments["SRVPORT"]["optional"] = "yes"
     arguments["SRVPORT"]["description"] = "Port to bind handler to"
+
+    arguments["HANDLER"] = {}
+    arguments["HANDLER"]["optional"] = "no"
+    arguments["HANDLER"]["description"] = "Handler for incoming connections"
+    arguments["HANDLER"]["options"] = { "tty": "Simple TTY handler similiar to netcat for capturing a shell",
+                                        "tcp": "Simple TCP handler to distribute second stage payloads",
+                                        "https": "Simple HTTPS handler to distribute second stage payloads", }
 
     advanced = {}
     advanced["PATH"] = {}
@@ -152,17 +155,17 @@ class Module():
 
         # Set the CERT path that is used by HTTPS if there is not one present, create it
         if "CERT" not in argv_dict.keys():
-            current_directory = os.path.dirname(os.path.abspath(__file__))
-            if os.path.isfile(f"{current_directory}/cert.pem") == False:
+            cert_dir = f"/home/{getpass.getuser()}/.local/share/sickle/"
+            if os.path.isfile(f"{cert_dir}/cert.pem") == False:
                 log_print("It appears that the HTTPS handler does not have a default certificate generated\n")
                 log_print("Would you like to generate one (Y/N): ")
                 create_cert = input()
                 if (create_cert.lower() == 'y') or (create_cert.lower() == 'yes'):
-                    cmd = f"openssl req -new -x509 -keyout {current_directory}/cert.pem -out {current_directory}/cert.pem -days 31337 -nodes"
+                    cmd = f"openssl req -new -x509 -keyout {cert_dir}/cert.pem -out {cert_dir}/cert.pem -days 31337 -nodes"
                     log_print(f"Executing: {cmd}\n")
                     os.system(cmd)
 
-            self.cert = f"{current_directory}/cert.pem"
+            self.cert = f"{cert_dir}/cert.pem"
         else:
             self.cert = argv_dict["CERT"]
             if os.path.isfile(self.cert) == False:
