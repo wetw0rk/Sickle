@@ -23,6 +23,9 @@ class WinRawr():
         self.exit_technique = exitfunc
 
     def gen_source(self, main_func):
+        """Generates basic windows shellcode
+        """
+
 
         if smartarch.arch_used == "x64":
 

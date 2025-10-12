@@ -1,6 +1,4 @@
-from sickle.common.lib.generic.modparser import get_module_list
-from sickle.common.lib.generic.modparser import get_truncated_list
-from sickle.common.lib.generic.modparser import check_module_support
+from sickle.common.lib.generic import modparser
 
 class FormatHandler():
     """This class is responsible for calling the appropriate format module. All
@@ -34,7 +32,7 @@ class FormatHandler():
         :rtype: FormatModule class
         """
 
-        format_module = check_module_support("formats", self.fmt)
+        format_module = modparser.check_module_support("formats", self.fmt)
         if (format_module == None):
             return None
 
@@ -46,8 +44,8 @@ class FormatHandler():
         """
         
         # Obtain the list of formats and their respective desciptions
-        formats = get_module_list("formats")
-        descriptions = [check_module_support("formats", fmt).FormatModule.description
+        formats = modparser.get_module_list("formats")
+        descriptions = [modparser.check_module_support("formats", fmt).FormatModule.description
                         for fmt in formats]
 
         # Obtain the largest format and format description string then calculate its
@@ -63,7 +61,7 @@ class FormatHandler():
         print(f"  {'------':<{max_format_len}} {'-----------'}")
         for fmt, info in zip(formats, descriptions):
             space_used = max_format_len + 4
-            out_list = get_truncated_list(f"{info}", space_used)
+            out_list = modparser.get_truncated_list(f"{info}", space_used)
             for i in range(len(out_list)):
                 if i != 0:
                     print(f"  {' ' * max_format_len} {out_list[i]}")
