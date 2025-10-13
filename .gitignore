@@ -21,3 +21,4 @@ src/sickle/common/headers/linux/__pycache__
 src/sickle/common/handlers/__pycache__
 src/sickle/modules/__pycache__
 src/sickle/formats/__pycache__
+src/sickle/modules/cert.pem

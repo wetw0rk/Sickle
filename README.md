@@ -1,6 +1,6 @@
 # Sickle
 
-![alt text](./docs/logo/panda_logo.png)
+![alt text](./docs/logo/sickle-hallow-2025.png)
 
 Sickle is a tool I originally developed to help me be more effective, in both developing and understanding shellcode. However, throughout the course of its development and usage It has evolved into a payload development framework. Although current modules are mostly aimed towards assembly, this tool is not limited to shellcode.
 
@@ -69,24 +69,27 @@ Although less common in 64-bit exploits, there may be instances where an exploit
 Originally, this tool started as a single large script. However, as it evolved, I found myself needing to re-learn the code with each update. To address this, Sickle now follows a modular approach, allowing for new functionality to be added with minimal time spent re-learning the tool’s design.
 
 ```
-$ sickle -l
+sickle.py -l
 
   Shellcode                              Ring Description
   ---------                              ---- -----------
   linux/x86/shell_reverse_tcp             3   Reverse shell via TCP over IPV4 that provides an interactive /bin/sh session
-  linux/x64/memfd_reflective_elf_tcp      3   Staged Reflective ELF Loader via TCP over IPV4 which executes an ELF from a remote server
-  linux/aarch64/memfd_reflective_elf_tcp  3   Staged Reflective ELF Loader via TCP over IPv4 which executes an ELF from a remote server handler
   linux/aarch64/shell_reverse_tcp         3   Reverse Shell via TCP over IPv4 that provides an interactive /bin/sh session
+  linux/aarch64/memfd_reflective_elf_tcp  3   Staged Reflective ELF Loader via TCP over IPv4 which executes an ELF from a remote server handler
+  linux/x64/memfd_reflective_elf_tcp      3   Staged Reflective ELF Loader via TCP over IPV4 which executes an ELF from a remote server
   windows/x86/shell_reverse_tcp           3   Reverse shell via TCP over IPv4 that provides an interactive cmd.exe session
-  windows/x64/egghunter                   3   Egghunter based on Hell's Gate and NtProtectVirtualMemory
-  windows/x64/reflective_pe_loader        3   Stageless Reflective PE Loader that takes an x64 binary and executes it in memory
-  windows/x64/shell_reverse_tcp           3   Reverse Shell via TCP over IPv4 that provides an interactive cmd.exe session
-  windows/x64/virtualalloc_exec_tcp       3   A lightweight stager that connects to a handler via TCP over IPv4 to receive and execute shellcode
   windows/aarch64/shell_reverse_tcp       3   Reverse Shell via TCP over IPv4 that provides an interactive cmd.exe session
+  windows/x64/virtualalloc_exec_https     3   A lightweight stager that connects to a handler over HTTPS to receive and execute shellcode
+  windows/x64/shell_reverse_tcp           3   Reverse Shell via TCP over IPv4 that provides an interactive cmd.exe session
+  windows/x64/reflective_pe_loader        3   Stageless Reflective PE Loader that takes an x64 binary and executes it in memory
+  windows/x64/virtualalloc_exec_tcp       3   A lightweight stager that connects to a handler via TCP over IPv4 to receive and execute shellcode
+  windows/x64/exec                        3   Executes a command on the target host
+  windows/x64/egghunter                   3   Egghunter based on Hell's Gate and NtProtectVirtualMemory
+  windows/x64/old_process_injection       3   Process injection using embedded 2nd stage shellcode
   windows/x86/kernel_token_stealer        0   Token stealing shellcode for privilege escalation
+  windows/x64/kernel_token_stealer        0   Token stealing shellcode for privilege escalation
   windows/x64/kernel_sysret               0   Generic method of returning from kernel space to user space
   windows/x64/kernel_ace_edit             0   SID entry modifier for process injection
-  windows/x64/kernel_token_stealer        0   Token stealing shellcode for privilege escalation
 
   Architectures
   -------------
@@ -97,34 +100,35 @@ $ sickle -l
   Modules       Description
   -------       -----------
   asm_shell     Interactive assembler and disassembler
+  run           Wrapper used for executing bytecode (shellcode)
   badchar       Produces a set of all potential invalid characters for validation purposes
-  format        Converts bytecode into a respective format (activated anytime '-f' is used)
+  diff          Bytecode diffing module for comparing two binaries (or shellcode)
+  handler       Module for handling payload distribution and session management
   disassemble   Simple linear disassembler for multiple architectures
   pinpoint      Highlights opcodes within a disassembly to identify instructions responsible for bad characters
-  diff          Bytecode diffing module for comparing two binaries (or shellcode)
-  run           Wrapper used for executing bytecode (shellcode)
+  format        Converts bytecode into a respective format (activated anytime '-f' is used)
 
   Format        Description
   ------        -----------
-  bash          Format bytecode for bash script (UNIX)
-  hex           Format bytecode in hex
-  perl          Format bytecode for Perl
+  python        Format bytecode for Python
+  num           Format bytecode in num format
   java          Format bytecode for Java
+  rust          Format bytecode for a Rust application
+  hex_space     Format bytecode in hex, seperated by a space
+  c             Format bytecode for a C application
   python3       Format bytecode for Python3
+  bash          Format bytecode for bash script (UNIX)
+  raw           Format bytecode to be written to stdout in raw form
+  hex           Format bytecode in hex
+  javascript    Format bytecode for Javascript (Blob to send via XHR)
+  powershell    Format bytecode for Powershell
   uint8array    Format bytecode for Javascript as a Uint8Array directly
+  escaped       Format bytecode for one-liner hex escape paste
+  cs            Format bytecode for C#
+  perl          Format bytecode for Perl
+  nasm          Format bytecode for NASM
   dword         Format bytecode in dword
   ruby          Format bytecode for Ruby
-  javascript    Format bytecode for Javascript (Blob to send via XHR)
-  nasm          Format bytecode for NASM
-  num           Format bytecode in num format
-  cs            Format bytecode for C#
-  raw           Format bytecode to be written to stdout in raw form
-  rust          Format bytecode for a Rust application
-  python        Format bytecode for Python
-  escaped       Format bytecode for one-liner hex escape paste
-  c             Format bytecode for a C application
-  powershell    Format bytecode for Powershell
-  hex_space     Format bytecode in hex, seperated by a space
 ```
 
 This approach allows each module the ability to generate detailed documentation for its functionality.

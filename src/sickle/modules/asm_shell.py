@@ -3,9 +3,10 @@ import cmd
 
 from sickle.formats import *
 
+from sickle.common.lib.generic import convert
+
 from sickle.common.handlers.format_handler import FormatHandler
 from sickle.common.lib.reversing.assembler import Assembler
-from sickle.common.lib.generic.convert import from_hex_to_raw
 from sickle.common.lib.reversing.disassembler import Disassembler
 
 class Module():
@@ -65,7 +66,7 @@ class AsmShell(cmd.Cmd):
     def do_d(self, line):
         """d [48ffc0]
         Convert opcode to assembly language"""
-        raw_bytes = from_hex_to_raw(line)
+        raw_bytes = convert.from_hex_to_raw(line)
 
         try:
             results = self.disassembler.get_linear_sweep(raw_bytes)
@@ -91,7 +92,7 @@ class AsmShell(cmd.Cmd):
         for i in range(len(encoding)):
             hex_line += ("{:02x}".format(encoding[i]))
 
-        self.fm.raw_bytes = from_hex_to_raw(hex_line)
+        self.fm.raw_bytes = convert.from_hex_to_raw(hex_line)
         opcode_line = self.fm.get_generated_lines(True, True)[0]
 
         if (li['single line comment'] != None):

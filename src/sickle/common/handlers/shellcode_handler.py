@@ -1,6 +1,4 @@
-from sickle.common.lib.generic.modparser import get_module_list
-from sickle.common.lib.generic.modparser import get_truncated_list
-from sickle.common.lib.generic.modparser import check_module_support
+from sickle.common.lib.generic import modparser
 
 class ShellcodeHandler():
     """This class is responsible for calling the appropriate shellcode module.
@@ -25,7 +23,7 @@ class ShellcodeHandler():
         :rtype: bytes
         """
 
-        payload_module = check_module_support("payloads", self.payload) 
+        payload_module = modparser.check_module_support("payloads", self.payload) 
         if (payload_module == None):
             return None
 
@@ -40,9 +38,9 @@ class ShellcodeHandler():
         """
 
         # Obtain the list objects of data we'll be parsing
-        payloads = get_module_list("payloads")
+        payloads = modparser.get_module_list("payloads")
 
-        sc_objects = [check_module_support("payloads", sc).Shellcode
+        sc_objects = [modparser.check_module_support("payloads", sc).Shellcode
                      for sc in payloads]
 
         descriptions = [sc.summary for sc in sc_objects]
@@ -93,7 +91,7 @@ class ShellcodeHandler():
                 space_used = max_name_len + 8
                
                 for user in userland_stubs:
-                    out_list = get_truncated_list(f"{user[3]}", space_used)
+                    out_list = modparser.get_truncated_list(f"{user[3]}", space_used)
                     for i in range(len(out_list)):
                         if i != 0:
                             print(f"  {' ' * max_name_len} {' ':^4} {out_list[i]}")
@@ -101,7 +99,7 @@ class ShellcodeHandler():
                             print(f"  {user[0]:<{max_name_len}} {user[2]:^4} {out_list[i]}")
 
                 for kernel in kernel_stubs:
-                    out_list = get_truncated_list(f"{kernel[3]}", space_used)
+                    out_list = modparser.get_truncated_list(f"{kernel[3]}", space_used)
                     for i in range(len(out_list)):
                         if i != 0:
                             print(f"  {' ' * max_name_len} {' ':^4} {out_list[i]}")

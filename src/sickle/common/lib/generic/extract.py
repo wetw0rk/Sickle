@@ -1,4 +1,3 @@
-# TODO: Consider renaming to read_from_file since this can be used by modules as well
 def read_bytes_from_file(filename, mode="rb"):
     """This function is responsible for reading bytes from any file.
 

@@ -1,7 +1,6 @@
 import sys
 
 from sickle.common.lib.reversing.assembler import Assembler
-from sickle.common.lib.generic.modparser import argument_check
 
 class Shellcode():
 
@@ -39,7 +38,7 @@ class Shellcode():
         return
 
     def generate_source(self):
-        """Generates source code to be assembled by the keystone engine
+        """Returns assembly source code for the main functionality of the stub
         """
 
         shellcode = """
@@ -64,7 +63,7 @@ class Shellcode():
         return shellcode
 
     def get_shellcode(self):
-        """Generates Kernel Token Stealing Stub
+        """Generates Shellcode
         """
 
         return self.builder.get_bytes_from_asm(self.generate_source())

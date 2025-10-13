@@ -1,14 +1,13 @@
 import os
 import sys
 
-from sickle.common.lib.reversing.smartarch import set_arch
+from sickle.common.lib.reversing import smartarch
+from sickle.common.lib.generic import modparser 
+from sickle.common.lib.generic import extract 
 
 from sickle.common.handlers.format_handler import FormatHandler
 from sickle.common.handlers.module_handler import ModuleHandler
 from sickle.common.handlers.shellcode_handler import ShellcodeHandler
-
-from sickle.common.lib.generic.modparser import print_module_info
-from sickle.common.lib.generic.extract import read_bytes_from_file
 
 class Handle():
     """This class should be looked at as the coordinator of the framework.
@@ -64,9 +63,9 @@ class Handle():
             if (self.payload and self.module != "format"):
                 sys.exit(f"Payload and the module information at the same time? Go get some coffee..")
             elif (self.module != "format"):
-                print_module_info("modules", self.module)
+                modparser.print_module_info("modules", self.module)
             elif (self.payload):
-                print_module_info("payloads", self.payload)
+                modparser.print_module_info("payloads", self.payload)
             else:
                 sys.exit(f"What do you want information for?")
 
@@ -91,13 +90,13 @@ class Handle():
         # This is where we actually read the bytecode / binary data and assign it
         # to the module_args dictionary.
         if self.binfile:
-            read_bytes = read_bytes_from_file(self.binfile)
+            read_bytes = extract.read_bytes_from_file(self.binfile)
         elif self.payload:
             # Set the architecture before generating any shellcode. This is needed
             # in order for structures to use the right pointer sizes. For example,
             # x86 (4), x64 (8), and so on...
             generator = ShellcodeHandler(self.payload, self.module_args)
-            self.module_args["architecture"] = set_arch(self.payload)
+            self.module_args["architecture"] = smartarch.set_arch(self.payload)
             read_bytes = generator.get_shellcode()
         else:
             read_bytes = None

