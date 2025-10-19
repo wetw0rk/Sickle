@@ -344,6 +344,7 @@ get_{imports[func]}:
                 stub += """    push rbp
         mov rbp, rsp\n"""
     
+            stub += f"    mov rbp, rsp\n" # TODO: test and ensure reliability is maintained
             stub += f"    sub rsp, {self.stack_space}\n"
     
             if self.exit_technique != "func":
