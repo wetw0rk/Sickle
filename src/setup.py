@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
   name='sickle',
-  version="3.1.0",
+  version="4.0.1",
   author="Milton Valencia (wetw0rk)",
   description="Payload development framework",
   url="https://github.com/wetw0rk/Sickle",
