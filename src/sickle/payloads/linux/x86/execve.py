@@ -1,8 +1,5 @@
 import sys
-import struct
 
-from sickle.common.lib.generic import convert
-from sickle.common.lib.generic import modparser
 from sickle.common.lib.reversing import mappings
 
 from sickle.common.lib.reversing.assembler import Assembler
