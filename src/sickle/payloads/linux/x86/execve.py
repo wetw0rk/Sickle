@@ -18,24 +18,24 @@ class Shellcode():
 
     platform = "linux"
 
-    name = f"Linux ({arch}) SH Reverse Shell"
+    name = f"Linux ({arch}) Execve"
 
     module = f"{platform}/{arch}/execve"
 
-    example_run = f"TODO"
+    example_run = f"{sys.argv[0]} -p {module} -f c"
 
     ring = 3
 
     author = ["Jean Pascal Pereira <pereira@secbiz.de>", # Original author (https://shell-storm.org/shellcode/files/shellcode-811.html)
-              "wetw0rk"]                     # Sickle module
+              "wetw0rk"]                                 # Sickle module
 
-    tested_platforms = ["TODO"]
+    tested_platforms = ["Ubuntu 16.04.1 LTS"]
 
-    summary = ("TODO")
+    summary = ("Executes a shell session such as /bin/sh")
 
-    description = ("TODO")
+    description = ("Executes a shell session such as /bin/sh")
 
-    arguments = {}
+    arguments = None
 
     def __init__(self, arg_object):
 
