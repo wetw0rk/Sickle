@@ -1,6 +1,6 @@
 # Sickle
 
-![alt text](./docs/logo/sickle-hallow-2025.png)
+![alt text](./docs/logo/panda_logo.png)
 
 Sickle is a tool I originally developed to help me be more effective, in both developing and understanding shellcode. However, throughout the course of its development and usage It has evolved into a payload development framework. Although current modules are mostly aimed towards assembly, this tool is not limited to shellcode.
 
